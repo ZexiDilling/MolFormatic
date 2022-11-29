@@ -1,0 +1,32 @@
+SCore - database program: 
+
+Importing different compounds + data 
+	Needs to see the data, what they expect to see 
+
+Generating assasy
+	Needs to see grit42 what they do, and borrow it. 
+
+Export reports over compounds for costumors. 
+	Costume make a report module, for what data to grab and show for different compounds
+
+Get bio + purity data bound up to compounds.
+
+create customers table linking to assays 
+
+Add plate-type to bio data. 
+
+Make a place to create/add assays. 
+
+Make misc tabe, for adding new plate-type (Include a picture of the different paramitors), new vendors (for the plates), new compound-origin, for adding assay customers... 
+
+Change compoound main table depending on type of search...
+	List MP for DP - production
+
+Echo WOrklist
+	Make a colour to colour work list. including vol. 
+	Make it possible for single MP to go to more DP's ( make a 
+
+
+test - compounds:
+4036482914
+4036482915
