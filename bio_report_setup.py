@@ -442,7 +442,11 @@ def _z_prime(ws, data_calc_dict, use_list, use_max_min):
         ws.cell(column=matrix_col-1, row=row_counter, value=barcodes).font = Font(b=True)
         ws.cell(column=col_counter, row=matrix_row-1, value=barcodes).font = Font(b=True)
         # Writes values for Z-Prime
-        z_prime = data_calc_dict[barcodes]["other_data"]["z_prime"]
+        try:
+            z_prime = data_calc_dict[barcodes]["other_data"]["z_prime"]
+        except KeyError:
+            z_prime = data_calc_dict[barcodes]["other"]["z_prime"]
+
         ws.cell(column=matrix_col, row=row_counter, value=z_prime)
         ws.cell(column=col_counter, row=matrix_row, value=z_prime)
         col_counter += 1

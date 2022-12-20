@@ -1,8 +1,9 @@
 
-def hex_to_rgb(hex):
+def hex_to_rgb(hex_colour):
     ''' "#FFFFFF" -> [255,255,255] '''
     # Pass 16 to the integer function for change of base
-    return [int(hex[i:i + 2], 16) for i in range(1, 6, 2)]
+    print(hex_colour)
+    return [int(hex_colour[i:i + 2], 16) for i in range(1, 6, 2)]
 
 
 

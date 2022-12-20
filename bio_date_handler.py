@@ -30,7 +30,6 @@ class BIOAnalyser:
         self.heatmap_colours = bio_plate_report_setup["heatmap_colours"]
         self.pora_threshold = bio_plate_report_setup["pora_threshold"]
 
-
     def __str__(self):
         """
         A class that handles the data from a Tecan platereader, where the data is in an excel formate.

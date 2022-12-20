@@ -194,7 +194,7 @@ def table_update_tree(mp_amount, min_mp, samples_per_plate, ignore_active, sub_s
     all_data_headlines = ["compound_list", "liquid_warning_list", "row_data", "mp_data", "mp_mapping", "plate_count"]
 
     temp_all_data = _compound_list(config, mp_amount, min_mp, samples_per_plate, ignore_active, sub_search, smiles,
-                                   sub_search_methode, threshold, source_table, fd, search_limiter)
+                                     sub_search_methode, threshold, source_table, fd, search_limiter)
 
     if not temp_all_data:
         return None
