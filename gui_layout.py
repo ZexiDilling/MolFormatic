@@ -218,7 +218,8 @@ class GUILayout:
                  , sg.Push(), sg.B("Report Settings", key="-BIO_REPORT_SETTINGS-")],
                 [sg.Checkbox("Compound Related Data", key="-BIO_COMPOUND_DATA-", enable_events=True),
                  sg.Checkbox("Add To Database", key="-BIO_EXPERIMENT_ADD_TO_DATABASE-", enable_events=True)],
-                [sg.Checkbox("Add Compound Info To Final Report", key="-BIO_FINAL_REPORT_ADD_COMPOUNDS-")],
+                [sg.Checkbox("Add Compound Info To Final Report", key="-BIO_FINAL_REPORT_ADD_COMPOUNDS-",
+                             enable_events=True)],
                 [sg.T("Report Name", size=12), sg.T("Assay Name", size=14)],
                 [sg.InputText(key="-FINAL_BIO_NAME-", size=14), sg.InputText(key="-BIO_ASSAY_NAME-", size=14)],
                 [sg.T("Responsible:", size=12),
@@ -394,6 +395,29 @@ class GUILayout:
         ]])
 
         layout = [[col_graph, col_options]]
+
+        return layout
+
+    def set_1_worklist(self):
+
+        col_ms_buttons = sg.Frame("Echo", [[
+            sg.Column([
+                [sg.Text("Plate Layout", size=self.standard_size),
+                 sg.DropDown(sorted(self.plate_list), key="-BIO_PLATE_LAYOUT-", enable_events=True,
+                             size=self.standard_size)],
+                [sg.Button("Generate", key="-WORKLIST_GENERATE-")]
+            ])
+        ]])
+
+        motherplates=[]
+
+        col_ms_settings = sg.Frame("Mother Plates", [[
+            sg.Column([
+                [sg.Listbox(values=motherplates, key="-WORKLIST_MP_LIST-", select_mode="LISTBOX_SELECT_MODE_MULTIPLE")]
+            ])
+        ]])
+
+        layout = [sg.vtop([col_ms_buttons, col_ms_settings])]
 
         return layout
 
@@ -1291,7 +1315,6 @@ class GUILayout:
         layout = [sg.vtop([col_table, col_search])]
         return layout
 
-
     def setup_table_plate(self):
         """
 
@@ -1311,9 +1334,11 @@ class GUILayout:
 
         col_search = sg.Frame("Seach Perameters", [[
             sg.Column([
-                [sg.Listbox("", key="-PLATE_TABLE_BARCODE_LIST_BOX-", enable_events=True, size=(10, 7),
+                [sg.Listbox("", key="-PLATE_TABLE_BARCODE_LIST_BOX-", enable_events=True, size=(15, 7),
                             select_mode=sg.LISTBOX_SELECT_MODE_MULTIPLE)],
                 [sg.DropDown(dd, key="-PLATE_TABLE_CHOOSER-", enable_events=True, default_value=dd[0])],
+                [sg.Button("Limit", key="-PLATE_TABLE_BUTTON_LIMITER-", size=10),
+                 sg.Input(key="-PLATE_TABLE_TEXT_LIMITER-", size=10)],
                 [sg.CalendarButton("Start Date", key="-PLATE_TABLE_START_DATE-", format="%Y-%m-%d", size=10,
                                    enable_events=True, target="-PLATE_TABLE_START_DATE_TARGET-"),
                  sg.Input(key="-PLATE_TABLE_START_DATE_TARGET-", size=10, enable_events=True)],

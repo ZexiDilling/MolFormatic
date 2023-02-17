@@ -76,6 +76,13 @@ def mass_search(data, peak_information, ms_mode, sample_data, delta_mass, mz_thr
             mass = sample_data[sample]["mass"]
         except ValueError:
             mass = compound_mass
+
+        # Guard for mass written with ',' instead of '.'
+        try:
+            mass = float(mass)
+        except ValueError:
+            mass = float(mass.replace(",", "."))
+
         ms_mz = data[sample][ms_mode].columns
         ms_rt = data[sample][ms_mode].index
         peak_hit[sample] = {}

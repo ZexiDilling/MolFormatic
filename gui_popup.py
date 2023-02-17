@@ -1,10 +1,11 @@
 import PySimpleGUI as sg
 
-from info import matrix_header
-from gui_functions import sub_settings_matrix
-from database_controller import FetchData
-from excel_handler import purity_sample_layout_import, purity_sample_layout_export
-from gui_functions import sort_table
+# from copy import deepcopy
+# from info import matrix_header
+# from gui_functions import sub_settings_matrix
+# from database_controller import FetchData
+# from excel_handler import purity_sample_layout_import, purity_sample_layout_export
+# from gui_functions import sort_table
 
 
 def _matrix_popup_layout(calc, state=None, method=None):
@@ -85,20 +86,7 @@ def matrix_popup(data_dict, calc_values, state_values, method_values, calc, stat
                 window.Element("-POPUP_MATRIX_TABLE-").Widget.configure(displaycolumns=display_columns)
 
 
-def _sample_checker_layout(found_samples, not_found_samples, blanks, headings):
-
-    table_data = []
-    for samples in found_samples:
-        temp_data = [samples, samples, "Found"]
-        table_data.append(temp_data)
-
-    for samples in not_found_samples:
-        temp_data = [samples, "None", "Not in DB"]
-        table_data.append(temp_data)
-
-    for samples in blanks:
-        temp_data = [samples, "Blank", "Blank"]
-        table_data.append(temp_data)
+def _sample_checker_layout(table_data, headings, db_data):
 
     raw_table_col = sg.Frame("Compound Samples", [[
         sg.Column([
@@ -110,16 +98,19 @@ def _sample_checker_layout(found_samples, not_found_samples, blanks, headings):
     layout = [
         [raw_table_col],
         [sg.Button("Done", key="-POP_SAMPLE_CHECKER_OK-", expand_x=True),
-         sg.Button("Check Database", key="-POP_SAMPLE_CHECKER_DB_CHECK-", expand_x=True),
-         sg.Button("Colour", key="-POP_SAMPLE_CHECKER_COLOUR-", expand_x=True),
-         sg.Button("Import", key="-POP_SAMPLE_CHECKER_IMPORT-", expand_x=True),
-         sg.Button("Export", key="-POP_SAMPLE_CHECKER_EXPORT-", expand_x=True),
+         sg.Button("Check Database", key="-POP_SAMPLE_CHECKER_DB_CHECK-", expand_x=True, visible=db_data),
+         sg.Button("Colour", key="-POP_SAMPLE_CHECKER_COLOUR-", expand_x=True, visible=db_data),
+         sg.Button("Import", key="-POP_SAMPLE_CHECKER_IMPORT-", expand_x=True, visible=db_data),
+         sg.Button("Export", key="-POP_SAMPLE_CHECKER_EXPORT-", expand_x=True, visible=db_data),
+         sg.Button("Rename To Raw", key="-POP_SAMPLE_CHECKER_RE_NAME_TO_RAW-", expand_x=True, visible=not db_data),
+         sg.Button("Rename To Excel", key="-POP_SAMPLE_CHECKER_RE_NAME_TO_EXCEL-", expand_x=True, visible=not db_data),
+         sg.Button("Back To Default", key="-POP_SAMPLE_CHECKER_BACK_TO_DEFAULT-", expand_x=True, visible=not db_data),
          sg.Button("Cancel", key="-WINDOW_TWO_CANCEL-", expand_x=True)]
     ]
     return sg.Window("Samples", layout, finalize=True, resizable=True), table_data
 
 
-def sample_checker_controller(config, data_dict):
+def sample_to_compound_name_controller(config, data_dict, db_data=True):
     fd = FetchData(config)
     samples = [keys for keys in data_dict]
     found_dict = fd.list_to_rows(samples)
@@ -141,7 +132,21 @@ def sample_checker_controller(config, data_dict):
     search_reverse = {}
     export_file = None
     table_headings = ["Raw Name", "compound ID", "In DB"]
-    window, table_data = _sample_checker_layout(found_samples, not_found_samples, blanks, table_headings)
+
+    table_data = []
+    for samples in found_samples:
+        temp_data = [samples, samples, "Found"]
+        table_data.append(temp_data)
+
+    for samples in not_found_samples:
+        temp_data = [samples, "None", "Not in DB"]
+        table_data.append(temp_data)
+
+    for samples in blanks:
+        temp_data = [samples, "Blank", "Blank"]
+        table_data.append(temp_data)
+
+    window, table_data = _sample_checker_layout(table_data, table_headings, db_data)
     window["-POP_SAMPLE_CHECKER_TABLE-"].bind('<Double-Button-1>', "+-double click-")
 
     while True:
@@ -244,3 +249,189 @@ def sample_checker_controller(config, data_dict):
                 window["-POP_SAMPLE_CHECKER_TABLE-"].update(new_table)
                 # all_table_data[clicked_table] = [all_table_data[clicked_table][0]] + new_table
                 table_data = new_table
+
+
+def ms_raw_name_guard(raw_data_samples, excel_data_samples, db_data, config):
+
+    table_data = []
+    new_name = {}
+    for raw_sample_index, raw_sample in enumerate(raw_data_samples):
+        if raw_sample in excel_data_samples:
+            temp_data = [raw_sample, raw_sample, raw_sample]
+        else:
+            temp_data = [raw_sample, excel_data_samples[raw_sample_index], raw_sample]
+        table_data.append(temp_data)
+
+    default_table_data = deepcopy(table_data)
+
+    default_colouring = []
+    search_reverse = {}
+    export_file = None
+    table_headings = ["Raw Name", "Excel name", "Final Name"]
+
+    window, table_data = _sample_checker_layout(table_data, table_headings, db_data)
+    window["-POP_SAMPLE_CHECKER_TABLE-"].bind('<Double-Button-1>', "+-double click-")
+
+    while True:
+        event, values = window.read()
+
+        if event == sg.WIN_CLOSED or event == "-WINDOW_TWO_CANCEL-" or event == "-POP_SAMPLE_CHECKER_OK-":
+            for row_index, row in enumerate(table_data):
+                new_name[table_data[row_index][2]] = {"raw": table_data[row_index][0], "excel": table_data[row_index][1]}
+
+            return new_name
+            window.close()
+
+        if event == "-POP_SAMPLE_CHECKER_RE_NAME_TO_RAW-":
+            for row_index, row in enumerate(table_data):
+                table_data[row_index][2] = table_data[row_index][0]
+
+            window["-POP_SAMPLE_CHECKER_TABLE-"].update(values=table_data, row_colors=default_colouring)
+
+        if event == "-POP_SAMPLE_CHECKER_RE_NAME_TO_EXCEL-":
+            for row_index, row in enumerate(table_data):
+                table_data[row_index][2] = table_data[row_index][1]
+
+            window["-POP_SAMPLE_CHECKER_TABLE-"].update(values=table_data, row_colors=default_colouring)
+
+        if event == "-POP_SAMPLE_CHECKER_BACK_TO_DEFAULT-":
+            table_data = deepcopy(default_table_data)
+
+            window["-POP_SAMPLE_CHECKER_TABLE-"].update(values=table_data, row_colors=default_colouring)
+
+        if event == "-POP_SAMPLE_CHECKER_TABLE-+-double click-":
+            try:
+                table_row = values["-POP_SAMPLE_CHECKER_TABLE-"][0]
+            except IndexError:
+                pass
+            else:
+                new_name = sg.PopupGetText("New name for the sample")
+                if new_name:
+                    table_data[table_row][2] = new_name
+
+                window["-POP_SAMPLE_CHECKER_TABLE-"].update(values=table_data, row_colors=default_colouring)
+
+        if isinstance(event, tuple) and event[0] == "-POP_SAMPLE_CHECKER_TABLE-":
+            # TABLE CLICKED Event has value in format ('-TABLE=', '+CLICKED+', (row,col))
+            # You can also call Table.get_last_clicked_position to get the cell clicked
+            try:
+                search_reverse[event[0]]
+            except KeyError:
+                search_reverse[event[0]] = {}
+            if event[2][0] == -1 and event[2][1] != -1:  # Header was clicked and wasn't the "row" column
+                col_num_clicked = event[2][1]
+
+                try:
+                    search_reverse[event[0]][col_num_clicked]
+                except KeyError:
+                    search_reverse[event[0]][col_num_clicked] = False
+                new_table, search_reverse[event[0]][col_num_clicked] = \
+                    sort_table(table_data[0:][:], (col_num_clicked, 0), search_reverse[event[0]][col_num_clicked])
+
+                window["-POP_SAMPLE_CHECKER_TABLE-"].update(new_table)
+                # all_table_data[clicked_table] = [all_table_data[clicked_table][0]] + new_table
+                table_data = new_table
+
+
+def _new_headlines_layout(table_data, headings):
+    raw_table_col = sg.Frame("Headlines", [[
+        sg.Column([
+            [sg.Table(values=table_data, headings=headings,
+                      key="-POP_HEADLINE_TABLE-", enable_events=True, enable_click_events=True)]
+        ])
+    ]])
+
+    layout = [
+        [raw_table_col],
+        [sg.Button("Done", key="-POP_SAMPLE_CHECKER_OK-", expand_x=True),
+         sg.Button("Cancel", key="-WINDOW_TWO_CANCEL-", expand_x=True)]
+    ]
+    return sg.Window("Samples", layout, finalize=True, resizable=True), table_data
+
+
+def new_headlines_popup(right_headlines, wrong_headlines):
+    search_reverse = {}
+    table_data = []
+    new_headlines = {}
+
+    for headline_index, headline in enumerate(right_headlines):
+        temp_data = [headline, wrong_headlines[headline_index]]
+        table_data.append(temp_data)
+
+    table_headings = ["Name in file", "Right Name"]
+
+    window, table_data = _new_headlines_layout(table_data, table_headings)
+    window["-POP_HEADLINE_TABLE-"].bind('<Double-Button-1>', "+-double click-")
+
+    while True:
+        event, values = window.read()
+
+        if event == sg.WIN_CLOSED or event == "-WINDOW_TWO_CANCEL-" or event == "-POP_SAMPLE_CHECKER_OK-":
+            for row_index, row in enumerate(table_data):
+                temp_wrong_headline = table_data[row_index][0]
+                if type(table_data[row_index][1]) == list:
+                    temp_right_headline = table_data[row_index][1][0]
+                else:
+                    temp_right_headline = table_data[row_index][1]
+
+                new_headlines[temp_wrong_headline] = temp_right_headline
+
+            # check if there are duplicates
+            flag = False
+            hash_val = dict()
+            print(new_headlines)
+            for keys in new_headlines:
+                if new_headlines[keys] in hash_val:
+                    flag = True
+                    break
+                else:
+                    hash_val[new_headlines[keys]] = 1
+            if flag:
+                sg.popup_error("There are repeated values, please try again")
+            else:
+                return new_headlines
+                window.close()
+
+        if event == "-POP_HEADLINE_TABLE-+-double click-":
+            try:
+                table_row = values["-POP_HEADLINE_TABLE-"][0]
+            except IndexError:
+                pass
+            else:
+                event, values = sg.Window('Select One',
+                                          layout=[[sg.Listbox(right_headlines, key='_LIST_',
+                                                              size=(max([len(str(v)) for v in right_headlines]) + 2,
+                                                                    len(right_headlines)), select_mode='extended',
+                                                              bind_return_key=True), sg.OK()]]).read(close=True)
+
+                temp_new_headlines = values['_LIST_'] if event is not None else None
+                if temp_new_headlines:
+                    table_data[table_row][1] = temp_new_headlines
+
+                window["-POP_HEADLINE_TABLE-"].update(values=table_data)
+
+        if isinstance(event, tuple) and event[0] == "-POP_HEADLINE_TABLE-":
+            # TABLE CLICKED Event has value in format ('-TABLE=', '+CLICKED+', (row,col))
+            # You can also call Table.get_last_clicked_position to get the cell clicked
+            try:
+                search_reverse[event[0]]
+            except KeyError:
+                search_reverse[event[0]] = {}
+            if event[2][0] == -1 and event[2][1] != -1:  # Header was clicked and wasn't the "row" column
+                col_num_clicked = event[2][1]
+
+                try:
+                    search_reverse[event[0]][col_num_clicked]
+                except KeyError:
+                    search_reverse[event[0]][col_num_clicked] = False
+                new_table, search_reverse[event[0]][col_num_clicked] = \
+                    sort_table(table_data[0:][:], (col_num_clicked, 0), search_reverse[event[0]][col_num_clicked])
+
+                window["-POP_HEADLINE_TABLE-"].update(new_table)
+                # all_table_data[clicked_table] = [all_table_data[clicked_table][0]] + new_table
+                table_data = new_table
+
+if __name__ == "__main__":
+    right_headlines = ["source_plates", "destination_plates", "source_well", "destination_well"]
+    wrong_headlines = ["source_plates", "destination_plates", "source_well", "destination_well"]
+    new_headlines_popup(right_headlines, wrong_headlines)

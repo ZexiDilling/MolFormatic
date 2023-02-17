@@ -46,7 +46,6 @@ class Integration:
         points = 5
         # Save both slope values and the corresponding retentions times
         slope = []
-        st_slope = []
         start_slope = []
         end_slope = []
 
@@ -63,7 +62,6 @@ class Integration:
             wave_number = uv_wavelengths[(np.fabs(uv_wavelengths-wavelength)).argmin(axis=0)]
             wave_indx = [i for i, x in enumerate(uv_wavelengths == wave_number) if x][0]
 
-
         # Calculate the slope based on 5 data points
         for rt in np.arange(0, len(uv_tensor[points:, wave_indx])):
             x = uv_rt.tolist()[(0+rt):(points+rt)]
@@ -79,8 +77,6 @@ class Integration:
                 index_value = int(round(points/2))
                 start_slope.append(uv_rt[index_value + rt])
                 end_slope.append(uv_rt[index_value + rt])
-
-
 
         # Find the start and end times based on the slope
         rt_start_peak = []

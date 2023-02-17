@@ -6,6 +6,7 @@ import os
 import info
 from info import *
 from plate_formatting import mother_plate_generator as mpg
+from gui_popup import new_headlines_popup
 
 
 class CSVWriter:
@@ -464,6 +465,52 @@ class CSVReader:
 
         return tube_dict
 
+    @staticmethod
+    def compound_plates(csv_file):
+        temp_dict = {}
+        counter = 0
+        headlines = []
+        with open(csv_file) as file:
+            for index, line in enumerate(file):
+                if index == 1:
+                    temp_headlines = line.split(";")
+
+                    for headline_index, headline in enumerate(temp_headlines):
+                        headline = headline.casefold().replace(" ", "_")
+                        if "weight" in headline:
+                            headline = "mass"
+                        if headline == "id":
+                            id_number = headline_index
+                        headlines.append(headline)
+
+                if index > 1:
+                    counter += 1
+                    data = line.split(";")
+                    sample = data[id_number]
+                    temp_dict[sample] = {}
+                    for data_index, data in enumerate(data):
+                        temp_dict[sample][headlines[data_index]] = data
+
+        return temp_dict
+
+    @staticmethod
+    def echo_worklist_to_dict(csv_file, new_headlines):
+        right_headlines = ["source_plates", "destination_plates", "source_well", "destination_well"]
+        with open(csv_file) as file:
+            for index, line in enumerate(file):
+                if index == 1:
+                    headlines = line.split(";")
+                    if new_headlines:
+                        for headline in headlines:
+                            headlines.append(new_headlines[headline])
+                    elif right_headlines not in headlines:
+                        headlines = new_headlines_popup(right_headlines, headlines)
+
+                    source_plates_index = headlines.index["source_plates"]
+                    destination_plates_index = headlines.index["destination_plates"]
+                    source_well_index = headlines.index["source_well"]
+                    destination_well_index = headlines.index["destination_well"]
+
 
 class CSVConverter:
 
@@ -492,14 +539,14 @@ class CSVConverter:
 
 
 if __name__ == "__main__":
-    file_input_1 = "comPOUND_2022-06-10.txt"
-    folder = "C:/Users/phch/PycharmProjects/structure_search/output_files/comPOUND"
+    file_input_1 = "DTU-CML-Plate14-101105-Full-Silvia.csv"
+    folder = "O:/Organisk kemi/molecular library running plate/FullPlates/NEW FILES/CSV FILES"
     full_list = f"{folder}/{file_input_1}"
     file_type_2 = "pb_mp"
     file_type_1 = "tab"
 
     csv = CSVReader()
-    csv.tube_list_to_list(full_list)
+    csv.compound_plates(full_list)
 
 
     # csvw = CSVWriter()

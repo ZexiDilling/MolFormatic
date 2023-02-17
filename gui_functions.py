@@ -2,6 +2,9 @@ import PySimpleGUI as sg
 import configparser
 from datetime import date
 from operator import itemgetter
+from os.path import isfile, isdir
+
+import natsort
 from natsort import natsorted
 from os import mkdir
 
@@ -199,8 +202,8 @@ def table_update_tree(mp_amount, min_mp, samples_per_plate, ignore_active, sub_s
     if not temp_all_data:
         return None
     else:
-        for índex, values in enumerate(temp_all_data):
-            all_data[all_data_headlines[índex]] = values
+        for data_index, values in enumerate(temp_all_data):
+            all_data[all_data_headlines[data_index]] = values
 
         # if source_table == "join_main_mp":
         #     rows = fd.list_to_rows(all_data["compound_list"], source_table)
@@ -473,23 +476,24 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
     return well_dict, min_x, min_y, max_x, max_y
 
 
-# def bio_data(config, folder, well_states_report, plate_analysis_dict, plate_layout, z_prime_calc, heatmap_colours):
-#     bioa = BIOAnalyser(config, well_states_report, plate_analysis_dict, heatmap_colours)
-#     file_list = get_file_list(folder)
-#
-#     all_plates_data = {}
-#     for files in file_list:
-#         all_data, well_row_col, well_type, barcode = original_data_dict(files, plate_layout)
-#         if not all_data:
-#             return False
-#
-#         all_plates_data[barcode] = bioa.bio_data_controller(files, plate_layout, all_data, well_row_col, well_type
-#                                                             , z_prime_calc)
-#
-#     return True, all_plates_data
+def samples_from_echo_worklist(path):
+    if isdir(path):
+        file_list = get_file_list(path)
+
+    elif isfile(path):
+        file_list = [path]
+    else:
+        return None
+    new_headlines = None
+    plate_sample_dict = {}
+    for file in file_list:
+        plate_name = file.split("/")[-1].split(".")[0]
+        plate_sample_dict[plate_name], new_headlines = CSVReader.echo_worklist_to_dict(sg, file, new_headlines)
+
+    return plate_sample_dict
 
 
-def bio_data(config, folder, plate_layout, bio_plate_report_setup, analysis, write_to_excel=True):
+def bio_data(config, folder, plate_layout, bio_plate_report_setup, analysis, bio_sample_dict, write_to_excel=True):
     """
     Handles the Bio data.
 
@@ -501,6 +505,8 @@ def bio_data(config, folder, plate_layout, bio_plate_report_setup, analysis, wri
     :type plate_layout: dict
     :param bio_plate_report_setup: The setup for what is included in the report
     :type bio_plate_report_setup: dict
+    :param bio_sample_dict: None or a dict of sample ide, per plate analysed
+    :type bio_sample_dict: dict
     :param analysis: The analysis method
     :type analysis: str
     :return: All the data for the plates raw data, and their calculations
@@ -509,16 +515,16 @@ def bio_data(config, folder, plate_layout, bio_plate_report_setup, analysis, wri
     # needs to reformat plate-layout to use well ID instead of numbers...
     bioa = BIOAnalyser(config, bio_plate_report_setup)
     file_list = get_file_list(folder)
-
     all_plates_data = {}
     for files in file_list:
-        all_data, well_row_col, well_type, barcode, date = original_data_dict(files, plate_layout)
-        if not all_data:
-            return False
-
-        all_plates_data[barcode] = bioa.bio_data_controller(files, plate_layout, all_data, well_row_col, well_type,
-                                                            analysis, write_to_excel)
-
+        if isfile(files) and files.endswith(".xlsx"): #ToDo I needs to be able to deal with txt files at some point
+            all_data, well_row_col, well_type, barcode, date = original_data_dict(files, plate_layout)
+            if not all_data:
+                return False
+            all_plates_data[barcode] = bioa.bio_data_controller(files, plate_layout, all_data, well_row_col, well_type,
+                                                                analysis, write_to_excel, bio_sample_dict)
+        else:
+            print(f"{files} is not the right formate")
     return True, all_plates_data, date
 
 
@@ -988,20 +994,27 @@ def get_peak_information(purity_data, slope_threshold, uv_threshold, rt_solvent_
 def import_ms_data(folder):
 
     file_list = get_file_list(folder)
-    purity_data = dm_controller(file_list)
+    data = dm_controller(file_list)
 
-    samples = []
-    table_data = []
-    for sample in purity_data:
-        samples.append(sample)
-        temp_data = []
-        for data in purity_data[sample]:
-            temp_data.append(purity_data[sample][data])
-        table_data.append(temp_data)
+    if isinstance(data, str):
+        return data
 
-            # Makes a dict of batches, for adding to the batch database
+    else:
+        purity_data = data[0]
+        missing_samples = data[1]
 
-    return table_data, samples, purity_data
+        samples = []
+        table_data = []
+        for sample in purity_data:
+            samples.append(sample)
+            temp_data = []
+            for data in purity_data[sample]:
+                temp_data.append(purity_data[sample][data])
+            table_data.append(temp_data)
+
+                # Makes a dict of batches, for adding to the batch database
+        all_data = [table_data, samples, purity_data, missing_samples]
+    return all_data
 
 
 def purity_data_to_db(config, purity_data):
@@ -1195,8 +1208,13 @@ def _purity_overview_table_data_creation(purity_data, sample_data):
 
 
 def _get_sample_data(sample_data_file):
-    sample_data = pd.read_excel(sample_data_file, index_col=0)
-    sample_data = sample_data.to_dict("index")
+    if sample_data_file.endswith(".csv"):
+        sample_data = CSVReader.compound_plates(sample_data_file)
+    elif sample_data_file.endswith(".xslx"):
+        sample_data = pd.read_excel(sample_data_file, index_col=0)
+        sample_data = sample_data.to_dict("index")
+    else:
+        return "Raw data do not match the right formate"
     return sample_data
 
 
@@ -1207,19 +1225,34 @@ def add_start_end_time(purity_peak_list_table_data, sample_peak_dict):
             purity_peak_list_table_data[samples][index].append(sample_peak_dict[samples][peak_data[0]]["end"])
 
 
-def purity_ops(config, sample_data_file, purity_data, peak_information, ms_mode, delta_mass, mz_threshold, peak_amounts,
+def purity_ops(sample_data, purity_data, peak_information, ms_mode, delta_mass, mz_threshold, peak_amounts,
                mass=None):
+    """
+
+    :param config:
+    :param sample_data_file:
+    :param purity_data:
+    :param peak_information:
+    :param ms_mode:
+    :param delta_mass:
+    :param mz_threshold:
+    :param peak_amounts:
+    :param mass:
+    :return:
+    """
+    print(sample_data)
+    print("test")
+    mass_hit = mass_search(purity_data, peak_information, ms_mode, sample_data, delta_mass, mz_threshold, peak_amounts,
+                           mass)
+
+    _purity_mass(purity_data, peak_information, mass_hit)
+
+    purity_overview_table_data, purity_peak_list_table_data = _purity_overview_table_data_creation(purity_data, sample_data)
+
+    return purity_overview_table_data, purity_peak_list_table_data
 
 
-    # file = "C:/Users/phch/PycharmProjects/structure_search/Import/lcms_raw.xlsx"
-
-    # uv_threshold = 10000
-    # rt_solvent_peak = 0.6
-    # ms_mode = "ms_neg"
-    # delta_mass = 1
-    # mz_threshold = 1000000
-    # peak_amounts = 100
-    # print(uv_threshold, rt_solvent_peak, ms_mode, delta_mass, mz_threshold, peak_amounts)
+def grab_sample_data(sample_data_file, purity_data, config):
     if sample_data_file == "compound_data":
         dbf = DataBaseFunctions(config)
         co = ChemOperators
@@ -1235,17 +1268,12 @@ def purity_ops(config, sample_data_file, purity_data, peak_information, ms_mode,
             smiles = temp_table_data[int(samples)]["smiles"]
             mass = co.mw_from_smiles(smiles)
             sample_data[samples] = {"mass": mass}
+        db_data = True
     elif sample_data_file:
         sample_data = _get_sample_data(sample_data_file)
+        db_data = False
 
-    mass_hit = mass_search(purity_data, peak_information, ms_mode, sample_data, delta_mass, mz_threshold, peak_amounts,
-                           mass)
-
-    _purity_mass(purity_data, peak_information, mass_hit)
-
-    purity_overview_table_data, purity_peak_list_table_data = _purity_overview_table_data_creation(purity_data, sample_data)
-
-    return purity_overview_table_data, purity_peak_list_table_data
+    return sample_data, db_data
 
 
 def grab_compound_table_data(config, table, sample):
@@ -1258,6 +1286,17 @@ def grab_compound_table_data(config, table, sample):
                       }
 
     return dbf.return_table_data(table, Search_limiter)
+
+
+def name_changer(new_names, raw_data_dict, excel_data_dict, peak_information, sample_peak_dict):
+
+    for names in new_names:
+        if names != new_names[names]["raw"]:
+            raw_data_dict[names] = raw_data_dict.pop(new_names[names]["raw"])
+            peak_information[names] = peak_information.pop(new_names[names]["raw"])
+            sample_peak_dict[names] = sample_peak_dict.pop(new_names[names]["raw"])
+        elif names != new_names[names]["excel"]:
+            excel_data_dict[names] = excel_data_dict.pop(new_names[names]["excel"])
 
 
 def compound_info_table_data(config, sample):

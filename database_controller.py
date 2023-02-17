@@ -378,8 +378,14 @@ class AddData:
         :return: The dict with some of its keys having changed name
         :rtype: dict
         """
+        # Create a new dictionary "temp_data" that contains the same key-value pairs as the input dictionary,
+        # but with the keys "amount" replaced by "volume"
         temp_data = {key.replace("amount", "volume"): value for key, value in temp_data.items()}
+
+        # Further update "temp_data" by replacing keys "barcode" with "compound_id"
         temp_data = {key.replace("barcode", "compound_id"): value for key, value in temp_data.items()}
+
+        # Return the updated dictionary
         return temp_data
 
     @staticmethod
@@ -394,19 +400,24 @@ class AddData:
         :return: A dict of data with less key-values
         :rtype: dict
         """
+        # Create a reference to the input dictionary "data_dict" in a new variable "temp_dict"
         temp_dict = data_dict
-        if table == "compound_mp":
-            ban_list = ["SourceWell", "SourceBarcode"]
+
+        # Create a dictionary of ban_lists based on the input table name
+        ban_lists = {"compound_mp": ["SourceWell", "SourceBarcode"],
+                     "purity": ["Peak_Info", "mass", "time_date", "wavelength"]}
+
+        # Check if the input table name is a key in the ban_lists dictionary
+        if table in ban_lists:
+            # Get the ban_list for the input table name
+            ban_list = ban_lists[table]
+            # Check if the first key in the ban list is in the data_dict
             if ban_list[0] in data_dict:
+                # Loop through the ban list and remove each key from the data_dict
                 for clm in ban_list:
                     data_dict.pop(clm)
 
-        if table == "purity":
-            ban_list = ["Peak_Info", "mass", "time_date", "wavelength"]
-            if ban_list[0] in data_dict:
-                for clm in ban_list:
-                    data_dict.pop(clm)
-
+        # Return the updated temp_dict
         return temp_dict
 
     @staticmethod
@@ -421,20 +432,21 @@ class AddData:
         :return: the Dict_wrong_order in the right order to fit the Database
         :rtype:dict
         """
-        if destination_table == "compound_main":
-            key_order = ["compound_id", "smiles", "png", "volume", "concentration", "ac_id", "origin_id"]
+        # Create a dictionary of key orders based on the input destination table name
+        key_orders = {
+            "compound_main": ["compound_id", "smiles", "png", "volume", "concentration", "ac_id", "origin_id"],
+            "compound_mp": ["Row_Counter", "DestinationBarcode", "compound_id", "DestinationWell", "Volume", "Date"],
+            "compound_dp": ["Row_Counter", "DestinationBarcode", "compound_id", "DestinationWell", "Volume", "Date",
+                            "SourceBarcode", "SourceWell"],
+            "purity": ["row_counter", "compound_id", "experiment", "result_max", "result_max_ion", "result_total"]}
 
-        if destination_table == "compound_mp":
-            key_order = ["Row_Counter", "DestinationBarcode", "compound_id", "DestinationWell", "Volume", "Date"]
-
-        elif destination_table == "compound_dp":
-            key_order = ["Row_Counter", "DestinationBarcode", "compound_id", "DestinationWell", "Volume", "Date",
-                         "SourceBarcode", "SourceWell"]
-
-        elif destination_table == "purity":
-            key_order = ["row_counter", "compound_id", "experiment", "result_max", "result_max_ion", "result_total"]
-
-        return {value: dict_wrong_order[value] for value in key_order}
+        # Check if the input destination table name is a key in the key_orders dictionary
+        if destination_table in key_orders:
+            # Get the key order for the input destination table name
+            key_order = key_orders[destination_table]
+            # Return a new dictionary created by looping through the key order and getting the corresponding value
+            # from the input dictionary "dict_wrong_order"
+            return {value: dict_wrong_order[value] for value in key_order}
 
     @staticmethod
     def _exp_dict_creator(compound_data, exp_count, exp_type, responsible):
@@ -457,11 +469,16 @@ class AddData:
             - dict
             - int
         """
-        for data in compound_data:
-            time_date = compound_data[data]["time_date"][0]
-            break
+        # Get the first time_date from the compound data dictionary
+        time_date = next(iter(compound_data.values()))["time_date"][0]
+
+        # Increment the experiment count
         exp_count += 1
+
+        # Create a dictionary for the experiment details
         experiment_dict = {"exp_id": exp_count, "type": exp_type, "responsible": responsible, "date": time_date}
+
+        # Return the experiment dictionary and experiment count
         return experiment_dict, exp_count
 
     @staticmethod

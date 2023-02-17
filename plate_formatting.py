@@ -1,4 +1,5 @@
 from info import mother_plate_layout as mpl
+from database_handler import *
 
 
 def mother_plate_generator(tube_dict, mp_name, volume=9):
@@ -114,3 +115,8 @@ def plate_layout_to_well_ditc(plate_layout):
         well_dict[plate_layout["well_layout"][counter]["state"]].append(plate_layout["well_layout"][counter]["well_id"])
 
     return well_dict
+
+def missing_wells(plate_layout, motherplate):
+    #ToDo look for MP in database. Get plate layout for used well. compare the two. generate list of compounds not in samples for the plat layout. add it to a dict.
+    #ToDo make a new worklist based on all the motherplates... for the plates....
+    pass

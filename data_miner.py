@@ -281,6 +281,7 @@ def _file_handler(file_list):
 
     row_id = 0
     all_data = {}
+    failed_samples = []
 
     for file in file_list:
         # uv files
@@ -288,20 +289,30 @@ def _file_handler(file_list):
             row_id += 1
             all_data = _uv_date(file, all_data, row_id)
 
-    for file in file_list:
-        # ms negativ files
-        if file.endswith('Ev2.JDX'):
+    if all_data:
+        for file in file_list:
+            # ms negativ files
+            if file.endswith('Ev2.JDX'):
+                sample = os.path.basename(file).removesuffix("_Seg1Ev2.JDX")
+                try:
+                    all_data[sample] = _ms_neg(file, all_data[sample])
+                except KeyError:
+                    failed_samples.append(f"{sample}_MS_NEG")
 
-            sample = os.path.basename(file).removesuffix("_Seg1Ev2.JDX")
-            all_data[sample] = _ms_neg(file, all_data[sample])
+        for file in file_list:
+            # ms positive files
+            if file.endswith('Ev1.JDX'):
+                sample = os.path.basename(file).removesuffix("_Seg1Ev1.JDX")
+                try:
+                    all_data[sample] = _ms_post(file, all_data[sample])
+                except KeyError:
+                    failed_samples.append(f"{sample}_MS_POS")
 
-    for file in file_list:
-        # ms positive files
-        if file.endswith('Ev1.JDX'):
-            sample = os.path.basename(file).removesuffix("_Seg1Ev1.JDX")
-            all_data[sample] = _ms_post(file, all_data[sample])
+        data = [all_data, failed_samples]
 
-    return all_data
+        return data
+    else:
+        return "No UV data"
 
 
 def dm_controller(file_list):

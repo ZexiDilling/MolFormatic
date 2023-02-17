@@ -91,17 +91,17 @@ def _well_writer_final_report(ws, hits, final_report_setup, init_row):
                 row_counter += 1
                 for split in hits[barcode][method]:
                     ws.cell(column=indent_col, row=row_counter, value=split).font = Font(b=True)
-                    ws.cell(column=indent_col+1, row=row_counter,
-                                   value=final_report_setup["pora_threshold"][split]["min"]).font = \
+                    ws.cell(column=indent_col + 1, row=row_counter,
+                            value=final_report_setup["pora_threshold"][split]["min"]).font = \
                         Font(underline="single")
-                    ws.cell(column=indent_col+2, row=row_counter,
-                                   value=final_report_setup["pora_threshold"][split]["max"]).font = \
+                    ws.cell(column=indent_col + 2, row=row_counter,
+                            value=final_report_setup["pora_threshold"][split]["max"]).font = \
                         Font(underline="single")
                     row_counter += 1
                     for well in hits[barcode][method][split]:
                         ws.cell(column=indent_col + 1, row=row_counter, value=well)
                         ws.cell(column=indent_col + 2, row=row_counter,
-                                       value=hits[barcode][method][split][well])
+                                value=hits[barcode][method][split][well])
                         row_counter += 1
         indent_col += 4
         row_counter = init_row
@@ -274,7 +274,6 @@ def _data_writer(ws_matrix, ws_list, data_calc_dict, state, plate_counter, all_m
             _write_min_max_values(ws_list, list_row_minmax, list_clm, temp_avg_dict, "avg", method)
             _write_min_max_values(ws_list, list_row_minmax, list_clm + 4, temp_stdev_dict, "stdev", method)
 
-
         # makes sure that next loop is writen below the first method. One method per row, with avg and stdev for each.
         col_stdev = init_col + plate_counter + spacer
         col_counter = init_col + 1
@@ -303,9 +302,12 @@ def _matrix_calculator(ws, row, col, temp_data_dict):
     for index_x, value_x in enumerate(temp_data_dict):
         for index_y, value_y in enumerate(temp_data_dict):
             try:
+                # Divide the value of `value_x` by the value of `value_y` and multiply by 100
                 temp_value = (float(temp_data_dict[value_x]) / float(temp_data_dict[value_y])) * 100
             except (ZeroDivisionError, TypeError):
+                # Handle division by zero and TypeError (when a value can't be converted to float)
                 temp_value = None
+            # Write the calculated value in the cell (column = `col + index_x`, row = `row + index_y`)
             ws.cell(column=col + index_x, row=row + index_y, value=temp_value)
 
 
@@ -354,7 +356,6 @@ def _writes_list_of_values(ws, row, col, temp_data_dict, item_name, method=None)
     # writes list of values and barcode / plate name
     row_counter = 0
     for index, values in enumerate(temp_data_dict):
-
         ws.cell(column=col, row=row + index, value=values)
         ws.cell(column=col + 1, row=row + index, value=temp_data_dict[values])
         row_counter += 1
@@ -439,8 +440,8 @@ def _z_prime(ws, data_calc_dict, use_list, use_max_min):
 
     for barcodes in data_calc_dict:
         # Writes Plate names
-        ws.cell(column=matrix_col-1, row=row_counter, value=barcodes).font = Font(b=True)
-        ws.cell(column=col_counter, row=matrix_row-1, value=barcodes).font = Font(b=True)
+        ws.cell(column=matrix_col - 1, row=row_counter, value=barcodes).font = Font(b=True)
+        ws.cell(column=col_counter, row=matrix_row - 1, value=barcodes).font = Font(b=True)
         # Writes values for Z-Prime
         try:
             z_prime = data_calc_dict[barcodes]["other_data"]["z_prime"]
@@ -513,7 +514,6 @@ def bio_final_report_controller(analyse_method, all_plate_data, output_file, fin
 
     for states in all_states:
         if final_report_setup["data"][states]["matrix"]:
-
             _data_writer(ws_creator(wb, states, "Matrix"), ws_creator(wb, states, "Lists"), data_calc_dict, states,
                          plate_counter, all_methods, final_report_setup["data"][states]["list"],
                          final_report_setup["data"][states]["max_min"])

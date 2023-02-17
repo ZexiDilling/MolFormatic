@@ -147,8 +147,3 @@ This module is import during the start-up of the database.
 This module test 3 function in the main function to see if they work as intended. 
 
 
-
-TODO
-There is missing a front end for the system. 
-There is missing the data analyst for bio-logical data. 
-

@@ -1,13 +1,13 @@
 import PySimpleGUI
 from openpyxl.formatting.rule import ColorScaleRule
 from openpyxl.styles import PatternFill, Font
-from openpyxl import load_workbook, Workbook
+from openpyxl import load_workbook
+from openpyxl.utils.exceptions import InvalidFileException
 import pandas as pd
 import re
-from matplotlib import colors
 from openpyxl_fix_functions import ex_cell
 import datetime
-from extra_functions import rgb_to_hex, hex_to_rgb
+
 
 
 def org(all_data, well):
@@ -85,10 +85,23 @@ def z_prime_calculator(all_data, method):
     :return: Returns the Z-Prime value
     :rtype: int
     """
-    return 1 - ((3 * (all_data["calculations"][method]["max"]["stdev"] +
-                (all_data["calculations"][method]["minimum"]["stdev"]))) /
-                abs(all_data["calculations"][method]["max"]["avg"] +
-                (all_data["calculations"][method]["minimum"]["avg"])))
+    # OLD set-up
+    # return 1 - ((3 * (all_data["calculations"][method]["max"]["stdev"] +
+    #             (all_data["calculations"][method]["minimum"]["stdev"]))) /
+    #             abs(all_data["calculations"][method]["max"]["avg"] +
+    #             (all_data["calculations"][method]["minimum"]["avg"])))
+
+    # Get the max average and standard deviation, and min average and standard deviation from the all_data dictionary
+    max_avg = all_data["calculations"][method]["max"]["avg"]
+    max_stdev = all_data["calculations"][method]["max"]["stdev"]
+    min_avg = all_data["calculations"][method]["minimum"]["avg"]
+    min_stdev = all_data["calculations"][method]["minimum"]["stdev"]
+
+    # Calculate the result
+    result = 1 - ((3 * (max_stdev + min_stdev)) / abs(max_avg + min_avg))
+
+    # Return the result
+    return result
 
 
 def state_mapping(config, ws, translate_wells_to_cells, plate, init_row, free_col, temp_dict, methode):
@@ -115,26 +128,35 @@ def state_mapping(config, ws, translate_wells_to_cells, plate, init_row, free_co
     :type methode: str
     :return: The colouring of the cells, and a reading guide for the colours, in the excel ark
     """
-    # colour the wells
-    init_row_start = init_row
+    # Iterate through the wells in the plate
+    init_row_start = init_row  # save the initial starting row
     for counter in plate["well_layout"]:
-        state = plate["well_layout"][counter]["state"]
-        cell_color = config["plate_colouring"][state]
-        # cell_color = colors.cnames[colour]
-        cell_color = cell_color.replace("#", "")
-        temp_cell = translate_wells_to_cells[plate["well_layout"][counter]["well_id"]]
+        state = plate["well_layout"][counter]["state"]  # get the state of the current well
+        cell_color = config["plate_colouring"][state]  # get the color for the current state
+        cell_color = cell_color.replace("#", "")  # remove the "#" symbol from the color
+        temp_cell = translate_wells_to_cells[
+            plate["well_layout"][counter]["well_id"]]  # get the cell for the current well
+        # fill the cell with the color for the current state
         ws[temp_cell].fill = PatternFill("solid", fgColor=cell_color)
+
+    # write the color guide in the worksheet
     for state in temp_dict["plates"][methode]:
-        # writes the colour guide
-        if state != "wells":
-            if init_row_start == init_row:
+        if state != "wells":  # skip the "wells" state
+            if init_row_start == init_row:  # write the header only once
                 ws[ex_cell(init_row + 1, free_col)] = "well state"
-                ws[ex_cell(init_row + 1, free_col + 1)] = "colour coding"
+                # ws[ex_cell(init_row + 1, free_col + 1)] = "colour coding"
+                # bold the header
                 ws[ex_cell(init_row + 1, free_col)].font = Font(b=True)
-                ws[ex_cell(init_row + 1, free_col + 1)].font = Font(b=True)
+                # ws[ex_cell(init_row + 1, free_col + 1)].font = Font(b=True)
+            # Writes the state and colour each state with the right colour
+            temp_colour = config["plate_colouring"][state]
+            temp_colour = temp_colour.replace("#", "")
             ws[ex_cell(init_row + 2, free_col)] = state
-            ws[ex_cell(init_row + 2, free_col + 1)] = config["plate_colouring"][state]
-            init_row += 1
+            ws[ex_cell(init_row + 2, free_col)].fill = PatternFill("solid", fgColor=temp_colour)
+
+            # write the color for the state
+            # ws[ex_cell(init_row + 2, free_col + 1)] = config["plate_colouring"][state]
+            init_row += 1  # increment the row for the next state
 
 
 def heatmap(config, ws, pw_dict, translate_wells_to_cells, heatmap_colours):
@@ -149,21 +171,29 @@ def heatmap(config, ws, pw_dict, translate_wells_to_cells, heatmap_colours):
     :type translate_wells_to_cells: dict
     :return: A heatmap coloured depending on the options, in the excel file.
     """
-    temp_list = []
-    for well in pw_dict:
-        if pw_dict[well] == "sample":
-            temp_list.append(well)
+    # create a list of well ids where the sample is present
+    temp_list = [well for well in pw_dict if pw_dict[well] == "sample"]
 
-    # 3 colours heat mao
-    ws.conditional_formatting.add(f"{translate_wells_to_cells[temp_list[0]]}:"
-                                  f"{translate_wells_to_cells[temp_list[-1]]}",
-                                  ColorScaleRule(start_type='percentile', start_value=10,
-                                                 start_color=config["Settings_bio"]["plate_report_heatmap_colours_low"].removeprefix("#"),
-                                                 mid_type='percentile', mid_value=50,
-                                                 mid_color=config["Settings_bio"]["plate_report_heatmap_colours_mid"].removeprefix("#"),
-                                                 end_type='percentile',  end_value=90,
-                                                 end_color=config["Settings_bio"]["plate_report_heatmap_colours_high"].removeprefix("#"))
-                                  )
+    # add conditional formatting to the selected wells to create a heatmap
+    ws.conditional_formatting.add(
+        f"{translate_wells_to_cells[temp_list[0]]}:{translate_wells_to_cells[temp_list[-1]]}",
+        ColorScaleRule(
+            # set the starting color based on the 10th percentile of the data
+            start_type='percentile',
+            start_value=10,
+            start_color=config["Settings_bio"]["plate_report_heatmap_colours_low"].replace("#", ""),
+
+            # set the middle color based on the 50th percentile of the data
+            mid_type='percentile',
+            mid_value=50,
+            mid_color=config["Settings_bio"]["plate_report_heatmap_colours_mid"].replace("#", ""),
+
+            # set the end color based on the 90th percentile of the data
+            end_type='percentile',
+            end_value=90,
+            end_color=config["Settings_bio"]["plate_report_heatmap_colours_high"].replace("#", "")
+        )
+    )
     # 2 colours heat mao
     # ws.conditional_formatting.add(f"{translate_wells_to_cells[temp_list[0]]}:"
     #                               f"{translate_wells_to_cells[temp_list[-1]]}",
@@ -195,28 +225,43 @@ def hit_mapping(ws, temp_dict, pora_threshold, methode, translate_wells_to_cells
     :type init_row: int
     :return: Colouring the cells in the excel file, depending on the boundaries of the hit.
     """
-    # Colour the wells:
+    # Iterate over all wells and fill the cells based on their pora value
     for wells in translate_wells_to_cells:
         for split in pora_threshold:
+            # Check if the current split is not "colour"
             if split != "colour":
-                if float(pora_threshold[split]["min"]) < temp_dict["plates"][methode]["wells"][wells] < \
-                                            float(pora_threshold[split]["max"]):
+                # Check if the current well's pora value falls within the range of the current split
+                if float(pora_threshold[split]["min"]) < temp_dict["plates"][methode]["wells"][wells] < float(
+                        pora_threshold[split]["max"]):
+                    # Get the colour for the current split
                     temp_colour = pora_threshold["colour"][split]
-                    # cell_color = colors.cnames[temp_colour]
+                    # Remove the "#" from the colour code
                     cell_color = temp_colour.replace("#", "")
                     temp_cell = translate_wells_to_cells[wells]
+                    # Fill the cell with the calculated color
                     ws[temp_cell].fill = PatternFill("solid", fgColor=cell_color)
 
+    # Initialize the row where the colour guide will be written
     write_row = init_row + 1
-
-    # Write the guide:
+    # Write the colour guide
     for threshold in pora_threshold:
-        ws[ex_cell(write_row, free_col)] = threshold
-        ws[ex_cell(write_row, free_col)].font = Font(b=True, underline="single")
-        for level in pora_threshold[threshold]:
-            ws[ex_cell(write_row, free_col + 1)] = level
-            ws[ex_cell(write_row, free_col + 2)] = pora_threshold[threshold][level]
-            write_row += 1
+        if threshold != "colour":
+            # Write the threshold
+            ws[ex_cell(write_row, free_col)] = threshold
+            # Bold and underline the threshold
+            ws[ex_cell(write_row, free_col)].font = Font(b=True, underline="single")
+            # colour the threshold
+            temp_colour = pora_threshold["colour"][threshold]
+            temp_colour = temp_colour.replace("#", "")
+            # Write the colour for the level
+            ws[ex_cell(write_row, free_col)].fill = PatternFill("solid", fgColor=temp_colour)
+            for level in pora_threshold[threshold]:
+                # Write the level
+                ws[ex_cell(write_row, free_col + 1)] = level
+
+                # write the value
+                ws[ex_cell(write_row, free_col + 2)] = pora_threshold[threshold][level]
+                write_row += 1
 
 
 def well_row_col_type(plate_layout):
@@ -232,13 +277,12 @@ def well_row_col_type(plate_layout):
     """
     well_type = {}
     well_col_row = {"well_col": [], "well_row": []}
-    if "well_layout" in plate_layout:
-        temp_plate_layout = plate_layout["well_layout"]
-    else:
-        temp_plate_layout = plate_layout
+    temp_plate_layout = plate_layout.get("well_layout", plate_layout)
 
+    # Extract the well information
     for counter in temp_plate_layout:
         for keys in temp_plate_layout[counter]:
+            # Get well id and column, row information
             if keys == "well_id":
                 temp_well_row = re.sub(r"\d+", "", temp_plate_layout[counter][keys])
                 temp_well_col = re.sub(r"\D+", "", temp_plate_layout[counter][keys])
@@ -247,6 +291,7 @@ def well_row_col_type(plate_layout):
                 if temp_well_col not in well_col_row["well_col"]:
                     well_col_row["well_col"].append(temp_well_col)
 
+            # Get well type information
             if keys == "state":
                 well_type.setdefault(temp_plate_layout[counter]["state"], []).append(
                     temp_plate_layout[counter]["well_id"])
@@ -273,56 +318,72 @@ def original_data_dict(file, plate_layout):
         - dict
         - str
     """
+
+    # Get well column, row, and type data
     well_col_row, well_type = well_row_col_type(plate_layout)
-    wb = load_workbook(file)        #Todo Make it work for txt file, as platebutle spits txt files out. I could Check for file type, convert txt to excel using test_script_2...
-    sheet = wb.sheetnames[0]
+    try:
+        wb = load_workbook(file)        #Todo Make it work for txt file, as platebutle spits txt files out. I could Check for file type, convert txt to excel using test_script_2...
+    except InvalidFileException:
+        return
+    sheet = wb.sheetnames[0]        #ToDo add guard to deal with files that are not the right files.
     ws = wb[sheet]
+
+    # Initialize variables for plate type detection
     plate_type_384 = False
     plate_type_1536 = False
 
+    # Initialize dictionary for all data
     all_data = {"plates": {}, "calculations": {}}
     n_rows = len(well_col_row["well_row"])
-    for row_index, row in enumerate(ws.values):     #Todo Change this to be a dict, as there can be multiple readings per data.
+
+    # Iterate through each row in the sheet
+    for row_index, row in enumerate(ws.values):     #Todo Change this to be a dict, as there can be multiple readings per data. There can be multiple plate readings inside an excel sheet
         for index_row, value in enumerate(row):
 
+            # Get the date
             if value == "Date:":
                 date = row[4]
 
+            # Get the barcode
             if value == "Name" and row[1]:
                 barcode = row[1]
 
+            # Get the number of rows to skip
             if value == "<>":
                 skipped_rows = row_index
+
+            # Check if the plate is 384-well
             if value == "I":
                 plate_type_384 = True
+
+            # Check if the plate is 1536-well
             if value == "AA":
                 plate_type_1536 = True
-            try:
-                print(skipped_rows)
-            except UnboundLocalError:
-                pass
 
+    # Load the data into a pandas dataframe, skipping the rows that were specified earlier
     df_plate = pd.read_excel(file, sheet_name=sheet, skiprows=skipped_rows, nrows=n_rows)
 
+    # Convert the dataframe to a dictionary
     df_plate_dict = df_plate.to_dict()
-    if n_rows == 8 and plate_type_384:
-        PySimpleGUI.PopupError("Wrong plate size, data is larger than 96-wells")
-        return None, None, None
-    elif n_rows == 16 and not plate_type_384:
-        PySimpleGUI.PopupError("Wrong plate size, data is 96-wells")
-        return None, None, None
-    elif n_rows == 16 and plate_type_1536:
-        PySimpleGUI.PopupError("wrong plate size, data is 1536-wells")
-        return None, None, None
-    elif n_rows == 32 and not plate_type_1536:
-        PySimpleGUI.PopupError("wrong plate size, data is larger smaller than 1536-wells")
+
+    # Check the size of the plate and display an error message if the size does not match the expected size
+    expected_plate_sizes = {
+        8: not plate_type_384 or plate_type_1536,
+        16: plate_type_384,
+        32: plate_type_1536
+    }
+
+    if n_rows not in expected_plate_sizes or not expected_plate_sizes[n_rows]:
+        PySimpleGUI.PopupError(f"Wrong plate size, data is not {expected_plate_sizes[n_rows]}-wells")
         return None, None, None
 
+    # temp_reading_dict stores the data from the dataframe in a dictionary format
     temp_reading_dict = {}
     for counter, heading in enumerate(df_plate_dict):
         for index, values in enumerate(df_plate_dict[heading]):
             temp_reading_dict[f"{well_col_row['well_row'][index]}{counter}"] = df_plate_dict[heading][values]
 
+    # The code below stores the data in the all_data dictionary
     all_data["plates"]["original"] = {}
     all_data["plates"]["original"]["wells"] = {}
     for state in well_type:
@@ -337,7 +398,6 @@ def original_data_dict(file, plate_layout):
         barcode
     except UnboundLocalError:
         barcode = file.split("/")[-1]
-
 
     try:
         date

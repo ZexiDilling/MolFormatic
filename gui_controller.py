@@ -2,7 +2,11 @@ import copy
 import os.path
 import configparser
 from time import sleep
+
+import PySimpleGUI
 import matplotlib.lines as lines
+import natsort
+from natsort import natsorted
 
 from gui_layout import GUILayout
 from gui_settings_control import GUISettingsController
@@ -11,7 +15,7 @@ from gui_guards import *
 from bio_data_functions import org, norm, pora, pora_internal
 from json_handler import plate_dict_reader, dict_writer, dict_reader
 from plate_formatting import plate_layout_re_formate
-from gui_popup import matrix_popup, sample_checker_controller
+from gui_popup import matrix_popup, sample_to_compound_name_controller, ms_raw_name_guard
 from gui_help_info_controller import help_info_controller
 from config_writer import ConfigWriter
 from database_startup import DatabaseSetUp
@@ -687,6 +691,12 @@ def main(config):
         if event == "-BIO_COMPOUND_DATA-" and values["-BIO_COMPOUND_DATA-"]:
             window["-BIO_EXPERIMENT_ADD_TO_DATABASE-"].update(value=True)
 
+        if event == "-BIO_FINAL_REPORT_ADD_COMPOUNDS-" and values["-BIO_FINAL_REPORT_ADD_COMPOUNDS-"]:
+            window["-BIO_COMPOUND_DATA-"].update(value=True)
+
+        if event == "-BIO_COMPOUND_DATA-" and not values["-BIO_COMPOUND_DATA-"]:
+            window["-BIO_FINAL_REPORT_ADD_COMPOUNDS-"].update(value=False)
+
         if event == "-BIO_EXPERIMENT_ADD_TO_DATABASE-" and not values["-BIO_ASSAY_NAME-"]:
             if values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"]:
                 assay_name = sg.popup_get_text("Assay Name?")
@@ -702,7 +712,7 @@ def main(config):
                 sg.popup_error("Please choose an export folder")
             elif values["-BIO_COMBINED_REPORT-"] and not values["-FINAL_BIO_NAME-"]:
                 sg.popup_error("Please choose an Report name")
-            elif values["-BIO_FINAL_REPORT_ADD_COMPOUNDS-"] and not values["-BIO_SAMPLE_LIST-"]:
+            elif values["-BIO_COMPOUND_DATA-"] and not values["-BIO_SAMPLE_LIST-"]:
                 sg.popup_error("Please choose a file with compound information (NO CHECK FOR WRITE FORMATE FILE)")
             elif values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"] and not values["-BIO_ASSAY_NAME-"]:
                 sg.popup_error("Please choose an Assay name")
@@ -711,6 +721,7 @@ def main(config):
             # Missing setting move moving files after analyse is done.
             # elif not values["-BIO_ANALYSE_TYPE-"]:
             #     sg.popup_error("Please choose an analyse type")
+            # ToDo add guards for wrong file-formate
             else:
                 bio_import_folder = values["-BIO_IMPORT_FOLDER-"]
                 plate_layout = archive_plates_dict[values["-BIO_PLATE_LAYOUT-"]]
@@ -719,10 +730,15 @@ def main(config):
                 if not bio_export_folder:
                     bio_export_folder = values["-BIO_EXPORT_FOLDER-"]
 
+                if values["-BIO_SAMPLE_LIST-"]:
+                    bio_sample_dict = None
+                else:
+                    bio_sample_dict = None
+
                 analyse_method = values["-BIO_ANALYSE_TYPE-"]
                 worked, all_plates_data, date = bio_data(config, bio_import_folder, plate_layout,
                                                          bio_plate_report_setup,
-                                                         analyse_method)
+                                                         analyse_method, bio_sample_dict)
 
                 if values["-BIO_COMBINED_REPORT-"]:
                     bio_full_report("single point", all_plates_data, bio_final_report_setup, bio_export_folder,
@@ -886,7 +902,7 @@ def main(config):
                 window["-PURITY_DATA_IMPORT-"].update(text="Import Data")
                 purit_info_values = False
 
-            elif not purit_info_values:
+            elif not purit_info_values: #ToDo add threading
                 temp_wavelength = values["-PURITY_DATA_UV_WAVE-"]
                 temp_wave_test, wavelength_data = guard_purity_data_wavelength(temp_wavelength)
 
@@ -902,59 +918,82 @@ def main(config):
                 else:
 
                     folder = values["-PURITY_DATA_IMPORT_FOLDER-"]
-                    _, purity_samples, purity_data = import_ms_data(folder)
-                    compound_data = values["-PURITY_DATA_USE_COMPOUNDS-"]
-                    slope_threshold = int(values["-PURITY_DATA_SLOPE_THRESHOLD-"])
-                    uv_threshold = int(values["-PURITY_DATA_UV_THRESHOLD-"])
-                    rt_solvent_peak = float(values["-PURITY_DATA_RT_SOLVENT-"])
-                    sample_data = values["-PURITY_DATA_COMPOUND_DATA-"]
-                    wavelength_data = values["-PURITY_DATA_UV_WAVE-"]
+                    all_data = import_ms_data(folder)
 
-                    # Make sure that the names are correct for the compound data. Will change the name in purity-data
-                    if compound_data:
-                        new_names = sample_checker_controller(config, purity_data)
-                        if new_names:
-                            for sample in new_names:
-                                if new_names[sample] == "Delete":
-                                    purity_data.pop(sample)
-                                else:
-                                    purity_data[new_names[sample]] = purity_data.pop(sample)
-                        purity_samples = []
-                        for samples in purity_data:
-                            purity_samples.append(samples)
-
-                    if values["-PURITY_DATA_ADD_TO_DATABASE-"]:
-                        uv_ms_data_path = purity_data_to_db(config, purity_data)
-                        purity_data_added_to_db = True
-
-                    peak_information, peak_table_data, sample_peak_dict = get_peak_information(
-                        purity_data, slope_threshold, uv_threshold, rt_solvent_peak, sample_data, wavelength_data)
-
-                    if values["-PURITY_DATA_CALC_PURITY-"]:
-                        if not values["-PURITY_DATA_USE_COMPOUNDS-"]:
-                            sample_data_file = values["-PURITY_DATA_COMPOUND_DATA-"]
+                    #GAURD# Checking if there are UV data
+                    if isinstance(all_data, str):
+                        sg.Popup("Missing UV Data")
+                    else:
+                        _, purity_samples, purity_data, missing_samples = all_data
+                        if missing_samples:
+                            guard = sg.PopupYesNo(f"Missing following data: {missing_samples}. Do you want to continue (for now this will stop the process!!!)") #ToDo Fix this, make it possible to continue
                         else:
-                            sample_data_file = "compound_data"
+                            compound_data = values["-PURITY_DATA_USE_COMPOUNDS-"]
+                            slope_threshold = int(values["-PURITY_DATA_SLOPE_THRESHOLD-"])
+                            uv_threshold = int(values["-PURITY_DATA_UV_THRESHOLD-"])
+                            rt_solvent_peak = float(values["-PURITY_DATA_RT_SOLVENT-"])
+                            sample_data = values["-PURITY_DATA_COMPOUND_DATA-"]
+                            wavelength_data = values["-PURITY_DATA_UV_WAVE-"]
 
-                        ms_mode = ms_mode_selector[values["-PURITY_DATA_MS_MODE-"]]
-                        delta_mass = float(values["-PURITY_DATA_MS_DELTA-"])
-                        mz_threshold = int(values["-PURITY_DATA_MS_THRESHOLD-"])
-                        peak_amounts = int(values["-PURITY_DATA_MS_PEAKS-"])
+                            # Make sure that the names are correct for the compound data. Will change the name in purity-data
+                            if compound_data:
+                                new_names = sample_to_compound_name_controller(config, purity_data) #ToDo duplicate code later on, for checking data that is not compound data
+                                if new_names:
+                                    for sample in new_names:
+                                        if new_names[sample] == "Delete":
+                                            purity_data.pop(sample)
+                                        else:
+                                            purity_data[new_names[sample]] = purity_data.pop(sample)
+                                purity_samples = []
+                                for samples in purity_data:
+                                    purity_samples.append(samples)
 
-                        all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"], \
-                        purity_peak_list_table_data = purity_ops(config, sample_data_file, purity_data, peak_information,
-                                                                 ms_mode, delta_mass, mz_threshold, peak_amounts)
+                            if values["-PURITY_DATA_ADD_TO_DATABASE-"]:
+                                _ = purity_data_to_db(config, purity_data)
+                                purity_data_added_to_db = True
 
-                        add_start_end_time(purity_peak_list_table_data, sample_peak_dict)
-                        window["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"].\
-                            update(values=all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"])
+                            peak_information, peak_table_data, sample_peak_dict = get_peak_information(
+                                purity_data, slope_threshold, uv_threshold, rt_solvent_peak, sample_data, wavelength_data)
 
-                    window["-PURITY_INFO_SAMPLE_BOX-"].update(values=purity_samples)
-                    window["-PURITY_DATA_IMPORT-"].update(text="Clear Purity Info")
-                    purit_info_values = True
-                    # window["-PURITY_INFO_OVERVIEW_TABLE-"].update(values=all_table_data["-PURITY_INFO_OVERVIEW_TABLE-"])
+                            if values["-PURITY_DATA_CALC_PURITY-"]:
+                                if not values["-PURITY_DATA_USE_COMPOUNDS-"]:
+                                    sample_data_file = values["-PURITY_DATA_COMPOUND_DATA-"]
+                                else:
+                                    sample_data_file = "compound_data"
 
-        if event == "-PURITY_INFO_PURITY_OVERVIEW_IMPORT-" and purity_data:
+                                ms_mode = ms_mode_selector[values["-PURITY_DATA_MS_MODE-"]]
+                                delta_mass = float(values["-PURITY_DATA_MS_DELTA-"])
+                                mz_threshold = int(values["-PURITY_DATA_MS_THRESHOLD-"])
+                                peak_amounts = int(values["-PURITY_DATA_MS_PEAKS-"])
+
+                                sample_data, db_data = grab_sample_data(sample_data_file, purity_data, config)
+
+                                if not compound_data:
+                                    # GUARD Check if file names the same. #ToDO this is duplicated earlier. FIX ! ! !
+                                    raw_data_samples = natsort.natsorted([keys for keys in purity_data])
+                                    excel_data_samples = natsort.natsorted([keys for keys in sample_data])
+
+                                    if raw_data_samples != excel_data_samples:
+                                        # If they are not the same, a popup will show, where you can set names for the data.
+                                        new_names = ms_raw_name_guard(raw_data_samples, excel_data_samples, db_data, config)
+
+                                    name_changer(new_names, purity_data, sample_data, peak_information, sample_peak_dict)
+
+
+                                all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"], \
+                                purity_peak_list_table_data = purity_ops(sample_data, purity_data, peak_information,
+                                                                         ms_mode, delta_mass, mz_threshold, peak_amounts)
+
+                                add_start_end_time(purity_peak_list_table_data, sample_peak_dict)
+                                window["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"].\
+                                    update(values=all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"])
+
+                            window["-PURITY_INFO_SAMPLE_BOX-"].update(values=purity_samples)
+                            window["-PURITY_DATA_IMPORT-"].update(text="Clear Purity Info")
+                            purit_info_values = True
+                            # window["-PURITY_INFO_OVERVIEW_TABLE-"].update(values=all_table_data["-PURITY_INFO_OVERVIEW_TABLE-"])
+
+        if event == "-PURITY_INFO_PURITY_OVERVIEW_IMPORT-" and purity_data:     #ToDo Check if this works
             if not "-PURITY_DATA_USE_COMPOUNDS-":
                 sg.PopupError("Not compound data. Can't be added to the database. ")
             else:
@@ -964,7 +1003,7 @@ def main(config):
                 purity_data_compounds_to_db(config, all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"])
 
         if event == "-PURITY_DATA_REPORT-":
-            ...
+            sg.Popup("Not working atm") # ToDo Make this work. create a report based on data.
 
         #     WINDOW 1 - PLATE LAYOUT     ###
         if event == "-PLATE_LAYOUT_COLOUR_CHOSE_TARGET-":
@@ -1932,6 +1971,16 @@ def main(config):
             else:
                 window["-PLATE_TABLE_TABLE-"].update(values=[])
 
+        if event == "-PLATE_TABLE_BUTTON_LIMITER-":
+            mp_limiter = values["-PLATE_TABLE_TEXT_LIMITER-"]
+            mp_plates_list = []
+            for rows in temp_mp_plates:
+                if mp_limiter in rows[0].casefold():
+                    mp_plates_list.append(rows[0])
+
+            window["-PLATE_TABLE_BARCODE_LIST_BOX-"].update(values=mp_plates_list)
+
+
         #   WINDOW 2 - COMPOUND INFO    ###
         if event == "-COMPOUND_INFO_SEARCH_COMPOUND_ID-":
             sample = values["-COMPOUND_INFO_ID-"]
@@ -2249,8 +2298,10 @@ def main(config):
                 mz_threshold = int(values["-PURITY_INFO_MS_THRESHOLD-"])
                 peak_amounts = int(values["-PURITY_INFO_MS_PEAKS-"])
 
+                sample_data, _ = grab_sample_data(sample_data_file, purity_data, config)
+
                 all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"], \
-                purity_peak_list_table_data = purity_ops(sample_data_file, purity_data, peak_information, ms_mode,
+                purity_peak_list_table_data = purity_ops(sample_data, purity_data, peak_information, ms_mode,
                                                          delta_mass, mz_threshold, peak_amounts, mass)
 
                 add_start_end_time(purity_peak_list_table_data, sample_peak_dict)
@@ -2292,6 +2343,7 @@ def main(config):
             elif event == "-PURITY_INFO_PURITY_OVERVIEW_TABLE-" and values["-PURITY_INFO_GRAPH_SHOWING-"]:
                 lc_method = lc_graph_showing[0]
                 window["-PURITY_INFO_GRAPH_SHOWING-"].update(value=lc_method)
+                print(all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"])
                 window["-PURITY_INFO_MZ-"].update(value=all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"][values[
                     "-PURITY_INFO_PURITY_OVERVIEW_TABLE-"][0]][1])
                 purity_info_samples = [all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"][values[

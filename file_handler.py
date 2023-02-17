@@ -1,5 +1,6 @@
 import os
 import shutil
+from natsort import natsorted
 
 
 def get_file_list(path):
@@ -11,7 +12,9 @@ def get_file_list(path):
     :return: A list of files in the folder
     :rtype: list
     """
-    return [f"{path}/{files}" for files in os.listdir(path)]
+    file_list = [f"{path}/{files}" for files in os.listdir(path)]
+    file_list = natsorted(file_list)
+    return file_list
 
 
 def move_files(file_list):
