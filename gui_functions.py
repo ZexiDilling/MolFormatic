@@ -902,33 +902,33 @@ def set_colours(window, reports):
     window["-BIO_PLATE_LAYOUT_COLOUR_BOX_EMPTY-"].\
         update(background_color=simple_settings["plate_colouring"]["empty"])
 
-    window["-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_SAMPLE-"].\
-        update(background_color=simple_settings["plate_colouring"]["sample"])
-    window["-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_BLANK-"].\
-        update(background_color=simple_settings["plate_colouring"]["blank"])
-    window["-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_NAX-"].\
-        update(background_color=simple_settings["plate_colouring"]["max"])
-    window["-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_MINIMUM-"].\
-        update(background_color=simple_settings["plate_colouring"]["minimum"])
-    window["-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_POSITIVE-"].\
-        update(background_color=simple_settings["plate_colouring"]["positive"])
-    window["-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_NEGATIVE-"].\
-        update(background_color=simple_settings["plate_colouring"]["negative"])
-    window["-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_EMPTY-"].\
-        update(background_color=simple_settings["plate_colouring"]["empty"])
+    # window["-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_SAMPLE-"].\
+    #     update(background_color=simple_settings["plate_colouring"]["sample"])
+    # window["-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_BLANK-"].\
+    #     update(background_color=simple_settings["plate_colouring"]["blank"])
+    # window["-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_NAX-"].\
+    #     update(background_color=simple_settings["plate_colouring"]["max"])
+    # window["-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_MINIMUM-"].\
+    #     update(background_color=simple_settings["plate_colouring"]["minimum"])
+    # window["-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_POSITIVE-"].\
+    #     update(background_color=simple_settings["plate_colouring"]["positive"])
+    # window["-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_NEGATIVE-"].\
+    #     update(background_color=simple_settings["plate_colouring"]["negative"])
+    # window["-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_EMPTY-"].\
+    #     update(background_color=simple_settings["plate_colouring"]["empty"])
 
-    window["-BIO_INFO_HIT_MAP_LOW_COLOUR_BOX-"].\
-        update(background_color=bio_plate_report_setup["heatmap_colours"]["low"])
-    window["-BIO_INFO_HIT_MAP_MID_COLOUR_BOX-"].\
-        update(background_color=bio_plate_report_setup["heatmap_colours"]["mid"])
-    window["-BIO_INFO_HIT_MAP_HIGH_COLOUR_BOX-"].\
-        update(background_color=bio_plate_report_setup["heatmap_colours"]["high"])
     window["-BIO_INFO_HEATMAP_LOW_COLOUR_BOX-"].\
-        update(background_color=bio_plate_report_setup["pora_threshold"]["colour"]["low"])
+        update(background_color=bio_plate_report_setup["heatmap_colours"]["low"])
     window["-BIO_INFO_HEATMAP_MID_COLOUR_BOX-"].\
-        update(background_color=bio_plate_report_setup["pora_threshold"]["colour"]["mid"])
+        update(background_color=bio_plate_report_setup["heatmap_colours"]["mid"])
     window["-BIO_INFO_HEATMAP_HIGH_COLOUR_BOX-"].\
-        update(background_color=bio_plate_report_setup["pora_threshold"]["colour"]["high"])
+        update(background_color=bio_plate_report_setup["heatmap_colours"]["high"])
+    window["-BIO_INFO_HIT_MAP_TH_1_COLOUR_BOX-"].\
+        update(background_color=bio_plate_report_setup["pora_threshold"]["colour"]["th_1"])
+    window["-BIO_INFO_HIT_MAP_TH_2_COLOUR_BOX-"].\
+        update(background_color=bio_plate_report_setup["pora_threshold"]["colour"]["th_2"])
+    window["-BIO_INFO_HIT_MAP_TH_3_COLOUR_BOX-"].\
+        update(background_color=bio_plate_report_setup["pora_threshold"]["colour"]["th_3"])
 
 
 def plate_layout_to_excel(well_dict, name, folder):

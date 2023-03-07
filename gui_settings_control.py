@@ -428,23 +428,51 @@ class GUISettingsController:
                 # window.Refresh()
 
             # BIO PLATE REPORT - SINGLE POINT
-            if event == "-PLATE_REPORT_HIT_LOW_COLOUR_TARGET-":
-                if values["-PLATE_REPORT_HIT_LOW_COLOUR_TARGET-"] != "None":
-                    window["-PLATE_REPORT_HIT_LOW_COLOUR-"].\
-                        update(button_color=values["-PLATE_REPORT_HIT_LOW_COLOUR_TARGET-"])
-            if event == "-PLATE_REPORT_HIT_MID_COLOUR_TARGET-":
-                if values["-PLATE_REPORT_HIT_MID_COLOUR_TARGET-"] != "None":
-                    window["-PLATE_REPORT_HIT_MID_COLOUR-"].\
-                        update(button_color=values["-PLATE_REPORT_HIT_MID_COLOUR_TARGET-"])
-            if event == "-PLATE_REPORT_HIT_HIGH_COLOUR_TARGET-":
-                if values["-PLATE_REPORT_HIT_HIGH_COLOUR_TARGET-"] != "None":
-                    window["-PLATE_REPORT_HIT_HIGH_COLOUR-"].\
-                        update(button_color=values["-PLATE_REPORT_HIT_HIGH_COLOUR_TARGET-"])
+            if event == "-PLATE_REPORT_HIT_TH_1_COLOUR_TARGET-":
+                if values["-PLATE_REPORT_HIT_TH_1_COLOUR_TARGET-"] != "None":
+                    window["-PLATE_REPORT_HIT_TH_1_COLOUR-"].\
+                        update(button_color=values["-PLATE_REPORT_HIT_TH_1_COLOUR_TARGET-"])
+            if event == "-PLATE_REPORT_HIT_TH_2_COLOUR_TARGET-":
+                if values["-PLATE_REPORT_HIT_TH_2_COLOUR_TARGET-"] != "None":
+                    window["-PLATE_REPORT_HIT_TH_2_COLOUR-"]. \
+                        update(button_color=values["-PLATE_REPORT_HIT_TH_2_COLOUR_TARGET-"])
+            if event == "-PLATE_REPORT_HIT_TH_3_COLOUR_TARGET-":
+                if values["-PLATE_REPORT_HIT_TH_3_COLOUR_TARGET-"] != "None":
+                    window["-PLATE_REPORT_HIT_TH_3_COLOUR-"]. \
+                        update(button_color=values["-PLATE_REPORT_HIT_TH_3_COLOUR_TARGET-"])
+            if event == "-PLATE_REPORT_HIT_TH_4_COLOUR_TARGET-":
+                if values["-PLATE_REPORT_HIT_TH_4_COLOUR_TARGET-"] != "None":
+                    window["-PLATE_REPORT_HIT_TH_4_COLOUR-"]. \
+                        update(button_color=values["-PLATE_REPORT_HIT_TH_4_COLOUR_TARGET-"])
+            if event == "-PLATE_REPORT_HIT_TH_5_COLOUR_TARGET-":
+                if values["-PLATE_REPORT_HIT_TH_5_COLOUR_TARGET-"] != "None":
+                    window["-PLATE_REPORT_HIT_TH_5_COLOUR-"]. \
+                        update(button_color=values["-PLATE_REPORT_HIT_TH_5_COLOUR_TARGET-"])
+            if event == "-PLATE_REPORT_HIT_TH_6_COLOUR_TARGET-":
+                if values["-PLATE_REPORT_HIT_TH_6_COLOUR_TARGET-"] != "None":
+                    window["-PLATE_REPORT_HIT_TH_6_COLOUR-"]. \
+                        update(button_color=values["-PLATE_REPORT_HIT_TH_6_COLOUR_TARGET-"])
+            if event == "-PLATE_REPORT_HIT_TH_7_COLOUR_TARGET-":
+                if values["-PLATE_REPORT_HIT_TH_7_COLOUR_TARGET-"] != "None":
+                    window["-PLATE_REPORT_HIT_TH_7_COLOUR-"]. \
+                        update(button_color=values["-PLATE_REPORT_HIT_TH_7_COLOUR_TARGET-"])
+            if event == "-PLATE_REPORT_HIT_TH_8_COLOUR_TARGET-":
+                if values["-PLATE_REPORT_HIT_TH_8_COLOUR_TARGET-"] != "None":
+                    window["-PLATE_REPORT_HIT_TH_8_COLOUR-"]. \
+                        update(button_color=values["-PLATE_REPORT_HIT_TH_8_COLOUR_TARGET-"])
+            if event == "-PLATE_REPORT_HIT_TH_9_COLOUR_TARGET-":
+                if values["-PLATE_REPORT_HIT_TH_9_COLOUR_TARGET-"] != "None":
+                    window["-PLATE_REPORT_HIT_TH_9_COLOUR-"]. \
+                        update(button_color=values["-PLATE_REPORT_HIT_TH_9_COLOUR_TARGET-"])
+            if event == "-PLATE_REPORT_HIT_TH_10_COLOUR_TARGET-":
+                if values["-PLATE_REPORT_HIT_TH_10_COLOUR_TARGET-"] != "None":
+                    window["-PLATE_REPORT_HIT_TH_10_COLOUR-"]. \
+                        update(button_color=values["-PLATE_REPORT_HIT_TH_10_COLOUR_TARGET-"])
 
             if event == "-PLATE_REPORT_HEATMAP_LOW_COLOUR_TARGET-":
                 if values["-PLATE_REPORT_HEATMAP_LOW_COLOUR_TARGET-"] != "None":
                     window["-PLATE_REPORT_HEATMAP_LOW_COLOUR-"].\
-                           update(button_color=values["-PLATE_REP  ORT_HEATMAP_LOW_COLOUR_TARGET-"])
+                           update(button_color=values["-PLATE_REPORT_HEATMAP_LOW_COLOUR_TARGET-"])
             if event == "-PLATE_REPORT_HEATMAP_MID_COLOUR_TARGET-":
                 if values["-PLATE_REPORT_HEATMAP_MID_COLOUR_TARGET-"] != "None":
                     window["-PLATE_REPORT_HEATMAP_MID_COLOUR-"].\

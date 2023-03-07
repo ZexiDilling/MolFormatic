@@ -104,60 +104,60 @@ class GUILayout:
 
         return layout
 
-    def setup_1_mp_dp_update(self):
-        """
-
-        :return: A layour for the bio-module in the top box
-        :rtype: list
-        """
-
-        col_bio_analysis = sg.Frame("Analyse setup", [[
-            sg.Column([
-                [sg.Text("Plate Layout", size=self.standard_size),
-                 sg.DropDown(sorted(self.plate_list), key="-MP_DP_UPDATE_PLATE_LAYOUT-", enable_events=True,
-                             size=self.standard_size)],
-
-            ])
-        ]])
-
-        col_extra = sg.Frame("Extra Settings", [[
-            sg.Column([
-            ])
-        ]])
-
-        col_graph = sg.Frame("Plate Layout", [[
-            sg.Column([
-                [sg.Graph(canvas_size=(250, 175), graph_bottom_left=(0, 0), graph_top_right=(250, 175),
-                          background_color='grey', key="-MP_DP_UPDATE_CANVAS-", enable_events=False, drag_submits=False,
-                          motion_events=False)],
-                [sg.Text("Sample:", size=self.standard_size),
-                 sg.T(background_color=self.config["plate_colouring"]["sample"], size=10,
-                      key="-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_SAMPLE-", relief="groove")],
-                [sg.Text("Blank:", size=self.standard_size),
-                 sg.T(background_color=self.config["plate_colouring"]["blank"], size=10,
-                      key="-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_BLANK-", relief="groove")],
-                [sg.Text("Maximum:", size=self.standard_size),
-                 sg.T(background_color=self.config["plate_colouring"]["max"], size=10,
-                      key="-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_NAX-", relief="groove")],
-                [sg.Text("Minimum:", size=self.standard_size),
-                 sg.T(background_color=self.config["plate_colouring"]["minimum"], size=10,
-                      key="-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_MINIMUM-", relief="groove")],
-                [sg.Text("Positive Control:", size=self.standard_size),
-                 sg.T(background_color=self.config["plate_colouring"]["positive"], size=10,
-                      key="-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_POSITIVE-", relief="groove")],
-                [sg.Text("Negative Control:", size=self.standard_size),
-                 sg.T(background_color=self.config["plate_colouring"]["negative"], size=10,
-                      key="-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_NEGATIVE-", relief="groove")],
-                [sg.Text("Empty:", size=self.standard_size),
-                 sg.T(background_color=self.config["plate_colouring"]["empty"], size=10,
-                      key="-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_EMPTY-", relief="groove")],
-            ])
-        ]])
-
-
-        layout = [sg.vtop([col_bio_analysis, col_extra, col_graph])]
-
-        return layout
+    # def setup_1_mp_dp_update(self):
+    #     """
+    #
+    #     :return: A layour for the bio-module in the top box
+    #     :rtype: list
+    #     """
+    #     print("is this working?")
+    #     col_bio_analysis = sg.Frame("Analyse setup", [[
+    #         sg.Column([
+    #             [sg.Text("Plate Layout", size=self.standard_size),
+    #              sg.DropDown(sorted(self.plate_list), key="-MP_DP_UPDATE_PLATE_LAYOUT-", enable_events=True,
+    #                          size=self.standard_size)],
+    #
+    #         ])
+    #     ]])
+    #
+    #     col_extra = sg.Frame("Extra Settings", [[
+    #         sg.Column([
+    #         ])
+    #     ]])
+    #
+    #     col_graph = sg.Frame("Plate Layout", [[
+    #         sg.Column([
+    #             [sg.Graph(canvas_size=(250, 175), graph_bottom_left=(0, 0), graph_top_right=(250, 175),
+    #                       background_color='grey', key="-MP_DP_UPDATE_CANVAS-", enable_events=False, drag_submits=False,
+    #                       motion_events=False)],
+    #             [sg.Text("Sample:", size=self.standard_size),
+    #              sg.T(background_color=self.config["plate_colouring"]["sample"], size=10,
+    #                   key="-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_SAMPLE-", relief="groove")],
+    #             [sg.Text("Blank:", size=self.standard_size),
+    #              sg.T(background_color=self.config["plate_colouring"]["blank"], size=10,
+    #                   key="-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_BLANK-", relief="groove")],
+    #             [sg.Text("Maximum:", size=self.standard_size),
+    #              sg.T(background_color=self.config["plate_colouring"]["max"], size=10,
+    #                   key="-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_NAX-", relief="groove")],
+    #             [sg.Text("Minimum:", size=self.standard_size),
+    #              sg.T(background_color=self.config["plate_colouring"]["minimum"], size=10,
+    #                   key="-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_MINIMUM-", relief="groove")],
+    #             [sg.Text("Positive Control:", size=self.standard_size),
+    #              sg.T(background_color=self.config["plate_colouring"]["positive"], size=10,
+    #                   key="-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_POSITIVE-", relief="groove")],
+    #             [sg.Text("Negative Control:", size=self.standard_size),
+    #              sg.T(background_color=self.config["plate_colouring"]["negative"], size=10,
+    #                   key="-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_NEGATIVE-", relief="groove")],
+    #             [sg.Text("Empty:", size=self.standard_size),
+    #              sg.T(background_color=self.config["plate_colouring"]["empty"], size=10,
+    #                   key="-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_EMPTY-", relief="groove")],
+    #         ])
+    #     ]])
+    #
+    #
+    #     layout = [sg.vtop([col_bio_analysis, col_extra, col_graph])]
+    #
+    #     return layout
 
     def setup_1_bio(self):
         """
@@ -868,24 +868,24 @@ class GUILayout:
                           default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_3_max"))],
 
             [sg.ColorChooserButton("TH-1 Values Colour", key="-INFO_BIO_HIT_MAP_LOW_COLOUR-", size=(15, None),
-                                   target="-BIO_INFO_HIT_MAP_LOW_COLOUR_TARGET-"),
+                                   target="-BIO_INFO_HIT_MAP_TH_1_COLOUR_TARGET-"),
              sg.T(background_color=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_1"]
-                  , key="-BIO_INFO_HIT_MAP_LOW_COLOUR_BOX-", size=8, relief="groove"),
-             sg.Input(key="-BIO_INFO_HIT_MAP_LOW_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
+                  , key="-BIO_INFO_HIT_MAP_TH_1_COLOUR_BOX-", size=8, relief="groove"),
+             sg.Input(key="-BIO_INFO_HIT_MAP_TH_1_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
                       default_text=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_1"])],
 
             [sg.ColorChooserButton("TH-2 Values Colour", key="-INFO_BIO_HIT_MAP_MID_COLOUR-", size=(15, None),
-                                   target="-BIO_INFO_HIT_MAP_MID_COLOUR_TARGET-"),
+                                   target="-BIO_INFO_HIT_MAP_TH_2_COLOUR_TARGET-"),
              sg.T(background_color=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_2"]
-                  , key="-BIO_INFO_HIT_MAP_MID_COLOUR_BOX-", size=8, relief="groove"),
-             sg.Input(key="-BIO_INFO_HIT_MAP_MID_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
+                  , key="-BIO_INFO_HIT_MAP_TH_2_COLOUR_BOX-", size=8, relief="groove"),
+             sg.Input(key="-BIO_INFO_HIT_MAP_TH_2_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
                       default_text=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_2"])],
 
             [sg.ColorChooserButton("TH-3 Values Colour", key="-INFO_BIO_HIT_MAP_HIGH_COLOUR-", size=(15, None),
-                                   target="-BIO_INFO_HIT_MAP_HIGH_COLOUR_TARGET-"),
+                                   target="-BIO_INFO_HIT_MAP_TH_3_COLOUR_TARGET-"),
              sg.T(background_color=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_3"]
-                  , key="-BIO_INFO_HIT_MAP_HIGH_COLOUR_BOX-", size=8, relief="groove"),
-             sg.Input(key="-BIO_INFO_HIT_MAP_HIGH_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
+                  , key="-BIO_INFO_HIT_MAP_TH_3_COLOUR_BOX-", size=8, relief="groove"),
+             sg.Input(key="-BIO_INFO_HIT_MAP_TH_3_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
                       default_text=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_3"])],
             [sg.Button("More bins", key="-BIO_INFO_BOUNDS_BUTTON-"), sg.Listbox(values=["1-bin", "2-bin"])]
             # [sg.T("Low Colour", size=10), sg.DropDown(colours, key="-INFO_BIO_Hit_LOW-", enable_events=True,
