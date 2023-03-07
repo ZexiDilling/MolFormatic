@@ -12,8 +12,10 @@ def get_file_list(path):
     :return: A list of files in the folder
     :rtype: list
     """
-    file_list = [f"{path}/{files}" for files in os.listdir(path)]
+    file_list = _folder_scan(path)
+    # file_list = [f"{path}/{files}" for files in os.listdir(path)]
     file_list = natsorted(file_list)
+    print(file_list)
     return file_list
 
 
@@ -75,6 +77,7 @@ def _folder_scan(folder):
 
     path_list = _create_folder_paths(all_files)
 
+    path_list = natsorted(path_list)
     return path_list
 
 
@@ -171,5 +174,7 @@ if __name__ == "__main__":
     folder = "C:/Users/phch/PycharmProjects/structure_search/output_files/pending"
     #folder_scan(folder)
     # file_list = get_file_list(folder)
-    z, x, c, a, s, file_list = file_list_distributor(folder)
-    move_files(file_list)
+    # z, x, c, a, s, file_list = file_list_distributor(folder)
+    # move_files(file_list)
+    folder = "C:/Users/phch/Desktop/more_data_files/spark_raw_elisa"
+    get_file_list(folder)

@@ -494,22 +494,63 @@ class CSVReader:
         return temp_dict
 
     @staticmethod
-    def echo_worklist_to_dict(csv_file, new_headlines):
-        right_headlines = ["source_plates", "destination_plates", "source_well", "destination_well"]
-        with open(csv_file) as file:
-            for index, line in enumerate(file):
-                if index == 1:
-                    headlines = line.split(";")
-                    if new_headlines:
-                        for headline in headlines:
-                            headlines.append(new_headlines[headline])
-                    elif right_headlines not in headlines:
-                        headlines = new_headlines_popup(right_headlines, headlines)
+    def echo_worklist_to_dict(csv_file, right_headlines, new_headline, sample_dict):
 
-                    source_plates_index = headlines.index["source_plates"]
-                    destination_plates_index = headlines.index["destination_plates"]
-                    source_well_index = headlines.index["source_well"]
-                    destination_well_index = headlines.index["destination_well"]
+        splitter = [";", ",", "."]
+        split_indicator = 0
+
+        with open(csv_file) as file:
+            for index, lines in enumerate(file):
+                lines = lines.removesuffix("\n")
+                if index == 0:
+                    # Check if the file is a CSV file
+
+                    headlines = lines.split(splitter[split_indicator])
+                    while len(headlines) < 2:
+                        split_indicator += 1
+                        headlines = lines.split(splitter[split_indicator])
+                        if split_indicator > len(splitter):
+                            return "Not a CSV file", headlines, sample_dict
+
+                    # Check if the headlines for the CSV file is correct, if not sends it back to be corrected
+                    if  not new_headline:
+                        for right_headline in right_headlines:
+                            if right_headline not in headlines:
+                                return "Wrong headlines", headlines, sample_dict
+
+                    for headline_index, headline in enumerate(headlines):
+                        if new_headline:
+                            headline = new_headline[headline]
+                        print(headline)
+                        if headline == right_headlines[0]:
+                            source_plates_index = headline_index
+                        elif headline == right_headlines[1]:
+                            destination_plates_index = headline_index
+                        elif headline == right_headlines[2]:
+                            source_well_index = headline_index
+                        elif headline == right_headlines[3]:
+                            destination_well_index = headline_index
+                else:
+                    line = lines.split(splitter[split_indicator])
+                    for data_index, data in enumerate(line):
+                        if data_index == source_plates_index:
+                            temp_source_plate = data
+                        elif data_index == destination_plates_index:
+                            temp_destination_plate = data
+                        elif data_index == source_well_index:
+                            temp_source_well = data
+                        elif data_index == destination_well_index:
+                            temp_destination_well = data
+                    try:
+                        sample_dict[temp_destination_plate]
+                    except KeyError:
+                        sample_dict[temp_destination_plate] = {}
+                        sample_dict[temp_destination_plate][temp_destination_well] = {"source_plate": temp_source_plate,
+                                                                                     "source_well": temp_source_well}
+                    else:
+                        sample_dict[temp_destination_plate][temp_destination_well] = {"source_plate": temp_source_plate,
+                                                                                      "source_well": temp_source_well}
+        return "done", headlines, sample_dict
 
 
 class CSVConverter:
@@ -545,8 +586,20 @@ if __name__ == "__main__":
     file_type_2 = "pb_mp"
     file_type_1 = "tab"
 
+    right_headlines = ["source_plates", "destination_plates", "source_well", "destination_well"]
+    csv_file = "C:/Users/phch/Desktop/more_data_files/50sets_picklist_updated_worklists_new.txt"
+    new_headline = None
+    sample_dict = {}
     csv = CSVReader()
-    csv.compound_plates(full_list)
+    test = csv.echo_worklist_to_dict(csv_file, right_headlines, new_headline, sample_dict)
+    if type(test) == str:
+        print(test)
+    else:
+        for plates in test:
+            for wells in test[plates]:
+
+                print(test[plates][wells]["source_plate"])
+                print(test[plates][wells]["source_well"])
 
 
     # csvw = CSVWriter()

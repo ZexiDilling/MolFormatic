@@ -354,11 +354,11 @@ def new_headlines_popup(right_headlines, wrong_headlines):
     table_data = []
     new_headlines = {}
 
-    for headline_index, headline in enumerate(right_headlines):
+    for headline_index, headline in enumerate(wrong_headlines):
         temp_data = [headline, wrong_headlines[headline_index]]
         table_data.append(temp_data)
 
-    table_headings = ["Name in file", "Right Name"]
+    table_headings = ["Headline in file", "New Headline"]
 
     window, table_data = _new_headlines_layout(table_data, table_headings)
     window["-POP_HEADLINE_TABLE-"].bind('<Double-Button-1>', "+-double click-")

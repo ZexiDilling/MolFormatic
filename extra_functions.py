@@ -1,3 +1,4 @@
+from math import floor
 
 def hex_to_rgb(hex_colour):
     """
@@ -23,3 +24,20 @@ def rgb_to_hex(rgb):
     rgb = [int(x) for x in rgb]
     return "#" + "".join(["0{0:x}".format(v) if v < 16 else "{0:x}".format(v) for v in rgb])
 
+
+def row_col_to_cell(row, col):
+    col_names = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
+                 "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
+                 "U", "V", "W", "X", "Y", "Z"]
+    col -= 1
+    if col < len(col_names):
+        cell_name = f"{col_names[col]}{row}"
+    else:
+        stacking_letter = floor(col/len(col_names))
+        temp_col = col - (len(col_names) * stacking_letter )
+        stacking_letter -= 1
+        cell_name = f"{col_names[stacking_letter]}{col_names[temp_col]}{row}"
+    return cell_name
+
+if __name__ == "__main__":
+    print(row_col_to_cell(3, 53))

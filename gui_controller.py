@@ -121,12 +121,36 @@ def main(config):
                           "positive": config["Settings_bio"].getboolean("final_report_calc_pora_positive"),
                           "blank": config["Settings_bio"].getboolean("final_report_calc_pora_blank")},
                  "z_prime": config["Settings_bio"].getboolean("final_report_calc_Z_prime")},
-        "pora_threshold": {"low": {"min": config["Settings_bio"].getfloat("final_report_pora_threshold_low_min"),
-                                   "max": config["Settings_bio"].getfloat("final_report_pora_threshold_low_max")},
-                           "mid": {"min": config["Settings_bio"].getfloat("final_report_pora_threshold_mid_min"),
-                                   "max": config["Settings_bio"].getfloat("final_report_pora_threshold_mid_max")},
-                           "high": {"min": config["Settings_bio"].getfloat("final_report_pora_threshold_high_min"),
-                                    "max": config["Settings_bio"].getfloat("final_report_pora_threshold_high_max")}},
+        "pora_threshold": {"th_1": {"min": config["Settings_bio"].getfloat("final_report_pora_threshold_th_1_min"),
+                                    "max": config["Settings_bio"].getfloat("final_report_pora_threshold_th_1_max"),
+                                    "use": config["Settings_bio"].getboolean("final_report_pora_threshold_th_1_use")},
+                           "th_2": {"min": config["Settings_bio"].getfloat("final_report_pora_threshold_th_2_min"),
+                                    "max": config["Settings_bio"].getfloat("final_report_pora_threshold_th_2_max"),
+                                    "use": config["Settings_bio"].getboolean("final_report_pora_threshold_th_2_use")},
+                           "th_3": {"min": config["Settings_bio"].getfloat("final_report_pora_threshold_th_3_min"),
+                                    "max": config["Settings_bio"].getfloat("final_report_pora_threshold_th_3_max"),
+                                    "use": config["Settings_bio"].getboolean("final_report_pora_threshold_th_3_use")},
+                           "th_4": {"min": config["Settings_bio"].getfloat("final_report_pora_threshold_th_4_min"),
+                                    "max": config["Settings_bio"].getfloat("final_report_pora_threshold_th_4_max"),
+                                    "use": config["Settings_bio"].getboolean("final_report_pora_threshold_th_4_use")},
+                           "th_5": {"min": config["Settings_bio"].getfloat("final_report_pora_threshold_th_5_min"),
+                                    "max": config["Settings_bio"].getfloat("final_report_pora_threshold_th_5_max"),
+                                    "use": config["Settings_bio"].getboolean("final_report_pora_threshold_th_5_use")},
+                           "th_6": {"min": config["Settings_bio"].getfloat("final_report_pora_threshold_th_6_min"),
+                                    "max": config["Settings_bio"].getfloat("final_report_pora_threshold_th_6_max"),
+                                    "use": config["Settings_bio"].getboolean("final_report_pora_threshold_th_6_use")},
+                           "th_7": {"min": config["Settings_bio"].getfloat("final_report_pora_threshold_th_7_min"),
+                                    "max": config["Settings_bio"].getfloat("final_report_pora_threshold_th_7_max"),
+                                    "use": config["Settings_bio"].getboolean("final_report_pora_threshold_th_7_use")},
+                           "th_8": {"min": config["Settings_bio"].getfloat("final_report_pora_threshold_th_8_min"),
+                                    "max": config["Settings_bio"].getfloat("final_report_pora_threshold_th_8_max"),
+                                    "use": config["Settings_bio"].getboolean("final_report_pora_threshold_th_8_use")},
+                           "th_9": {"min": config["Settings_bio"].getfloat("final_report_pora_threshold_th_9_min"),
+                                    "max": config["Settings_bio"].getfloat("final_report_pora_threshold_th_9_max"),
+                                    "use": config["Settings_bio"].getboolean("final_report_pora_threshold_th_9_use")},
+                           "th_10": {"min": config["Settings_bio"].getfloat("final_report_pora_threshold_th_10_min"),
+                                     "max": config["Settings_bio"].getfloat("final_report_pora_threshold_th_10_max"),
+                                     "use": config["Settings_bio"].getboolean("final_report_pora_threshold_th_10_use")}},
         "data": {"sample": {"matrix": config["Settings_bio"].getboolean("final_report_data_sample_matrix"),
                             "list": config["Settings_bio"].getboolean("final_report_data_sample_list"),
                             "max_min": config["Settings_bio"].getboolean("final_report_data_sample_max_min")},
@@ -172,6 +196,10 @@ def main(config):
         "calc_dict": {"original": {"use": config["Settings_bio"].getboolean("plate_report_calc_dict_original_use"),
                                    "avg": config["Settings_bio"].getboolean("plate_report_calc_dict_original_avg"),
                                    "stdev": config["Settings_bio"].getboolean("plate_report_calc_dict_original_stdev"),
+                                   "pstdev": config["Settings_bio"].getboolean("plate_report_calc_dict_original_pstdev"),
+                                   "pvariance": config["Settings_bio"].getboolean("plate_report_calc_dict_original_pvariance"),
+                                   "variance": config["Settings_bio"].getboolean("plate_report_calc_dict_original_variance"),
+                                   "st_dev_%": config["Settings_bio"].getboolean("plate_report_calc_dict_original_st_dev_%"),
                                    "state": {"sample": config["Settings_bio"].
                                        getboolean("plate_report_calc_dict_original_state_sample"),
                                              "minimum": config["Settings_bio"].
@@ -191,6 +219,14 @@ def main(config):
                                          getboolean("plate_report_calc_dict_normalised_avg"),
                                      "stdev": config["Settings_bio"].
                                          getboolean("plate_report_calc_dict_normalised_stdev"),
+                                     "pstdev": config["Settings_bio"].
+                                         getboolean("plate_report_calc_dict_normalised_pstdev"),
+                                     "pvariance": config["Settings_bio"].
+                                         getboolean("plate_report_calc_dict_normalised_pvariance"),
+                                     "variance": config["Settings_bio"].
+                                         getboolean("plate_report_calc_dict_normalised_variance"),
+                                     "st_dev_%": config["Settings_bio"].
+                                         getboolean("plate_report_calc_dict_normalised_st_dev_%"),
                                      "state": {"sample": config["Settings_bio"].
                                          getboolean("plate_report_calc_dict_normalised_"
                                                     "state_sample"),
@@ -215,6 +251,10 @@ def main(config):
                       "pora": {"use": config["Settings_bio"].getboolean("plate_report_calc_dict_pora_use"),
                                "avg": config["Settings_bio"].getboolean("plate_report_calc_dict_pora_avg"),
                                "stdev": config["Settings_bio"].getboolean("plate_report_calc_dict_pora_stdev"),
+                               "pstdev": config["Settings_bio"].getboolean("plate_report_calc_dict_pora_pstdev"),
+                               "pvariance": config["Settings_bio"].getboolean("plate_report_calc_dict_pora_pvariance"),
+                               "variance": config["Settings_bio"].getboolean("plate_report_calc_dict_pora_variance"),
+                               "st_dev_%": config["Settings_bio"].getboolean("plate_report_calc_dict_pora_st_dev_%"),
                                "state": {"sample": config["Settings_bio"].
                                    getboolean("plate_report_calc_dict_pora_state_sample"),
                                          "minimum": config["Settings_bio"].
@@ -256,6 +296,10 @@ def main(config):
             "original": {"use": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_original_use"),
                          "avg": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_original_avg"),
                          "stdev": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_original_stdev"),
+                         "pstdev": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_original_pstdev"),
+                         "pvariance": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_original_pvariance"),
+                         "variance": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_original_variance"),
+                         "st_dev_%": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_original_st_dev_%"),
                          "state": {"sample": config["Settings_bio"].
                              getboolean("plate_report_plate_calc_dict_original_state_sample"),
                                    "minimum": config["Settings_bio"].
@@ -273,6 +317,10 @@ def main(config):
             "normalised": {"use": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_normalised_use"),
                            "avg": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_normalised_avg"),
                            "stdev": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_normalised_stdev"),
+                           "pstdev": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_normalised_pstdev"),
+                           "pvariance": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_normalised_pvariance"),
+                           "variance": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_normalised_variance"),
+                           "st_dev_%": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_normalised_st_dev_%"),
                            "state": {"sample": config["Settings_bio"].
                                getboolean("plate_report_plate_calc_dict_normalised_state_sample"),
                                      "minimum": config["Settings_bio"].
@@ -290,6 +338,10 @@ def main(config):
             "pora": {"use": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_pora_use"),
                      "avg": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_pora_avg"),
                      "stdev": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_pora_stdev"),
+                     "pstdev": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_pora_pstdev"),
+                     "pvariance": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_pora_pvariance"),
+                     "variance": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_pora_variance"),
+                     "st_dev_%": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_pora_st_dev_%"),
                      "state": {"sample": config["Settings_bio"].
                          getboolean("plate_report_plate_calc_dict_pora_state_sample"),
                                "minimum": config["Settings_bio"].
@@ -310,6 +362,14 @@ def main(config):
                                   getboolean("plate_report_plate_calc_dict_pora_internal_avg"),
                               "stdev": config["Settings_bio"].
                                   getboolean("plate_report_plate_calc_dict_pora_internal_stdev"),
+                              "pstdev": config["Settings_bio"].
+                                  getboolean("plate_report_plate_calc_dict_pora_internal_pstdev"),
+                              "pvariance": config["Settings_bio"].
+                                  getboolean("plate_report_plate_calc_dict_pora_internal_pvariance"),
+                              "variance": config["Settings_bio"].
+                                  getboolean("plate_report_plate_calc_dict_pora_internal_variance"),
+                              "st_dev_%": config["Settings_bio"].
+                                  getboolean("plate_report_plate_calc_dict_pora_internal_st_dev_%"),
                               "state": {"sample": config["Settings_bio"].
                                   getboolean("plate_report_plate_calc_dict_pora_internal_state_sample"),
                                         "minimum": config["Settings_bio"].
@@ -378,15 +438,46 @@ def main(config):
         "heatmap_colours": {'low': config["Settings_bio"]["plate_report_heatmap_colours_low"],
                             'mid': config["Settings_bio"]["plate_report_heatmap_colours_mid"],
                             'high': config["Settings_bio"]["plate_report_heatmap_colours_high"]},
-        "pora_threshold": {"low": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_low_min"),
-                                   "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_low_max")},
-                           "mid": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_mid_min"),
-                                   "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_mid_max")},
-                           "high": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_high_min"),
-                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_high_max")},
-                           "colour": {"low": config["Settings_bio"]["plate_report_pora_threshold_colour_low"],
-                                      "mid": config["Settings_bio"]["plate_report_pora_threshold_colour_mid"],
-                                      "high": config["Settings_bio"]["plate_report_pora_threshold_colour_high"]}
+        "pora_threshold": {"th_1": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_1_min"),
+                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_1_max"),
+                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_1_use")},
+                           "th_2": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_2_min"),
+                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_2_max"),
+                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_2_use")},
+                           "th_3": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_3_min"),
+                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_3_max"),
+                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_3_use")},
+                           "th_4": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_4_min"),
+                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_4_max"),
+                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_4_use")},
+                           "th_5": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_5_min"),
+                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_5_max"),
+                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_5_use")},
+                           "th_6": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_6_min"),
+                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_6_max"),
+                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_6_use")},
+                           "th_7": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_7_min"),
+                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_7_max"),
+                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_7_use")},
+                           "th_8": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_8_min"),
+                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_8_max"),
+                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_8_use")},
+                           "th_9": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_9_min"),
+                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_9_max"),
+                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_9_use")},
+                           "th_10": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_10_min"),
+                                     "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_10_max"),
+                                     "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_10_use")},
+                           "colour": {"th_1": config["Settings_bio"]["plate_report_pora_threshold_colour_th_1"],
+                                      "th_2": config["Settings_bio"]["plate_report_pora_threshold_colour_th_2"],
+                                      "th_3": config["Settings_bio"]["plate_report_pora_threshold_colour_th_3"],
+                                      "th_4": config["Settings_bio"]["plate_report_pora_threshold_colour_th_4"],
+                                      "th_5": config["Settings_bio"]["plate_report_pora_threshold_colour_th_5"],
+                                      "th_6": config["Settings_bio"]["plate_report_pora_threshold_colour_th_6"],
+                                      "th_7": config["Settings_bio"]["plate_report_pora_threshold_colour_th_7"],
+                                      "th_8": config["Settings_bio"]["plate_report_pora_threshold_colour_th_8"],
+                                      "th_9": config["Settings_bio"]["plate_report_pora_threshold_colour_th_9"],
+                                      "th_10": config["Settings_bio"]["plate_report_pora_threshold_colour_th_10"]}
                            }
     }
 
@@ -712,8 +803,6 @@ def main(config):
                 sg.popup_error("Please choose an export folder")
             elif values["-BIO_COMBINED_REPORT-"] and not values["-FINAL_BIO_NAME-"]:
                 sg.popup_error("Please choose an Report name")
-            elif values["-BIO_COMPOUND_DATA-"] and not values["-BIO_SAMPLE_LIST-"]:
-                sg.popup_error("Please choose a file with compound information (NO CHECK FOR WRITE FORMATE FILE)")
             elif values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"] and not values["-BIO_ASSAY_NAME-"]:
                 sg.popup_error("Please choose an Assay name")
             elif values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"] and not values["-BIO_RESPONSIBLE-"]:
@@ -730,18 +819,26 @@ def main(config):
                 if not bio_export_folder:
                     bio_export_folder = values["-BIO_EXPORT_FOLDER-"]
 
-                if values["-BIO_SAMPLE_LIST-"]:
-                    bio_sample_dict = None
+                # If this is checked, it will ask for worklist, that can be converted to a sample dict, that can be used
+                # for finding sample info in the database.
+                if values["-BIO_COMPOUND_DATA-"]:
+                    bio_sample_list = sg.popup_get_file("Please select worklist files", multiple_files=True)
+                    bio_sample_dict = bio_compound_info_from_worklist(config, bio_sample_list)
                 else:
                     bio_sample_dict = None
 
-                analyse_method = values["-BIO_ANALYSE_TYPE-"]
+                # gets get all the data from the different files and the results from the platereader.
+                # the plate reader data can either be in excel formate or in txt formate.
+                # If the raw data is txt, it re-writes it to excel. then it analyses the data and writes it in the
+                # excel file.
+                # analyse_method = values["-BIO_ANALYSE_TYPE-"]     # not used atm...
+                analyse_method = "single point"
                 worked, all_plates_data, date = bio_data(config, bio_import_folder, plate_layout,
                                                          bio_plate_report_setup,
-                                                         analyse_method, bio_sample_dict)
+                                                         analyse_method, bio_sample_dict, bio_export_folder)
 
                 if values["-BIO_COMBINED_REPORT-"]:
-                    bio_full_report("single point", all_plates_data, bio_final_report_setup, bio_export_folder,
+                    bio_full_report(analyse_method, all_plates_data, bio_final_report_setup, bio_export_folder,
                                     final_report_name)
 
                 if values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"]:
@@ -2061,6 +2158,9 @@ def main(config):
             if values["-BIO_INFO_HIT_MAP_HIGH_COLOUR_TARGET-"] != "None":
                 window["-BIO_INFO_HIT_MAP_HIGH_COLOUR_BOX-"].\
                     update(background_color=values["-BIO_INFO_HIT_MAP_HIGH_COLOUR_TARGET-"])
+        if event == "-BIO_INFO_BOUNDS_BUTTON-":
+            sg.PopupError("This is not working")    #ToDo make this button work. Should get a small popup, to choose all the bins for the bio analysis.
+
 
         if event == "-BIO_INFO_SUB_SETTINGS_TABS-" and values["-BIO_INFO_SUB_SETTINGS_TABS-"] == "Plate Overview" \
                 and bio_info_sub_setting_tab_plate_overview_calc or event == "-BIO_INFO_PLATE_OVERVIEW_METHOD_LIST-" \

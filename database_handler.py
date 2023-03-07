@@ -1,3 +1,4 @@
+import configparser
 import sqlite3
 
 
@@ -415,4 +416,15 @@ class DataBaseFunctions:
 
 
 if __name__ == "__main__":
-    ...
+    config = configparser.ConfigParser()
+    config.read("config.ini")
+    dbf = DataBaseFunctions(config)
+    table_name = "compound_mp"
+    barcode_name = "mp_barcode"
+    id_name = "mp_well"
+    barcode = "MP2022-001"
+    id_number = "q3"
+    sample_id = dbf.find_data(table_name, barcode, id_number, barcode_name, id_name)
+    print(sample_id[0][3])
+
+

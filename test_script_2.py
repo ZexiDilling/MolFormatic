@@ -73,16 +73,21 @@ def cal_writer(ws, all_data, init_row, ex_file):
         row_counter += 2
 
 
-def grading(grade_indicator):
-    grading_dict = {0: {'french': '4', 'v-grade': 'V0'}, 1: {'french': '5a', 'v-grade': 'V1'}, 2: {'french': '5b', 'v-grade': 'V1'}, 3: {'french': '5c', 'v-grade': 'V2'}, 4: {'french': '5c+', 'v-grade': 'v2'}, 5: {'french': '6a', 'v-grade': 'V3'}, 6: {'french': '6a+', 'v-grade': 'V3/4'}, 7: {'french': '6b', 'v-grade': 'V4'}, 8: {'french': '6b+', 'v-grade': 'V4/5'}, 9: {'french': '6c', 'v-grade': 'V5'}, 10: {'french': '6c+', 'v-grade': 'V5/6'}, 11: {'french': '7a', 'v-grade': 'V6'}, 12: {'french': '7a+', 'v-grade': 'V7'}, 13: {'french': '7b', 'v-grade': 'V8'}, 14: {'french': '7b+', 'v-grade': 'V8/9'}, 15: {'french': '7c', 'v-grade': 'V9'}, 16: {'french': '7c+', 'v-grade': 'V10'}, 17: {'french': '8a', 'v-grade': 'V11'}, 18: {'french': '8a+', 'v-grade': 'V12'}, 19: {'french': '8b', 'v-grade': 'V13'}, 20: {'french': '8b+', 'v-grade': 'V14'}, 21: {'french': '8c', 'v-grade': 'V15'}, 22: {'french': '8c+', 'v-grade': 'V16'}, 23: {'french': '9a', 'v-grade': 'V16'}, 24: {'french': '9a+', 'v-grade': 'V16'}, 25: {'french': '9b', 'v-grade': 'V16'}, 26: {'french': '9b+', 'v-grade': 'V16'}}
-    return grading_dict[grade_indicator]
+
 
 if __name__ == "__main__":
     ex_file = "C:/Users/phch/Desktop/more_data_files/bio-data/1 sheet/alpha_so1.xlsx"
     # wb = load_workbook(ex_file)
+    from numpy import histogram, arange
+    temp_list = [-10, 0, 2, 4, 5, 13, 25, 1, 1, -32, 2, 300]
+    temp_min = min(temp_list)
+    temp_max = max(temp_list)
+    bin_min = 0
+    bin_max = 25
+    bin_width = 5
+    temp_min_bin_width = bin_min - temp_min
 
-    print(grading(1)["french"])
-
+    min_hist_list_1, min_hist_list_2 = histogram(temp_list, bins=arange(temp_min, bin_min + bin_width,temp_min_bin_width))
 
     # try:
     #     ws_data = wb["test"]

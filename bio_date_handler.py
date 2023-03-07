@@ -1,15 +1,10 @@
 import configparser
-import pandas as pd
-from json_handler import plate_dict_reader
-import re
 from statistics import mean, stdev, pstdev, pvariance, variance
-from openpyxl import load_workbook
-from openpyxl.styles import PatternFill, Font
-from matplotlib import colors
-from numpy import histogram, arange
 
 
 from bio_data_functions import *
+
+from database_handler import DataBaseFunctions
 
 
 class BIOAnalyser:
@@ -176,6 +171,7 @@ class BIOAnalyser:
         :return: counter_row: the next row to write on.
         :rtype: int
         """
+
         temp_row = counter_row
         # Loop through states in the current method
         for state in temp_dict["plates"][methode]:
@@ -183,32 +179,37 @@ class BIOAnalyser:
             # Check if state calculation is required for the current method
             if state != "wells" and self.plate_calc_dict[methode]["state"][state]:
                 # Loop through calculations for the current state
+
                 for calc in temp_dict["calculations"][methode][state]:
-                    # Write the calculation name in the first row of each calculation type
-                    if counter_row == temp_row:
-                        ws[ex_cell(counter_row, temp_col + 1)] = calc
-                        ws[ex_cell(counter_row, temp_col + 1)].font = Font(b=True)
-                    # Write the state name in the first column of each state type
-                    if temp_col == init_col:
-                        ws[ex_cell(counter_row + 1, temp_col)] = state
-                        ws[ex_cell(counter_row + 1, temp_col)].font = Font(b=True)
-                        # Writes the state and colour each state with the right colour
-                        temp_colour = self.config["plate_colouring"][state]
-                        temp_colour = temp_colour.replace("#", "")
-                        ws[ex_cell(counter_row + 1, temp_col)] = state
-                        ws[ex_cell(counter_row + 1, temp_col)].fill = PatternFill("solid", fgColor=temp_colour)
+                    if self.plate_calc_dict[methode][calc]:
 
-                    # Write the calculation result in the corresponding cell
-                    ws[ex_cell(counter_row + 1, temp_col + 1)] = temp_dict["calculations"][methode][state][calc]
-                    temp_col += 1
+                        # Write the calculation name in the first row of each calculation type
+                        if counter_row == temp_row:
+                            ws[ex_cell(counter_row, temp_col + 1)] = calc
+                            ws[ex_cell(counter_row, temp_col + 1)].font = Font(b=True)
+                        # Write the state name in the first column of each state type
+                        if temp_col == init_col:
+                            # Writes the state
+                            ws[ex_cell(counter_row + 1, temp_col)] = state
+                            ws[ex_cell(counter_row + 1, temp_col)].font = Font(b=True)
+
+                            # Colour the original data calculations, to show witch wells are what.
+                            if methode == "original":
+                                temp_colour = self.config["plate_colouring"][state]
+                                temp_colour = temp_colour.replace("#", "")
+                                ws[ex_cell(counter_row + 1, temp_col)].fill = PatternFill("solid", fgColor=temp_colour)
+
+                        # Write the calculation result in the corresponding cell
+                        ws[ex_cell(counter_row + 1, temp_col + 1)] = temp_dict["calculations"][methode][state][calc]
+                        temp_col += 1
                 counter_row += 1
-
-        ws[ex_cell(temp_row, temp_col + 1)] = "S/B:"
-        ws[ex_cell(temp_row, temp_col + 1)].font = Font(b=True)
-        try:
-            ws[ex_cell(temp_row, temp_col + 2)] = temp_dict["calculations"][methode]["other"]["S/B"]
-        except KeyError:
-            ws[ex_cell(temp_row, temp_col + 2)] = "could not calculate"
+        if methode == "original":
+            ws[ex_cell(temp_row, temp_col + 1)] = "S/B:"
+            ws[ex_cell(temp_row, temp_col + 1)].font = Font(b=True)
+            try:
+                ws[ex_cell(temp_row, temp_col + 2)] = temp_dict["calculations"][methode]["other"]["S/B"]
+            except KeyError:
+                ws[ex_cell(temp_row, temp_col + 2)] = "could not calculate"
         return counter_row
 
     def _write_plate(self, ws, counter_row, temp_dict, methode, well_row_col, pw_dict):
@@ -232,10 +233,11 @@ class BIOAnalyser:
         """
         indent_col = 3
         indent_row = 3
-        init_row = counter_row + indent_row
+        initial_row = counter_row + indent_row
         init_col = indent_col
         translate_wells_to_cells = {}
         counter_row += indent_row
+
         for index_row, row in enumerate(well_row_col["well_row"]):
 
             # sets the headline and colour for the headline for row
@@ -246,11 +248,11 @@ class BIOAnalyser:
                     # Merge cell above tables, and writes the name of the method used for the plate
                     # ws.merged_cells(start_row=counter_row - 2, start_column=indent_col - 1,
                     #                 end_row=counter_row - 2, end_column=indent_col + 1)
-                    if methode != "pora":
-                        ws.cell(column=indent_col - 1, row=counter_row - 2, value=methode).font = Font(b=True)
-                    else:
-                        temp_name = "Percentage of Remaining Activity (%)"
-                        ws.cell(column=indent_col - 1, row=counter_row - 2, value=temp_name).font = Font(b=True)
+
+                    # Finds the right headline for the excel sheet
+                    # Finds the headline in the config file, for the method
+                    temp_name = self.config["bio_method_headline"][methode]
+                    ws.cell(column=indent_col - 1, row=counter_row - 2, value=temp_name).font = Font(b=True)
 
                     # sets the headline and colour for the headline for column
                     ws.cell(column=index_col + indent_col, row=counter_row - 1, value=int(col)).fill = \
@@ -276,19 +278,20 @@ class BIOAnalyser:
 
         # colour wells depending on what state the wells are (sample, blank, min, max...) and add a reading guide.
         if self.plate_analysis[methode]["state_map"]:
-            state_mapping(self.config, ws, translate_wells_to_cells, self.plate, init_row, free_col, temp_dict, methode)
+            state_mapping(self.config, ws, translate_wells_to_cells, self.plate, initial_row, free_col, temp_dict,
+                          methode)
 
         # colour in the heat map, if sets to active. Can set for each method
         if self.plate_analysis[methode]["heatmap"]:
             heatmap(self.config, ws, pw_dict, translate_wells_to_cells, self.heatmap_colours)
 
         if self.plate_analysis[methode]["hit_map"]:
-            hit_mapping(ws, temp_dict, self.pora_threshold, methode, translate_wells_to_cells, free_col, init_row)
+            hit_mapping(ws, temp_dict, self.pora_threshold, methode, translate_wells_to_cells, free_col, initial_row)
 
         counter_row += 1
         return counter_row
 
-    def cal_writer(self, ws, all_data, init_row):
+    def cal_writer(self, ws, all_data, initial_row):
         """
         Writes all the calculations to its own sheet for an overview.
 
@@ -296,65 +299,61 @@ class BIOAnalyser:
         :type ws: openpyxl.worksheet.worksheet.Worksheet
         :param all_data: A dict over all plate date. all the analysed data will be added to this dict
         :type all_data: dict
-        :param init_row: The first row to write data to.
-        :type init_row: int
+        :param initial_row: The first row to write data to.
+        :type initial_row: int
         :return: All the calculations writen in the worksheet called: report
         """
         indent_col = 2
         free_col = indent_col
-        row_counter = init_row
+        row_counter = initial_row
         for plate_analysed in all_data["calculations"]:
-            if row_counter != init_row:
+            if row_counter != initial_row:
                 row_counter += 2
 
             temp_row_counter = row_counter
             calc_used = []
-            # if self.plate_report_calc_dict[plate_analysed]["use"]:
-            ws.cell(column=-1 + indent_col, row=row_counter, value=plate_analysed).font = Font(b=True)
-            init_row = row_counter
-            init_col = indent_col
-            for state in all_data["calculations"][plate_analysed]:
 
-                # try:
-                #     self.plate_report_calc_dict[plate_analysed]["state"][state]
-                #     temp_name = "state"
-                # except KeyError:
-                #     temp_name = "calc"
-                # if self.plate_report_calc_dict[plate_analysed][temp_name][state]: #ToDo add settings again but needs all the stuff in there
-
-                if plate_analysed != "other":
+            if self.plate_report_calc_dict[plate_analysed]["use"]:
+                ws.cell(column=-1 + indent_col, row=row_counter, value=plate_analysed).font = Font(b=True)
+                initial_row = row_counter
+                init_col = indent_col
+                for state in all_data["calculations"][plate_analysed]:
                     if state != "other":
-                        ws.cell(column=init_col + 1, row=init_row, value=state).font = Font(b=True)
-                    for calc_index, calc in enumerate(all_data["calculations"][plate_analysed][state]):
+                        if plate_analysed != "other":
+                            ws.cell(column=init_col + 1, row=initial_row, value=state).font = Font(b=True)
 
-                        if calc not in calc_used:
-                            if calc != "S/B":
-                                ws.cell(column=init_col, row=temp_row_counter + 1, value=calc).font = Font(b=True)
-                                temp_row = temp_row_counter + 2
-                                temp_col = init_col
-                            else:
-                                ws.cell(column=temp_col, row=temp_row, value=calc).font = Font(b=True)
-                                ws.cell(column=temp_col + 1, row=temp_row,
-                                        value=all_data["calculations"][plate_analysed][state][calc])
-                                continue
-                            calc_used.append(calc)
+                            for calc_index, calc in enumerate(all_data["calculations"][plate_analysed][state]):
 
-                        ws.cell(column=init_col + 1, row=temp_row_counter + 1,
-                                value=all_data["calculations"][plate_analysed][state][calc])
-                        temp_row_counter += 1
-                # Writes other calculations that are for not calculated on a specific method,
-                # atm, that is only z-prime!
-                else:
-                    if self.plate_report_calc_dict[plate_analysed]["calc"]["z_prime"]:
-                        ws.cell(column=init_col, row=init_row, value=state).font = Font(b=True)
-                        ws.cell(column=init_col + 1, row=temp_row_counter,
-                                value=all_data["calculations"][plate_analysed][state])
-                        ws.cell(column=init_col, row=temp_row_counter + 1,
-                                value="calculated on normalized data")
+                                if self.plate_report_calc_dict[plate_analysed][calc]:
+                                    if calc not in calc_used:
+                                        if calc != "S/B":
+                                            ws.cell(column=init_col, row=temp_row_counter + 1, value=calc).font = Font(b=True)
+                                            temp_row = temp_row_counter + 2
+                                            temp_col = init_col
+                                        else:
+                                            ws.cell(column=temp_col, row=temp_row, value=calc).font = Font(b=True)
+                                            ws.cell(column=temp_col + 1, row=temp_row,
+                                                    value=all_data["calculations"][plate_analysed][state][calc])
+                                            continue
+                                        calc_used.append(calc)
 
-                init_col += 1
-                temp_row_counter = init_row
-                row_counter += 1
+                                    ws.cell(column=init_col + 1, row=temp_row_counter + 1,
+                                            value=all_data["calculations"][plate_analysed][state][calc])
+                                    temp_row_counter += 1
+                    # Writes other calculations that are for not calculated on a specific method,
+                    # atm, that is only z-prime!
+                        else:
+
+                            if self.plate_report_calc_dict[plate_analysed]["calc"]["z_prime"]:
+                                ws.cell(column=init_col, row=initial_row, value=state).font = Font(b=True)
+                                ws.cell(column=init_col + 1, row=temp_row_counter,
+                                        value=all_data["calculations"][plate_analysed][state])
+                                ws.cell(column=init_col, row=temp_row_counter + 1,
+                                        value="calculated on normalized data")
+
+                    init_col += 1
+                    temp_row_counter = initial_row
+                    row_counter += 1
             row_counter += 2
             if free_col < init_col:
                 free_col = init_col
@@ -362,18 +361,18 @@ class BIOAnalyser:
         free_col += 1
         return free_col
 
-    def _well_writer(self, ws, all_data, init_row, free_col, plate_name, bio_sample_dict):
+    def _well_writer(self, ws, all_data, initial_row, free_col, plate_name, bio_sample_dict):
         """
         Writes Well data from the different analysis method into the report sheet on the excel ark
 
-        :param wb: the excel ark / workbook
-        :type wb: openpyxl.workbook.workbook.Workbook
+        # :param wb: the excel ark / workbook
+        # :type wb: openpyxl.workbook.workbook.Workbook
         :param ws: The worksheet for the excel filere where the data is added
         :type ws: openpyxl.worksheet.worksheet.Worksheet
         :param all_data: A dict over all plate date. all the analysed data will be added to this dict
         :type all_data: dict
-        :param init_row: The first row to write data to.
-        :type init_row: int
+        :param initial_row: The first row to write data to.
+        :type initial_row: int
         :param plate_name: Name of the plate
         type plate_name: str
         :param bio_sample_dict: None or a dict of sample ide, per plate analysed
@@ -381,9 +380,17 @@ class BIOAnalyser:
         :return: All the wells writen in a list in the worksheet called: report
         """
         indent_col = free_col
-        row_counter = init_row
+        row_counter = initial_row
         added = False
         freq_data = {}
+
+        # if there are sample data, this initialises the database up.
+        if bio_sample_dict:
+            dbf = DataBaseFunctions(self.config)
+            table_name = "compound_mp"
+            barcode_name = "mp_barcode"
+            id_name = "mp_well"
+
         for plate_analysed in all_data["plates"]:
             freq_data[plate_analysed] = {"wells": [], "well_values": []}
             if self.well_states_report_method[plate_analysed]:
@@ -409,8 +416,15 @@ class BIOAnalyser:
                             freq_data[plate_analysed]["well_values"].append(well_value)
 
                             if bio_sample_dict:
-                                print(bio_sample_dict[plate_name])
-                                print(bio_sample_dict[plate_name][well])
+                                barcode = bio_sample_dict[plate_name][well]["source_plate"]
+                                id_number = bio_sample_dict[plate_name][well]["source_well"]
+                                sample_row = dbf.find_data(table_name, barcode, id_number, barcode_name, id_name)
+                                try:
+                                    sample_id = sample_row[0][3]
+                                except IndexError:
+                                    sample_id = "Not found"
+                                ws.cell(column=indent_col + 3, row=row_counter,
+                                        value=sample_id)
                             added = True
                             row_counter += 1
                     added = False
@@ -418,43 +432,9 @@ class BIOAnalyser:
                     indent_col += 4
                 else:
                     indent_col += 5
-                row_counter = init_row
+                row_counter = initial_row
         free_col = indent_col
         return freq_data, free_col
-
-    @staticmethod
-    def _frequency_writer(ws, freq_data, free_col, init_row, bin_min, bin_max, binwidth=5):
-        col = free_col
-
-        for data_set_headline, data_set in enumerate(freq_data):
-            if data_set == "pora":
-                row = init_row
-                # write headline:
-                ws.cell(column=col, row=row, value=data_set).font = Font(b=True)
-                ws.cell(column=col + 1, row=row, value="Bin Values").font = Font(b=True)
-                row += 1
-
-                # get data set out:
-                temp_data_set = freq_data[data_set]["well_values"]
-
-                # Sets bin range to be range of samples values
-                if bin_min == "data_set":
-                    bin_min = min(temp_data_set)
-                if bin_max == "data_set":
-                    bin_max = max(temp_data_set)
-
-                temp_list_1, temp_list_2 = \
-                    histogram(temp_data_set, bins=arange(bin_min, bin_max + binwidth, binwidth))
-
-                # temp_list_1, temp_list_2 = \
-                #     histogram(temp_data_set)
-
-                # write data points:
-                for data_point in range(len(temp_list_1)):
-                    ws.cell(column=col, row=row + data_point, value=temp_list_1[data_point])
-                    ws.cell(column=col + 1, row=row + data_point, value=temp_list_2[data_point])
-
-                col += 1
 
     def _report_writer_controller(self, wb, all_data, plate_name, bio_sample_dict):
         """
@@ -472,7 +452,7 @@ class BIOAnalyser:
             the analysis.
         """
 
-        init_row = 2
+        initial_row = 2
 
         try:
             ws_report = wb["Report"]
@@ -482,16 +462,25 @@ class BIOAnalyser:
             wb.remove_sheet(ws_report)
             ws_report = wb.create_sheet("Report")
 
-        free_col = self.cal_writer(ws_report, all_data, init_row)
-        freq_data, free_col = self._well_writer(ws_report, all_data, init_row, free_col, plate_name, bio_sample_dict)
+        free_col = self.cal_writer(ws_report, all_data, initial_row)
+        freq_data, free_col = self._well_writer(ws_report, all_data, initial_row, free_col, plate_name, bio_sample_dict)
 
         bin_min = 0
         bin_max = 150
-        binwidth = 5
+        bin_width = 5
+        include_outliers = self.config["Settings_bio"].getboolean("outliers")
 
-        self._frequency_writer(ws_report, freq_data, free_col, init_row, bin_min, bin_max, binwidth)
+        for data_set_headline, data_set in enumerate(freq_data):
+            if data_set == "pora":
+                # get data set out:
+                titel = "Frequency"
+                temp_data_set = freq_data[data_set]["well_values"]
+                free_col, data_location, category_location = \
+                    frequency_writer(ws_report, data_set, temp_data_set, free_col, initial_row, bin_min, bin_max, bin_width,
+                                           include_outliers)
+                bar_chart(ws_report, titel, free_col, initial_row, data_location, category_location)
 
-    def _excel_controller(self, all_data, well_row_col, pw_dict, bio_sample_dict):
+    def _excel_controller(self, all_data, well_row_col, pw_dict, bio_sample_dict, save_location):
         """
         Controls the flow for the data, to write into an excel file
 
@@ -503,6 +492,8 @@ class BIOAnalyser:
         :type pw_dict: dict
         :param bio_sample_dict: None or a dict of sample ide, per plate analysed
         :type bio_sample_dict: dict
+        :param save_location: where to save all the excel files
+        :type save_location: str
         :return: A modified excel file, with all the calculations and data added, depending on the analysis method used.
         """
         plate_name = self.ex_file.split("/")[-1].split(".")[0]
@@ -521,10 +512,11 @@ class BIOAnalyser:
             counter_row = self._write_plate(ws_data, counter_row, all_data, methode, well_row_col, pw_dict)
         self._report_writer_controller(wb, all_data, plate_name, bio_sample_dict)
 
-        wb.save(self.ex_file)
+        save_file = f"{save_location}/{plate_name}.xlsx"
+        wb.save(save_file)
 
     def bio_data_controller(self, ex_file, plate_layout, all_data, well_row_col, well_type, analysis, write_to_excel,
-                            bio_sample_dict):
+                            bio_sample_dict, save_location):
         """
         The control modul for the bio analysing
 
@@ -542,17 +534,18 @@ class BIOAnalyser:
         :type analysis: str
         :param bio_sample_dict: None or a dict of sample ide, per plate analysed
         :type bio_sample_dict: dict
+        :param save_location: where to save all the excel files
+        :type save_location: str
         :return: A dict over all plate date. all the analysed data will be added to this dict
         :rtype: dict
         """
-
 
         self.ex_file = ex_file
         self.plate = plate_layout
 
         all_data, pw_dict = self._data_converter(all_data, well_type)
         if write_to_excel:
-            self._excel_controller(all_data, well_row_col, pw_dict, bio_sample_dict)
+            self._excel_controller(all_data, well_row_col, pw_dict, bio_sample_dict, save_location)
 
         return all_data
 
@@ -567,10 +560,329 @@ if __name__ == "__main__":
     write_to_excel = True
     bio_sample_dict = None
 
+    config = configparser.ConfigParser()
+    config.read("config.ini")
 
+    bio_plate_report_setup = {
+        "well_states_report_method": {"original": config["Settings_bio"].
+            getboolean("well_states_report_method_original"),
+                                      "normalised": config["Settings_bio"].
+                                          getboolean("well_states_report_method_normalised"),
+                                      "pora": config["Settings_bio"].getboolean("well_states_report_method_pora"),
+                                      "pora_internal": config["Settings_bio"].
+                                          getboolean("well_states_report_method_pora_internal")},
+        "well_states_report": {'sample': config["Settings_bio"].getboolean("plate_report_well_states_report_sample"),
+                               'blank': config["Settings_bio"].getboolean("plate_report_well_states_report_blank"),
+                               'max': config["Settings_bio"].getboolean("plate_report_well_states_report_max"),
+                               'minimum': config["Settings_bio"].getboolean("plate_report_well_states_report_minimum"),
+                               'positive': config["Settings_bio"].getboolean("plate_report_well_states_report_positive")
+            ,
+                               'negative': config["Settings_bio"].getboolean("plate_report_well_states_report_negative")
+            ,
+                               'empty': config["Settings_bio"].getboolean("plate_report_well_states_report_empty")},
+        "calc_dict": {"original": {"use": config["Settings_bio"].getboolean("plate_report_calc_dict_original_use"),
+                                   "avg": config["Settings_bio"].getboolean("plate_report_calc_dict_original_avg"),
+                                   "stdev": config["Settings_bio"].getboolean("plate_report_calc_dict_original_stdev"),
+                                   "pstdev": config["Settings_bio"].getboolean(
+                                       "plate_report_calc_dict_original_pstdev"),
+                                   "pvariance": config["Settings_bio"].getboolean(
+                                       "plate_report_calc_dict_original_pvariance"),
+                                   "variance": config["Settings_bio"].getboolean(
+                                       "plate_report_calc_dict_original_variance"),
+                                   "st_dev_%": config["Settings_bio"].getboolean(
+                                       "plate_report_calc_dict_original_st_dev_%"),
+                                   "state": {"sample": config["Settings_bio"].
+                                       getboolean("plate_report_calc_dict_original_state_sample"),
+                                             "minimum": config["Settings_bio"].
+                                                 getboolean("plate_report_calc_dict_original_state_minimum"),
+                                             "max": config["Settings_bio"].
+                                                 getboolean("plate_report_calc_dict_original_state_max"),
+                                             "empty": config["Settings_bio"].
+                                                 getboolean("plate_report_calc_dict_original_state_empty"),
+                                             "negative": config["Settings_bio"].
+                                                 getboolean("plate_report_calc_dict_original_state_negative"),
+                                             "positive": config["Settings_bio"].
+                                                 getboolean("plate_report_calc_dict_original_state_positive"),
+                                             "blank": config["Settings_bio"].
+                                                 getboolean("plate_report_calc_dict_original_state_blank")}},
+                      "normalised": {"use": config["Settings_bio"].getboolean("plate_report_calc_dict_normalised_use"),
+                                     "avg": config["Settings_bio"].
+                                         getboolean("plate_report_calc_dict_normalised_avg"),
+                                     "stdev": config["Settings_bio"].
+                                         getboolean("plate_report_calc_dict_normalised_stdev"),
+                                     "pstdev": config["Settings_bio"].
+                                         getboolean("plate_report_calc_dict_normalised_pstdev"),
+                                     "pvariance": config["Settings_bio"].
+                                         getboolean("plate_report_calc_dict_normalised_pvariance"),
+                                     "variance": config["Settings_bio"].
+                                         getboolean("plate_report_calc_dict_normalised_variance"),
+                                     "st_dev_%": config["Settings_bio"].
+                                         getboolean("plate_report_calc_dict_normalised_st_dev_%"),
+                                     "state": {"sample": config["Settings_bio"].
+                                         getboolean("plate_report_calc_dict_normalised_"
+                                                    "state_sample"),
+                                               "minimum": config["Settings_bio"].
+                                                   getboolean("plate_report_calc_dict_normalised_"
+                                                              "state_minimum"),
+                                               "max": config["Settings_bio"].
+                                                   getboolean("plate_report_calc_dict_normalised_"
+                                                              "state_max"),
+                                               "empty": config["Settings_bio"].
+                                                   getboolean("plate_report_calc_dict_normalised_"
+                                                              "state_empty"),
+                                               "negative": config["Settings_bio"].
+                                                   getboolean("plate_report_calc_dict_normalised_"
+                                                              "state_negative"),
+                                               "positive": config["Settings_bio"].
+                                                   getboolean("plate_report_calc_dict_normalised_"
+                                                              "state_positive"),
+                                               "blank": config["Settings_bio"].
+                                                   getboolean("plate_report_calc_dict_normalised_"
+                                                              "state_blank")}},
+                      "pora": {"use": config["Settings_bio"].getboolean("plate_report_calc_dict_pora_use"),
+                               "avg": config["Settings_bio"].getboolean("plate_report_calc_dict_pora_avg"),
+                               "stdev": config["Settings_bio"].getboolean("plate_report_calc_dict_pora_stdev"),
+                               "pstdev": config["Settings_bio"].getboolean("plate_report_calc_dict_pora_pstdev"),
+                               "pvariance": config["Settings_bio"].getboolean("plate_report_calc_dict_pora_pvariance"),
+                               "variance": config["Settings_bio"].getboolean("plate_report_calc_dict_pora_variance"),
+                               "st_dev_%": config["Settings_bio"].getboolean("plate_report_calc_dict_pora_st_dev_%"),
+                               "state": {"sample": config["Settings_bio"].
+                                   getboolean("plate_report_calc_dict_pora_state_sample"),
+                                         "minimum": config["Settings_bio"].
+                                             getboolean("plate_report_calc_dict_pora_state_minimum"),
+                                         "max": config["Settings_bio"].getboolean(
+                                             "plate_report_calc_dict_pora_state_max"),
+                                         "empty": config["Settings_bio"].
+                                             getboolean("plate_report_calc_dict_pora_state_empty"),
+                                         "negative": config["Settings_bio"].
+                                             getboolean("plate_report_calc_dict_pora_state_negative"),
+                                         "positive": config["Settings_bio"].
+                                             getboolean("plate_report_calc_dict_pora_state_positive"),
+                                         "blank": config["Settings_bio"].
+                                             getboolean("plate_report_calc_dict_pora_state_blank")}},
+                      "pora_internal": {"use": config["Settings_bio"].
+                          getboolean("plate_report_calc_dict_pora_internal_use"),
+                                        "avg": config["Settings_bio"].
+                                            getboolean("plate_report_calc_dict_pora_internal_avg"),
+                                        "stdev": config["Settings_bio"].
+                                            getboolean("plate_report_calc_dict_pora_internal_stdev"),
+                                        "state": {"sample": config["Settings_bio"].
+                                            getboolean("plate_report_calc_dict_pora_internal_state_sample"),
+                                                  "minimum": config["Settings_bio"].
+                                                      getboolean("plate_report_calc_dict_pora_internal_state_minimum"),
+                                                  "max": config["Settings_bio"].
+                                                      getboolean("plate_report_calc_dict_pora_internal_state_max"),
+                                                  "empty": config["Settings_bio"].
+                                                      getboolean("plate_report_calc_dict_pora_internal_state_empty"),
+                                                  "negative": config["Settings_bio"].
+                                                      getboolean("plate_report_calc_dict_pora_internal_state_negative"),
+                                                  "positive": config["Settings_bio"].
+                                                      getboolean("plate_report_calc_dict_pora_internal_state_positive"),
+                                                  "blank": config["Settings_bio"].
+                                                      getboolean("plate_report_calc_dict_pora_internal_state_blank")}},
+                      "other": {"use": config["Settings_bio"].getboolean("plate_report_calc_dict_other_use"),
+                                "calc": {"z_prime": config["Settings_bio"].
+                                    getboolean("plate_report_calc_dict_other_calc_z_prime")}}},
+        "plate_calc_dict": {
+            "original": {"use": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_original_use"),
+                         "avg": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_original_avg"),
+                         "stdev": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_original_stdev"),
+                         "pstdev": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_original_pstdev"),
+                         "pvariance": config["Settings_bio"].getboolean(
+                             "plate_report_plate_calc_dict_original_pvariance"),
+                         "variance": config["Settings_bio"].getboolean(
+                             "plate_report_plate_calc_dict_original_variance"),
+                         "st_dev_%": config["Settings_bio"].getboolean(
+                             "plate_report_plate_calc_dict_original_st_dev_%"),
+                         "state": {"sample": config["Settings_bio"].
+                             getboolean("plate_report_plate_calc_dict_original_state_sample"),
+                                   "minimum": config["Settings_bio"].
+                                       getboolean("plate_report_plate_calc_dict_original_state_minimum"),
+                                   "max": config["Settings_bio"].
+                                       getboolean("plate_report_plate_calc_dict_original_state_max"),
+                                   "empty": config["Settings_bio"].
+                                       getboolean("plate_report_plate_calc_dict_original_state_empty"),
+                                   "negative": config["Settings_bio"].
+                                       getboolean("plate_report_plate_calc_dict_original_state_negative"),
+                                   "positive": config["Settings_bio"].
+                                       getboolean("plate_report_plate_calc_dict_original_state_positive"),
+                                   "blank": config["Settings_bio"].
+                                       getboolean("plate_report_plate_calc_dict_original_state_blank")}},
+            "normalised": {"use": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_normalised_use"),
+                           "avg": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_normalised_avg"),
+                           "stdev": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_normalised_stdev"),
+                           "pstdev": config["Settings_bio"].getboolean(
+                               "plate_report_plate_calc_dict_normalised_pstdev"),
+                           "pvariance": config["Settings_bio"].getboolean(
+                               "plate_report_plate_calc_dict_normalised_pvariance"),
+                           "variance": config["Settings_bio"].getboolean(
+                               "plate_report_plate_calc_dict_normalised_variance"),
+                           "st_dev_%": config["Settings_bio"].getboolean(
+                               "plate_report_plate_calc_dict_normalised_st_dev_%"),
+                           "state": {"sample": config["Settings_bio"].
+                               getboolean("plate_report_plate_calc_dict_normalised_state_sample"),
+                                     "minimum": config["Settings_bio"].
+                                         getboolean("plate_report_plate_calc_dict_normalised_state_minimum"),
+                                     "max": config["Settings_bio"].
+                                         getboolean("plate_report_plate_calc_dict_normalised_state_max"),
+                                     "empty": config["Settings_bio"].
+                                         getboolean("plate_report_plate_calc_dict_normalised_state_empty"),
+                                     "negative": config["Settings_bio"].
+                                         getboolean("plate_report_plate_calc_dict_normalised_state_negative"),
+                                     "positive": config["Settings_bio"].
+                                         getboolean("plate_report_plate_calc_dict_normalised_state_positive"),
+                                     "blank": config["Settings_bio"].
+                                         getboolean("plate_report_plate_calc_dict_normalised_state_blank")}},
+            "pora": {"use": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_pora_use"),
+                     "avg": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_pora_avg"),
+                     "stdev": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_pora_stdev"),
+                     "pstdev": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_pora_pstdev"),
+                     "pvariance": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_pora_pvariance"),
+                     "variance": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_pora_variance"),
+                     "st_dev_%": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_pora_st_dev_%"),
+                     "state": {"sample": config["Settings_bio"].
+                         getboolean("plate_report_plate_calc_dict_pora_state_sample"),
+                               "minimum": config["Settings_bio"].
+                                   getboolean("plate_report_plate_calc_dict_pora_state_minimum"),
+                               "max": config["Settings_bio"].
+                                   getboolean("plate_report_plate_calc_dict_pora_state_max"),
+                               "empty": config["Settings_bio"].
+                                   getboolean("plate_report_plate_calc_dict_pora_state_empty"),
+                               "negative": config["Settings_bio"].
+                                   getboolean("plate_report_plate_calc_dict_pora_state_negative"),
+                               "positive": config["Settings_bio"].
+                                   getboolean("plate_report_plate_calc_dict_pora_state_positive"),
+                               "blank": config["Settings_bio"].
+                                   getboolean("plate_report_plate_calc_dict_pora_state_blank")}},
+            "pora_internal": {"use": config["Settings_bio"].
+                getboolean("plate_report_plate_calc_dict_pora_internal_use"),
+                              "avg": config["Settings_bio"].
+                                  getboolean("plate_report_plate_calc_dict_pora_internal_avg"),
+                              "stdev": config["Settings_bio"].
+                                  getboolean("plate_report_plate_calc_dict_pora_internal_stdev"),
+                              "pstdev": config["Settings_bio"].
+                                  getboolean("plate_report_plate_calc_dict_pora_internal_pstdev"),
+                              "pvariance": config["Settings_bio"].
+                                  getboolean("plate_report_plate_calc_dict_pora_internal_pvariance"),
+                              "variance": config["Settings_bio"].
+                                  getboolean("plate_report_plate_calc_dict_pora_internal_variance"),
+                              "st_dev_%": config["Settings_bio"].
+                                  getboolean("plate_report_plate_calc_dict_pora_internal_st_dev_%"),
+                              "state": {"sample": config["Settings_bio"].
+                                  getboolean("plate_report_plate_calc_dict_pora_internal_state_sample"),
+                                        "minimum": config["Settings_bio"].
+                                            getboolean("plate_report_plate_calc_dict_pora_internal_state_minimum"),
+                                        "max": config["Settings_bio"].
+                                            getboolean("plate_report_plate_calc_dict_pora_internal_state_max"),
+                                        "empty": config["Settings_bio"].
+                                            getboolean("plate_report_plate_calc_dict_pora_internal_state_empty"),
+                                        "negative": config["Settings_bio"].
+                                            getboolean("plate_report_plate_calc_dict_pora_internal_state_negative"),
+                                        "positive": config["Settings_bio"].
+                                            getboolean("plate_report_plate_calc_dict_pora_internal_state_positive"),
+                                        "blank": config["Settings_bio"].
+                                            getboolean("plate_report_plate_calc_dict_pora_internal_state_blank")}},
+        },
+        "plate_analysis_dict": {"original": {"use": config["Settings_bio"].
+            getboolean("plate_report_plate_analysis_dict_original_use"),
+                                             "methode": org,
+                                             "state_map": config["Settings_bio"].
+                                                 getboolean("plate_report_plate_analysis_dict_original_state_map"),
+                                             "heatmap": config["Settings_bio"].
+                                                 getboolean("plate_report_plate_analysis_dict_original_heatmap"),
+                                             "hit_map": config["Settings_bio"].
+                                                 getboolean("plate_report_plate_analysis_dict_original_hit_map"),
+                                             "none": config["Settings_bio"].
+                                                 getboolean("plate_report_plate_analysis_dict_original_none")},
+                                "normalised": {"use": config["Settings_bio"].
+                                    getboolean("plate_report_plate_analysis_dict_normalised_use"),
+                                               "methode": norm,
+                                               "state_map": config["Settings_bio"].
+                                                   getboolean("plate_report_plate_analysis_dict_normalised_state_map"),
+                                               "heatmap": config["Settings_bio"].
+                                                   getboolean("plate_report_plate_analysis_dict_normalised_heatmap"),
+                                               "hit_map": config["Settings_bio"].
+                                                   getboolean("plate_report_plate_analysis_dict_normalised_hit_map"),
+                                               "none": config["Settings_bio"].
+                                                   getboolean("plate_report_plate_analysis_dict_normalised_none")},
+                                "pora": {"use": config["Settings_bio"].
+                                    getboolean("plate_report_plate_analysis_dict_pora_use"),
+                                         "methode": pora,
+                                         "state_map": config["Settings_bio"].
+                                             getboolean("plate_report_plate_analysis_dict_pora_state_map"),
+                                         "heatmap": config["Settings_bio"].
+                                             getboolean("plate_report_plate_analysis_dict_pora_heatmap"),
+                                         "hit_map": config["Settings_bio"].
+                                             getboolean("plate_report_plate_analysis_dict_pora_hit_map"),
+                                         "none": config["Settings_bio"].
+                                             getboolean("plate_report_plate_analysis_dict_pora_none")},
+                                "pora_internal": {"use": config["Settings_bio"].
+                                    getboolean("plate_report_plate_analysis_dict_pora_internal_use"),
+                                                  "methode": pora_internal,
+                                                  "state_map": config["Settings_bio"].
+                                                      getboolean(
+                                                      "plate_report_plate_analysis_dict_pora_internal_state_map")
+                                    ,
+                                                  "heatmap": config["Settings_bio"].
+                                                      getboolean(
+                                                      "plate_report_plate_analysis_dict_pora_internal_heatmap"),
+                                                  "hit_map": config["Settings_bio"].
+                                                      getboolean(
+                                                      "plate_report_plate_analysis_dict_pora_internal_hit_map"),
+                                                  "none": config["Settings_bio"].
+                                                      getboolean("plate_report_plate_analysis_dict_pora_internal_none")}
+                                },
+        "z_prime_calc": config["Settings_bio"].getboolean("plate_report_z_prime_calc"),
+        "heatmap_colours": {'low': config["Settings_bio"]["plate_report_heatmap_colours_low"],
+                            'mid': config["Settings_bio"]["plate_report_heatmap_colours_mid"],
+                            'high': config["Settings_bio"]["plate_report_heatmap_colours_high"]},
+        "pora_threshold": {"th_1": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_1_min"),
+                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_1_max"),
+                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_1_use")},
+                           "th_2": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_2_min"),
+                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_2_max"),
+                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_2_use")},
+                           "th_3": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_3_min"),
+                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_3_max"),
+                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_3_use")},
+                           "th_4": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_4_min"),
+                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_4_max"),
+                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_4_use")},
+                           "th_5": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_5_min"),
+                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_5_max"),
+                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_5_use")},
+                           "th_6": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_6_min"),
+                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_6_max"),
+                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_6_use")},
+                           "th_7": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_7_min"),
+                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_7_max"),
+                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_7_use")},
+                           "th_8": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_8_min"),
+                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_8_max"),
+                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_8_use")},
+                           "th_9": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_9_min"),
+                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_9_max"),
+                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_9_use")},
+                           "th_10": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_10_min"),
+                                     "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_10_max"),
+                                     "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_10_use")},
+                           "colour": {"th_1": config["Settings_bio"]["plate_report_pora_threshold_colour_th_1"],
+                                      "th_2": config["Settings_bio"]["plate_report_pora_threshold_colour_th_2"],
+                                      "th_3": config["Settings_bio"]["plate_report_pora_threshold_colour_th_3"],
+                                      "th_4": config["Settings_bio"]["plate_report_pora_threshold_colour_th_4"],
+                                      "th_5": config["Settings_bio"]["plate_report_pora_threshold_colour_th_5"],
+                                      "th_6": config["Settings_bio"]["plate_report_pora_threshold_colour_th_6"],
+                                      "th_7": config["Settings_bio"]["plate_report_pora_threshold_colour_th_7"],
+                                      "th_8": config["Settings_bio"]["plate_report_pora_threshold_colour_th_8"],
+                                      "th_9": config["Settings_bio"]["plate_report_pora_threshold_colour_th_9"],
+                                      "th_10": config["Settings_bio"]["plate_report_pora_threshold_colour_th_10"]}
+                           }
+    }
 
-    # bio_data_controller(ex_file, plate_layout, all_data, well_row_col, well_type, analysis, write_to_excel,
-    #                     bio_sample_dict)
+    bio = BIOAnalyser(config, bio_plate_report_setup)
+    save_location = "C:/Users/phch/Desktop/more_data_files"
+    bio.bio_data_controller(ex_file, plate_layout, all_data, well_row_col, well_type, analysis, write_to_excel,
+                            bio_sample_dict, save_location)
 
     all_data = {'plates': {'original': {
         'wells': {'A1': 0.0003, 'B1': 0.0001, 'C1': 0.0002, 'D1': 0.0001, 'E1': 0.0001, 'F1': 0.0, 'G1': 0.0003,
@@ -1041,5 +1353,5 @@ if __name__ == "__main__":
         'sample': {'avg': 75.11961722488039, 'stdev': 116.50289018026562, 'pstdev': 116.28369357936202,
                    'pvariance': 13521.89739245896, 'variance': 13572.923420355033, 'st_dev_%': 155.08983469857014},
         'other': {'S/B': 9.85162418487296e+16}}, 'other': {'z_prime': -5.2987535596580475}}}
-    init_row = 2
-    cal_writer(ws, all_data, init_row)
+    # initial_row = 2
+    # cal_writer(ws, all_data, initial_row)

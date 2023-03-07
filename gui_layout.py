@@ -224,7 +224,8 @@ class GUILayout:
                 [sg.InputText(key="-FINAL_BIO_NAME-", size=14), sg.InputText(key="-BIO_ASSAY_NAME-", size=14)],
                 [sg.T("Responsible:", size=12),
                  sg.DropDown(responsible, key="-BIO_RESPONSIBLE-", size=14)],
-                [sg.FileBrowse("Import Sample List", key="-BIO_SAMPLE_LIST-", target="-BIO_SAMPLE_LIST_TARGET-")],
+                [sg.Button("Select Worklist", key="-BIO_SELECT_WORKLIST-",
+                           tooltip="Use Control til select multiple files")],
                 [sg.T(key="-BIO_SAMPLE_LIST_TARGET-")]
             ])
         ]])
@@ -850,42 +851,43 @@ class GUILayout:
         col_hit_mapping = sg.Column([
             [sg.T("Hit-Map Settings", relief="groove")],
             [sg.HorizontalSeparator()],
-            [sg.T("Lower bound", size=10),
+            [sg.T("TH-1 bound", size=10),
              sg.InputText(key="-BIO_INFO_PORA_LOW_MIN_HIT_THRESHOLD-", size=8, enable_events=True,
-                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_low_min")),
+                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_1_min")),
              sg.InputText(key="-BIO_INFO_PORA_LOW_MAX_HIT_THRESHOLD-", size=8, enable_events=True,
-                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_low_max"))],
-            [sg.T("Middle bound", size=10),
+                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_1_max"))],
+            [sg.T("TH-2 bound", size=10),
              sg.InputText(key="-BIO_INFO_PORA_MID_MIN_HIT_THRESHOLD-", size=8, enable_events=True,
-                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_mid_min")),
+                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_2_min")),
              sg.InputText(key="-BIO_INFO_PORA_MID_MAX_HIT_THRESHOLD-", size=8, enable_events=True,
-                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_mid_max"))],
-            [sg.T("Higher bound", size=10),
+                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_2_max"))],
+            [sg.T("TH-3 bound", size=10),
              sg.InputText(key="-BIO_INFO_PORA_HIGH_MIN_HIT_THRESHOLD-", size=8, enable_events=True,
-                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_high_min")),
+                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_3_min")),
              sg.InputText(key="-BIO_INFO_PORA_HIGH_MAX_HIT_THRESHOLD-", size=8, enable_events=True,
-                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_high_max"))],
+                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_3_max"))],
 
-            [sg.ColorChooserButton("Low Values Colour", key="-INFO_BIO_HIT_MAP_LOW_COLOUR-", size=(15, None),
+            [sg.ColorChooserButton("TH-1 Values Colour", key="-INFO_BIO_HIT_MAP_LOW_COLOUR-", size=(15, None),
                                    target="-BIO_INFO_HIT_MAP_LOW_COLOUR_TARGET-"),
-             sg.T(background_color=self.config["Settings_bio"]["plate_report_pora_threshold_colour_low"]
+             sg.T(background_color=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_1"]
                   , key="-BIO_INFO_HIT_MAP_LOW_COLOUR_BOX-", size=8, relief="groove"),
              sg.Input(key="-BIO_INFO_HIT_MAP_LOW_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
-                      default_text=self.config["Settings_bio"]["plate_report_pora_threshold_colour_low"])],
+                      default_text=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_1"])],
 
-            [sg.ColorChooserButton("Mid Values Colour", key="-INFO_BIO_HIT_MAP_MID_COLOUR-", size=(15, None),
+            [sg.ColorChooserButton("TH-2 Values Colour", key="-INFO_BIO_HIT_MAP_MID_COLOUR-", size=(15, None),
                                    target="-BIO_INFO_HIT_MAP_MID_COLOUR_TARGET-"),
-             sg.T(background_color=self.config["Settings_bio"]["plate_report_pora_threshold_colour_mid"]
+             sg.T(background_color=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_2"]
                   , key="-BIO_INFO_HIT_MAP_MID_COLOUR_BOX-", size=8, relief="groove"),
              sg.Input(key="-BIO_INFO_HIT_MAP_MID_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
-                      default_text=self.config["Settings_bio"]["plate_report_pora_threshold_colour_mid"])],
+                      default_text=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_2"])],
 
-            [sg.ColorChooserButton("High Values Colour", key="-INFO_BIO_HIT_MAP_HIGH_COLOUR-", size=(15, None),
+            [sg.ColorChooserButton("TH-3 Values Colour", key="-INFO_BIO_HIT_MAP_HIGH_COLOUR-", size=(15, None),
                                    target="-BIO_INFO_HIT_MAP_HIGH_COLOUR_TARGET-"),
-             sg.T(background_color=self.config["Settings_bio"]["plate_report_pora_threshold_colour_high"]
+             sg.T(background_color=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_3"]
                   , key="-BIO_INFO_HIT_MAP_HIGH_COLOUR_BOX-", size=8, relief="groove"),
              sg.Input(key="-BIO_INFO_HIT_MAP_HIGH_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
-                      default_text=self.config["Settings_bio"]["plate_report_pora_threshold_colour_high"])],
+                      default_text=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_3"])],
+            [sg.Button("More bins", key="-BIO_INFO_BOUNDS_BUTTON-"), sg.Listbox(values=["1-bin", "2-bin"])]
             # [sg.T("Low Colour", size=10), sg.DropDown(colours, key="-INFO_BIO_Hit_LOW-", enable_events=True,
             #                                           default_value=self.config["Settings_bio"]
             #                                           ["plate_report_pora_threshold_colour_low"], size=14)],

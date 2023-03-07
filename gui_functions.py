@@ -8,13 +8,13 @@ import natsort
 from natsort import natsorted
 from os import mkdir
 
-
+from gui_popup import new_headlines_popup
 from csv_handler import CSVWriter, CSVConverter, CSVReader
 from lc_data_handler import LCMSHandler
 from database_handler import DataBaseFunctions
 from database_controller import FetchData, AddData
 from file_handler import get_file_list
-from bio_data_functions import original_data_dict, well_row_col_type
+from bio_data_functions import original_data_dict, well_row_col_type, txt_to_xlsx
 from bio_report_setup import bio_final_report_controller
 from bio_date_handler import BIOAnalyser
 from info import matrix_header
@@ -476,24 +476,38 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
     return well_dict, min_x, min_y, max_x, max_y
 
 
-def samples_from_echo_worklist(path):
-    if isdir(path):
-        file_list = get_file_list(path)
+def bio_compound_info_from_worklist(sg, bio_sample_list):
+    """
+    Gets a dictionary, with each Destination plate in a worklist as a key, and each well in the plate have a dictionary
+    with the source plate and source well. It is used to look up compounds in the database
+    :param sg:
+    :param bio_sample_list: A list of files
+    :type bio_sample_list: list
+    :return: a dict over destiantion plates with source plate and source well for each well in the destination plate
+    :rtype dict
+    """
+    right_headlines = ["source_plates", "destination_plates", "source_well", "destination_well"]
+    sample_dict = {}
+    for files in bio_sample_list:
+        new_headline = None
+        msg, file_headlines, sample_dict = CSVReader.echo_worklist_to_dict(files, right_headlines, new_headline,
+                                                                           sample_dict)
 
-    elif isfile(path):
-        file_list = [path]
-    else:
-        return None
-    new_headlines = None
-    plate_sample_dict = {}
-    for file in file_list:
-        plate_name = file.split("/")[-1].split(".")[0]
-        plate_sample_dict[plate_name], new_headlines = CSVReader.echo_worklist_to_dict(sg, file, new_headlines)
+        # if the file uses wrong names for the headlines, this will give a popup with the "wrong headlines" and an
+        # option to change them.
+        if msg == "Wrong headlines":
+            new_headline = new_headlines_popup(right_headlines, file_headlines)
+            msg, file_headlines, sample_dict = CSVReader.echo_worklist_to_dict(files, right_headlines, new_headline,
+                                                                               sample_dict)
+        elif msg == "Not a CSV file":
+            sg.popup_error("Wrong file fomate!!!")              # ToDo sort out this guard so it dose not crash.
+            continue
 
-    return plate_sample_dict
+    return sample_dict
 
 
-def bio_data(config, folder, plate_layout, bio_plate_report_setup, analysis, bio_sample_dict, write_to_excel=True):
+def bio_data(config, folder, plate_layout, bio_plate_report_setup, analysis, bio_sample_dict, save_location,
+             write_to_excel=True):
     """
     Handles the Bio data.
 
@@ -509,6 +523,8 @@ def bio_data(config, folder, plate_layout, bio_plate_report_setup, analysis, bio
     :type bio_sample_dict: dict
     :param analysis: The analysis method
     :type analysis: str
+    :param save_location: where to save all the excel files
+    :type save_location: str
     :return: All the data for the plates raw data, and their calculations
     :rtype: dict
     """
@@ -517,12 +533,16 @@ def bio_data(config, folder, plate_layout, bio_plate_report_setup, analysis, bio
     file_list = get_file_list(folder)
     all_plates_data = {}
     for files in file_list:
+        if isfile(files) and files.endswith(".txt"):
+            files = txt_to_xlsx(files)
         if isfile(files) and files.endswith(".xlsx"): #ToDo I needs to be able to deal with txt files at some point
             all_data, well_row_col, well_type, barcode, date = original_data_dict(files, plate_layout)
             if not all_data:
                 return False
+
             all_plates_data[barcode] = bioa.bio_data_controller(files, plate_layout, all_data, well_row_col, well_type,
-                                                                analysis, write_to_excel, bio_sample_dict)
+                                                                analysis, write_to_excel, bio_sample_dict,
+                                                                save_location)
         else:
             print(f"{files} is not the right formate")
     return True, all_plates_data, date
@@ -1062,9 +1082,11 @@ def purity_data_to_db(config, purity_data):
         update_database(temp_data_ditc, table, None, config)
     return batch_dict
 
+
 def get_number_of_rows(config, table):
     dbf = DataBaseFunctions(config)
     return dbf.number_of_rows(table)
+
 
 def purity_data_compounds_to_db(config, table_data):
 
@@ -1375,15 +1397,11 @@ def database_to_table(config, table, headings):
 
     return table_data
 
+
 if __name__ == "__main__":
-    ...
-    # file = "C:/Users/phch/PycharmProjects/LC_data/HTE_analysis_tool/HTE_analysis_tool/45.xlsx"
-    # sample_data = pd.read_excel(file, index_col=0)
-    # sample_data = sample_data.to_dict("index")
-    # uv_threshold = 10000
-    # rt_solvent_peak = 2
-    # ms_mode = "ms_neg"
-    # delta_mass = 0.1
-    # mz_threshold = 10000
-    #
-    # purity_ops(sample_data, purity_data, uv_threshold, rt_solvent_peak, ms_mode, delta_mass, mz_threshold)
+
+    sg = "hej"
+    csv_file = "C:/Users/phch/Desktop/more_data_files/50sets_picklist_updated_worklists_new.txt"
+    bio_sample_list = [csv_file]
+    sample_dict = bio_compound_info_from_worklist(sg, bio_sample_list)
+    print(sample_dict)
