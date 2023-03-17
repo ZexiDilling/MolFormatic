@@ -228,19 +228,73 @@ def purity_sample_layout_import(file, table_headings):
     return table_data
 
 
+def well_compound_list(file):
+    """
+    Takes excel file with wells in clm 1, compound name in clm 2, volume in clm 3 in uL and plate type in clm 4.
+    The name of the file, is the name of the plate
+    :param file: a file with data for a sourceplate with information about where compounds are placed
+    :type file: pathlib.WindowsPath
+    :return: compound_data - Data for what compound is in each well, based on excel files data.
+    :rtype: dict
+    """
+
+    compound_data = {}
+
+    plate_name = file.name
+    # compound_data_org = {}
+    plate_name = plate_name.replace("-", "_").removesuffix(".xlsx")
+    compound_data[plate_name] = {}
+    wb = load_workbook(filename=file)
+    ws = wb.active
+    for row, data in enumerate(ws):
+        if row != 0:
+
+            for col, cells in enumerate(data):
+
+                if col == 0:
+                    temp_well = cells.value
+                elif col == 1:
+                    temp_compound = cells.value.casefold()
+                elif col == 2:
+                    try:
+                        temp_volume = float(cells.value) * 1000
+                    except ValueError:
+                        return "Value_Error on volume column"
+                elif col == 3:
+                    temp_plate_type = cells.value.casefold()
+
+                    try:
+                        compound_data[plate_name][temp_compound]
+                    except KeyError:
+                        compound_data[plate_name][temp_compound] = {}
+
+                    compound_data[plate_name][temp_compound][temp_well] = {"volume": temp_volume,
+                                                                           "plate_type": temp_plate_type}
+
+    return compound_data
+
+
 if __name__ == "__main__":
 
-    file = "import/plate_dilution/The_form_we_send_out_to_ppl_with_a_name_that_make_sense.xlsx"
-    output = "save_plates"
-
+    # file = "import/plate_dilution/The_form_we_send_out_to_ppl_with_a_name_that_make_sense.xlsx"
+    # output = "save_plates"
+    #
     import configparser
     config = configparser.ConfigParser()
     config.read("config.ini")
 
-    # plate_dilution_write_vol_well_amount(config, file)
-    table_data = [[4036482914, 4036482914, "Found"], [4036482915, 4036482915, "Found"], ["test_1", "None", "Not in DB"],
-                  ["test_2", "None", "Not in DB"]]
-    headings = ["Old Name", "new Name", "DB info"]
+    print(config["plate_types_values"]["pp"].split(",")[0])
+    # # plate_dilution_write_vol_well_amount(config, file)
+    # table_data = [[4036482914, 4036482914, "Found"], [4036482915, 4036482915, "Found"], ["test_1", "None", "Not in DB"],
+    #               ["test_2", "None", "Not in DB"]]
+    # headings = ["Old Name", "new Name", "DB info"]
+    #
+    # file = purity_sample_layout_export(config, table_data, headings)
+    # # purity_sample_layout_import(file)
+    from pathlib import Path
 
-    file = purity_sample_layout_export(config, table_data, headings)
-    # purity_sample_layout_import(file)
+    file = Path(r"C:\Users\phch\Desktop\more_data_files\test_plate_layout.xlsx")
+    print(type(file))
+    test = well_compound_list(file)
+    print(test)
+    print(list(test.keys())[0])

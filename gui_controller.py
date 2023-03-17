@@ -2,10 +2,10 @@ import copy
 import os.path
 import configparser
 from time import sleep
+from pathlib import Path
 
 import PySimpleGUI
 import matplotlib.lines as lines
-import natsort
 from natsort import natsorted
 
 from gui_layout import GUILayout
@@ -823,7 +823,8 @@ def main(config):
                 # for finding sample info in the database.
                 if values["-BIO_COMPOUND_DATA-"]:
                     bio_sample_list = sg.popup_get_file("Please select worklist files", multiple_files=True)
-                    bio_sample_dict = bio_compound_info_from_worklist(config, bio_sample_list)
+                    bio_sample_list = bio_sample_list.split(";")
+                    bio_sample_dict = bio_compound_info_from_worklist(config, sg, bio_sample_list)
                 else:
                     bio_sample_dict = None
 
@@ -1355,6 +1356,145 @@ def main(config):
         if event == "-UPDATE_AUTO-":
             sg.PopupOKCancel("this is not working atm")
 
+        if event == "-TAB_GROUP_ONE-" and values["-TAB_GROUP_ONE-"] == "Worklist":
+            temp_mp_plates, _ = grab_table_data(config, "mp_plates", None)
+            worklist_mp_plates_list = []
+            for rows in temp_mp_plates:
+                worklist_mp_plates_list.append(rows[0])
+
+            # sortes the table
+            worklist_mp_plates_list = natsorted(worklist_mp_plates_list)
+
+            window["-WORKLIST_MP_LIST-"].update(values=worklist_mp_plates_list)
+            window["-WORKLIST_ASSAY_LIST-"].update(values=worklist_mp_plates_list)
+
+            temp_assay_list, _ = grab_table_data(config, "assay", None)
+
+        if event == "-WORKLIST_USE_POSITIVE_CONTROL-":
+            window["-WORKLIST_POSITIVE_CONTROL_ID-"].update(disabled=not values["-WORKLIST_USE_POSITIVE_CONTROL-"])
+
+        if event == "-WORKLIST_USE_NEGATIVE_CONTROL-":
+            window["-WORKLIST_NEGATIVE_CONTROL_ID-"].update(disabled=not values["-WORKLIST_USE_NEGATIVE_CONTROL-"])
+
+        if event == "-WORKLIST_GENERATE-":
+            if not values["-WORKLIST_PLATE_LAYOUT-"]:
+                sg.PopupError("Please select a plate layout")
+
+            elif not values["-WORKLIST_MP_LIST-"] and not values["-WORKLIST_USE_ALL_MOTHERPLATES-"]:
+                sg.PopupError("Please select witch MotherPlates to use")
+
+            elif not values["-WORKLIST_PLATE_AMOUNT-"]:
+                sg.PopupError("Please write how many plates are needed")
+
+            elif not values["-WORKLIST_INITIAL_PLATE-"]:
+                sg.PopupError("Please write what the starting number is")
+
+            elif not values["-WORKLIST_VOLUME-"]:
+                sg.PopupError("Please write how much volume is needed per plate")
+
+            elif values["-WORKLIST_USE_POSITIVE_CONTROL-"] and not values["-WORKLIST_POSITIVE_CONTROL_ID-"]:
+                sg.PopupError("Please write an ID for the Positive control.")
+
+            elif values["-WORKLIST_USE_NEGATIVE_CONTROL-"] and not values["-WORKLIST_NEGATIVE_CONTROL_ID-"]:
+                sg.PopupError("Please write an ID for the Negative control.")
+
+            elif values["-WORKLIST_USE_POSITIVE_CONTROL-"] and not values["-WORKLIST_CONTROL_LAYOUT-"]:
+                sg.PopupError("Please select a Plate Layout for the Positive control.")
+
+            elif values["-WORKLIST_USE_NEGATIVE_CONTROL-"] and not values["-WORKLIST_CONTROL_LAYOUT-"]:
+                sg.PopupError("Please select a Plate Layout for the Negative control.")
+
+            elif values["-WORKLIST_USE_BONUS_COMPOUND-"] and not values["-WORKLIST_BONUS_COMPOUND-"]:
+                sg.PopupError("Please write an ID for the Bonus Compound.")
+
+            elif values["-WORKLIST_USE_BONUS_COMPOUND-"] and not values["-WORKLIST_BONUS_MAX-"]\
+                or values["-WORKLIST_USE_BONUS_COMPOUND-"] and not values["-WORKLIST_BONUS_POSITIVE-"]\
+                or values["-WORKLIST_USE_BONUS_COMPOUND-"] and not values["-WORKLIST_BONUS_EMPTY-"]\
+                or values["-WORKLIST_USE_BONUS_COMPOUND-"] and not values["-WORKLIST_BONUS_MIN-"]\
+                or values["-WORKLIST_USE_BONUS_COMPOUND-"] and not values["-WORKLIST_BONUS_NEGATIVE-"]\
+                or values["-WORKLIST_USE_BONUS_COMPOUND-"] and not values["-WORKLIST_BONUS_BLANK-"]:
+                sg.PopupError("Please select minimum one Well states where the Bonus compounds should be added")
+            else:
+                if values["-WORKLIST_USE_ALL_MOTHERPLATES-"]:
+                    mps = worklist_mp_plates_list
+                else:
+                    mps = values["-WORKLIST_MP_LIST-"]
+
+                if not values["-WORKLIST_ASSAY_LIST-"]:
+                    assays = None
+                    mp_check = sg.PopupYesNo("Have any of the MotherPlates been used for for this production before?")
+                    if mp_check.casefold() == "yes":
+                        worklist = sg.popup_get_file("Please select worklist files", multiple_files=True)
+                        if worklist:
+                            worklist = worklist.split(";")
+                        else:
+                            worklist = "cancelled"
+                    else:
+                        worklist = None
+                else:
+                     worklist = None
+                     assays = values["-WORKLIST_ASSAY_LIST-"]
+                if worklist != "cancelled":
+                    plate_layout = archive_plates_dict[values["-WORKLIST_PLATE_LAYOUT-"]]
+
+                    if worklist:
+                        # Get data from the worklist, to see what plate and witch wells have been used before
+                        used_plate_well_dict = bio_compound_info_from_worklist(config, sg, worklist)
+                    elif assays:
+                        print("Find assay data")  # ToDo make this work
+                        used_plate_well_dict = None
+                    else:
+                        used_plate_well_dict = None
+
+                    if values["-WORKLIST_USE_POSITIVE_CONTROL-"] or values["-WORKLIST_USE_NEGATIVE_CONTROL-"]:
+                        use_control = True
+                    else:
+                        use_control = False
+
+                    if use_control:
+                        control_layout = Path(values["-WORKLIST_CONTROL_LAYOUT-"])
+
+                    else:
+                        control_layout = None
+
+                    control_samples = {"positive":
+                                           {"use": values["-WORKLIST_USE_POSITIVE_CONTROL-"],
+                                            "sample": values["-WORKLIST_POSITIVE_CONTROL_ID-"]},
+                                       "negative":
+                                           {"use": values["-WORKLIST_USE_NEGATIVE_CONTROL-"],
+                                            "sample": values["-WORKLIST_NEGATIVE_CONTROL_ID-"]}
+                                       }
+
+                    bonus_compound = {"sample_name": values["-WORKLIST_BONUS_COMPOUND-"].casefold(),
+                                      "max": values["-WORKLIST_BONUS_MAX-"],
+                                      "min": values["-WORKLIST_BONUS_MIN-"],
+                                      "positive": values["-WORKLIST_BONUS_POSITIVE-"],
+                                      "negative": values["-WORKLIST_BONUS_NEGATIVE-"],
+                                      "blank": values["-WORKLIST_BONUS_BLANK-"],
+                                      "empty": values["-WORKLIST_BONUS_EMPTY-"],
+                                      "sample": values["-WORKLIST_BONUS_SAMPLE-"]}
+
+
+                    worklist_analyse_method = values["-WORKLIST_ANALYSE_STYLE-"]
+                    sample_direction = values["-WORKLIST_DROPDOWN_SAMPLE_DIRECTION-"]
+
+                    assay_name = values["-WORKLIST_ASSAY_NAME-"]
+                    plate_amount = int(values["-WORKLIST_PLATE_AMOUNT-"])
+                    initial_plate = int(values["-WORKLIST_INITIAL_PLATE-"])
+                    volume = float(values["-WORKLIST_VOLUME-"])
+
+                    worklist_check = generate_worklist(config, plate_amount, mps, plate_layout, used_plate_well_dict,
+                                                       assay_name, initial_plate, volume, worklist_analyse_method,
+                                                       sample_direction, control_layout, control_samples,
+                                                       bonus_compound)
+
+                    if not worklist_check:
+                        sg.PopupError("Something crashed up")
+                    elif type(worklist_check) == str:
+                        sg.Popup(worklist_check)
+                    else:
+                        sg.Popup(f"Worklist have been created and saved here: {worklist_check}")
+
         #       WINDOW 1 - EXTRA            ###
         if event == "-PD_METHOD_DD-" and values["-PD_METHOD_DD-"] == "Generate":
             window["-PD_SAVE_PLATES-"].update(disabled=False)
@@ -1802,7 +1942,7 @@ def main(config):
                         output_folder = values["-SEARCH_OUTPUT_FOLDER-"]
                         mp_data = all_data["mp_data"]
 
-                        dp_creator(plate_layout, sample_amount, mp_data, transferee_volume, dp_name, output_folder)
+                        dp_creator(config, plate_layout, sample_amount, mp_data, transferee_volume, dp_name, output_folder)
 
                         file_location = f"{values['-SEARCH_OUTPUT_FOLDER-']}/dp_output/"
 
@@ -1937,6 +2077,7 @@ def main(config):
             # print(table_data)
 
             window["-BIO_EXP_TABLE-"].update(values=all_table_data["-BIO_EXP_TABLE-"])
+
         if event == "-TABLE_TAB_GRP-" and values["-TABLE_TAB_GRP-"] == "Bio Experiment table":
             temp_bio_exp_data, headlines = grab_table_data(config, "bio_experiment", None)
             bio_exp_data = []
@@ -1998,6 +2139,9 @@ def main(config):
             for rows in temp_mp_plates:
                 mp_plates_list.append(rows[0])
 
+            # sortes the table
+            mp_plates_list = natsorted(mp_plates_list)
+
             window["-PLATE_TABLE_BARCODE_LIST_BOX-"].update(values=mp_plates_list)
 
         if event == "-PLATE_TABLE_CLEAR-":
@@ -2010,6 +2154,9 @@ def main(config):
             mp_plates_list = []
             for rows in temp_mp_plates:
                 mp_plates_list.append(rows[0])
+
+            # sortes the table
+            mp_plates_list = natsorted(mp_plates_list)
 
             window["-PLATE_TABLE_BARCODE_LIST_BOX-"].update(values=mp_plates_list)
             window.Element("-PLATE_TABLE_TABLE-").Widget.configure(displaycolumns=plate_table_table_heading_mp)

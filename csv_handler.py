@@ -2,11 +2,13 @@ import csv
 from datetime import date
 from math import ceil
 import os
+from pathlib import Path
 
 import info
 from info import *
 from plate_formatting import mother_plate_generator as mpg
 from gui_popup import new_headlines_popup
+
 
 
 class CSVWriter:
@@ -145,7 +147,7 @@ class CSVWriter:
         # self.mp_to_pb_writer(path, pb_mp_output)
 
     @staticmethod
-    def dp_writer(dp_dict, path):
+    def dp_writer(config, dp_dict, path):
         """
         Writes CSV file for PlateButler protocol for producing DaughterPlates
 
@@ -165,7 +167,8 @@ class CSVWriter:
 
         with open(file_name, "w", newline="\n") as csv_file:
             csv_writer = csv.writer(csv_file, delimiter="\t")
-            csv_writer.writerow(["DestinationBarcode", "DestinationWell", "Volume", "SourceWell", "SourceBarcode", "CompoundID"])
+            headlines = [headlines for headlines in config["worklist_headlines"]]
+            csv_writer.writerow(headlines)
 
             for destination_plate in dp_dict:
 
@@ -204,7 +207,6 @@ class CSVWriter:
 
     @staticmethod
     def source_plate_dilution(sample_dict, output_folder):
-        print(sample_dict)
         try:
             os.mkdir(f"{output_folder}/plate_dilution_output")
         except OSError:
@@ -214,15 +216,14 @@ class CSVWriter:
         file_name = f"{path}/source_plate_dilution_{date.today()}.csv"
 
         with open(file_name, "w", newline="\n") as csv_file:
-            csv_writer = csv.writer(csv_file, delimiter="\t")
+            csv_writer = csv.writer(csv_file, delimiter=";")
             csv_writer.writerow(
-                ["Concentration", "DestinationBarcode", "DestinationWell", "CompoundID", "Volume", "SourceWell",
-                 "SourceBarcode", "SourPlateType"])
+                ["concentration", "destination_plates", "destination_well", "compound", "Volume", "source_well",
+                 "source_plates", "sour_plate_type"])
 
             for samples in sample_dict:
                 for dilution in sample_dict[samples]:
                     for counter in sample_dict[samples][dilution]:
-                        print(sample_dict[samples][dilution][counter])
                         conc = dilution
                         destination_barcode = sample_dict[samples][dilution][counter]["destination_well"]
                         destination_well = sample_dict[samples][dilution][counter]["destination_plate"]
@@ -234,22 +235,22 @@ class CSVWriter:
                         csv_writer.writerow([conc, destination_barcode, destination_well, compound_id, volume,
                                              source_well, source_barcode, sour_plate_type])
 
-
     @staticmethod
     def plate_dilution(sample_dict, output_folder):
 
+        path = f"{output_folder}/plate_dilution_output"
         try:
-            os.mkdir(f"{output_folder}/plate_dilution_output")
+            os.mkdir(path)
         except OSError:
             print("directory exist")
 
-        path = f"{output_folder}/plate_dilution_output"
+
         file_name = f"{path}/plate_dilution_{date.today()}.csv"
 
         with open(file_name, "w", newline="\n") as csv_file:
             csv_writer = csv.writer(csv_file, delimiter="\t")
-            csv_writer.writerow(["Concentration", "DestinationBarcode", "DestinationWell", "CompoundID", "Volume",
-                                 "SourceWell", "SourceBarcode", "SourPlateType"])
+            csv_writer.writerow(["concentration", "destination_plates", "destination_well", "compound", "Volume",
+                                 "source_well", "source_plates", "sour_plate_type"])
 
             for plate_replica in sample_dict:
                 if plate_replica != "other_state":
@@ -286,6 +287,133 @@ class CSVWriter:
 
                                 csv_writer.writerow([conc, destination_barcode, destination_well, compound_id, volume,
                                                      source_well, source_barcode, sour_plate_type])
+
+    @staticmethod
+    def worklist_writer(config, plate_layout, mps, free_well_dict, assay_name, plate_amount, initial_plate, volume,
+                        sample_direction, worklist_analyse_method, control_bonus_source, control_samples,
+                        bonus_compound):
+        """
+        Writes a worklist to use with plateButler
+        :param config: The config handler, with all the default information in the config file.
+        :type config: configparser.ConfigParser
+        :param plate_layout: The layout for the plate with values for each well, what state they are in
+        :type plate_layout: dict
+        :param mps: A list of MotherPlates
+        :type: mps: list
+        :param free_well_dict: A dict over the wells with compounds on motherplates that can be used
+        :type free_well_dict: dict
+        :param assay_name: the name of the assay, and the name used for the destination plate in the workinglist
+        :type assay_name: str
+        :param plate_amount: Number of plates to produce
+        :type plate_amount: int
+        :param initial_plate: the starting number of the plates
+        :type initial_plate: int
+        :param volume: How much volume to transfere to each well. The same amount of liquid will be transfered to each.
+        :type volume: int
+        :param sample_direction: The direction for the sample layout. Only relevant if the analyse_method differet from
+            "Single Point"
+        :type sample_direction: str
+        :param worklist_analyse_method: The method use for the sample layout.
+        :type worklist_analyse_method: str
+        :param control_bonus_source: The layout for where controls and bonus compounds are placed and the name for the
+        souceplate
+        :type control_bonus_source: dict or None
+        :param control_samples: A dict for samples for positive and negative control
+        :type: control_samples: None or dict
+        :param bonus_compound: If there are a compound that needs to be added to multiple well_states
+        :type bonus_compound: None or dict
+        :return:
+        """
+
+        if control_bonus_source:
+            source_plate_bonus = list(control_bonus_source.keys())[0]
+
+        mp_plate_counter = 0
+        mp_well_counter = 0
+
+        output_folder = Path(f'{config["output_folders"]["output"]}/worklist')
+        path = output_folder/assay_name
+        try:
+            os.mkdir(path)
+        except OSError:
+            print("directory exist")
+
+        headlines = [headlines for headlines in config["worklist_headlines"]]
+        temp_file_name = f"Worklist_{assay_name}_{initial_plate}_to_{plate_amount + initial_plate}"
+        file = path / f"{temp_file_name}.csv"
+        file_name_counter = 1
+        while file.exists():
+            file_name = f"{temp_file_name}_{file_name_counter}"
+            file = path / f"{file_name}.csv"
+            file_name_counter += 1
+
+        file.touch()
+        with open(file, "w", newline="\n") as csv_file:
+
+            csv_writer = csv.writer(csv_file, delimiter=";")
+            csv_writer.writerow(headlines)
+
+            for plate in range(plate_amount):
+                destination_plate = f"{assay_name}_{plate + initial_plate}"
+                for wells in plate_layout["well_layout"]:
+                    destination_well = plate_layout["well_layout"][wells]["well_id"]
+                    well_state = plate_layout["well_layout"][wells]["state"]
+
+                    # Check if the well is suppose to have samples in it, and if it does, add sample from MotherPlates
+                    if well_state == "sample":
+                        source_plate = mps[mp_plate_counter]
+                        source_well = free_well_dict[source_plate][mp_well_counter]
+
+                        # Writes the data to a CSV file
+                        csv_writer.writerow([destination_plate, destination_well, volume,
+                                             source_well, source_plate])
+
+                        # counts the well used in each motherplates. If there are no compounds left, it will jump to
+                        # the next MotherPlate.
+                        mp_well_counter += 1
+                        if mp_well_counter == len(free_well_dict[source_plate]):
+                            mp_plate_counter += 1
+                            mp_well_counter = 0
+                            if mp_plate_counter == len(mps):
+                                # If there are not enough compounds in the MotherPlates selected, it will close the file
+                                # delete the file, and inform the user.
+                                csv_file.close()
+                                file.unlink()
+                                return "Not Enough MotherPlates"
+
+                    elif well_state == "positive" or well_state == "negative":
+                        if control_samples[well_state]["use"]:
+                            control_compound = control_samples[well_state]["sample"]
+                            control_wells = control_bonus_source[source_plate_bonus][control_compound]
+                            for control_well in control_wells:
+                                dead_vol = \
+                                config["plate_types_values"][control_wells[control_well]["plate_type"]].split(",")[0]
+                                if control_wells[control_well]["volume"] >= dead_vol + volume:
+                                    source_well = bonus_wells
+                                    source_plate = source_plate_bonus
+                                    control_wells[control_well]["volume"] -= volume
+                                else:
+                                    return f"Not enough {control_compound} in {source_plate_bonus}"
+
+                                csv_writer.writerow([destination_plate, destination_well, volume,
+                                                     source_well, source_plate])
+
+                    # Check if there needs to be added an extra compound to a specific well-state:
+                    if bonus_compound[well_state]:
+                        bonus_wells = control_bonus_source[source_plate_bonus][bonus_compound["sample_name"]]
+                        for bonus_well in bonus_wells:
+                            dead_vol = config["plate_types_values"][bonus_wells[bonus_well]["plate_type"]].split(",")[0]
+                            if bonus_wells[bonus_well]["volume"] >= dead_vol + volume:
+                                source_well = bonus_wells
+                                source_plate = source_plate_bonus
+                                bonus_wells[bonus_well]["volume"] -= volume
+                            else:
+                                return f"Not enough {bonus_compound['sample_name']} in {source_plate_bonus}"
+
+                            csv_writer.writerow([destination_plate, destination_well, volume,
+                                                 source_well, source_plate])
+
+        return file
 
 
 class CSVReader:
@@ -494,11 +622,10 @@ class CSVReader:
         return temp_dict
 
     @staticmethod
-    def echo_worklist_to_dict(csv_file, right_headlines, new_headline, sample_dict):
+    def echo_worklist_to_dict(config, csv_file, right_headlines, new_headline, sample_dict):
 
         splitter = [";", ",", "."]
         split_indicator = 0
-
         with open(csv_file) as file:
             for index, lines in enumerate(file):
                 lines = lines.removesuffix("\n")
@@ -511,9 +638,8 @@ class CSVReader:
                         headlines = lines.split(splitter[split_indicator])
                         if split_indicator > len(splitter):
                             return "Not a CSV file", headlines, sample_dict
-
                     # Check if the headlines for the CSV file is correct, if not sends it back to be corrected
-                    if  not new_headline:
+                    if not new_headline:
                         for right_headline in right_headlines:
                             if right_headline not in headlines:
                                 return "Wrong headlines", headlines, sample_dict
@@ -521,14 +647,14 @@ class CSVReader:
                     for headline_index, headline in enumerate(headlines):
                         if new_headline:
                             headline = new_headline[headline]
-                        print(headline)
-                        if headline == right_headlines[0]:
+
+                        if headline == config["worklist_headlines"]["source_plates"]:
                             source_plates_index = headline_index
-                        elif headline == right_headlines[1]:
+                        elif headline == config["worklist_headlines"]["destination_plates"]:
                             destination_plates_index = headline_index
-                        elif headline == right_headlines[2]:
+                        elif headline == config["worklist_headlines"]["source_well"]:
                             source_well_index = headline_index
-                        elif headline == right_headlines[3]:
+                        elif headline == config["worklist_headlines"]["destination_well"]:
                             destination_well_index = headline_index
                 else:
                     line = lines.split(splitter[split_indicator])
@@ -546,7 +672,7 @@ class CSVReader:
                     except KeyError:
                         sample_dict[temp_destination_plate] = {}
                         sample_dict[temp_destination_plate][temp_destination_well] = {"source_plate": temp_source_plate,
-                                                                                     "source_well": temp_source_well}
+                                                                                      "source_well": temp_source_well}
                     else:
                         sample_dict[temp_destination_plate][temp_destination_well] = {"source_plate": temp_source_plate,
                                                                                       "source_well": temp_source_well}

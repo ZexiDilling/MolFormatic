@@ -334,10 +334,11 @@ def ms_raw_name_guard(raw_data_samples, excel_data_samples, db_data, config):
 
 
 def _new_headlines_layout(table_data, headings):
-    raw_table_col = sg.Frame("Headlines", [[
+    raw_table_col = sg.Frame("Please select new headlines", [[
         sg.Column([
             [sg.Table(values=table_data, headings=headings,
-                      key="-POP_HEADLINE_TABLE-", enable_events=True, enable_click_events=True)]
+                      key="-POP_HEADLINE_TABLE-", enable_events=True, enable_click_events=True,
+                      tooltip='double click to select a new headline in the "NEW headline" column ')]
         ])
     ]])
 
@@ -379,7 +380,6 @@ def new_headlines_popup(right_headlines, wrong_headlines):
             # check if there are duplicates
             flag = False
             hash_val = dict()
-            print(new_headlines)
             for keys in new_headlines:
                 if new_headlines[keys] in hash_val:
                     flag = True
@@ -389,8 +389,8 @@ def new_headlines_popup(right_headlines, wrong_headlines):
             if flag:
                 sg.popup_error("There are repeated values, please try again")
             else:
-                return new_headlines
                 window.close()
+                return new_headlines
 
         if event == "-POP_HEADLINE_TABLE-+-double click-":
             try:

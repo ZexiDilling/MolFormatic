@@ -9,6 +9,7 @@ class GUILayout:
         self.button_height = 1
         self.tab_colour = config["GUI"]["tab_colour"]
         self.plate_list = plate_list
+        self.analyse_style = ["Single Point", "Duplicate", "Triplicate", "Custom", "Dose Response"]
 
     @staticmethod
     def menu_top():
@@ -173,7 +174,7 @@ class GUILayout:
         # Colours for the heatmap, if added back in
         # colours = [keys for keys in list(self.config["colours to hex"].keys())]
 
-        sample_type = ["single point", "duplicate", "triplicate"]
+        sample_type = self.analyse_style
 
         col_bio_analysis = sg.Frame("Analyse setup", [[
             sg.Column([
@@ -220,8 +221,12 @@ class GUILayout:
                  sg.Checkbox("Add To Database", key="-BIO_EXPERIMENT_ADD_TO_DATABASE-", enable_events=True)],
                 [sg.Checkbox("Add Compound Info To Final Report", key="-BIO_FINAL_REPORT_ADD_COMPOUNDS-",
                              enable_events=True)],
-                [sg.T("Report Name", size=12), sg.T("Assay Name", size=14)],
-                [sg.InputText(key="-FINAL_BIO_NAME-", size=14), sg.InputText(key="-BIO_ASSAY_NAME-", size=14)],
+                [sg.T("Report Name", size=12), sg.T("New Assay", size=14), sg.T("Old Assay", size=14)],
+                [sg.InputText(key="-FINAL_BIO_NAME-", size=14, tooltip="The Name the final report will be saved as"),
+                 sg.InputText(key="-BIO_ASSAY_NAME-", size=14,
+                              tooltip="The assay name the analyse will saved under in the database"),
+                 sg.DropDown(values=[], key="-BIO_ASSAY_LIST_DROPDOWN-",
+                             tooltip="If you want to add new data to an assay that have been run before")],
                 [sg.T("Responsible:", size=12),
                  sg.DropDown(responsible, key="-BIO_RESPONSIBLE-", size=14)],
                 [sg.Button("Select Worklist", key="-BIO_SELECT_WORKLIST-",
@@ -336,7 +341,7 @@ class GUILayout:
             color_select[keys] = self.config["plate_colouring"][keys]
 
         plate_type = ["plate_96", "plate_384", "plate_1536"]
-        sample_type = ["single point", "duplicate", "triplicate"]
+        sample_type = self.analyse_style
 
 
         col_graph = sg.Frame("Plate Layout", [[
@@ -400,25 +405,101 @@ class GUILayout:
         return layout
 
     def set_1_worklist(self):
-
-        col_ms_buttons = sg.Frame("Echo", [[
+        text_size_short = 10
+        text_size_long = 14
+        input_size_short = 5
+        input_size_long = 10
+        
+        dropdown_size = 13
+        col_basic_setup = sg.Frame("Setup", [[
             sg.Column([
-                [sg.Text("Plate Layout", size=self.standard_size),
-                 sg.DropDown(sorted(self.plate_list), key="-BIO_PLATE_LAYOUT-", enable_events=True,
-                             size=self.standard_size)],
-                [sg.Button("Generate", key="-WORKLIST_GENERATE-")]
+                [sg.T("Assay Name:", size=text_size_short),
+                 sg.InputText(key="-WORKLIST_ASSAY_NAME-", size=input_size_long,
+                              tooltip="The name of the assay. "
+                                      "Will be used for destination plate names, and folder name")],
+                [sg.Text("Plate Amount:", size=text_size_short),
+                 sg.InputText(key="-WORKLIST_PLATE_AMOUNT-", size=input_size_short,
+                              tooltip="How many Destination plates should there be. "
+                                      "This do not take into account the initial plate value")],
+                [sg.T("Initial Plate:", size=text_size_short),
+                 sg.InputText(key="-WORKLIST_INITIAL_PLATE-", size=input_size_short, default_text="1",
+                              tooltip="What number should the Destination Plate start at for this worklist")],
+                [sg.T("Volume:", size=text_size_short),
+                 sg.InputText(key="-WORKLIST_VOLUME-", size=input_size_short,
+                              tooltip="How much volume needs to be added to each well, in nL")],
+                [sg.Text("Plate Layout:", size=text_size_short),
+                 sg.DropDown(sorted(self.plate_list), key="-WORKLIST_PLATE_LAYOUT-", size=dropdown_size,
+                             tooltip="What layout to use. Check under Bio Data or Plate Layout to see what "
+                                     "state each well is in")],
+                [sg.Button("Generate", key="-WORKLIST_GENERATE-", tooltip="This will generate the worklist")]
+            ])
+        ]])
+
+        worklist_analyse_style = self.analyse_style
+        sample_directions = ["Vertical", "Horizontale"]
+        col_advance_setup = sg.Frame("Extra settings", [[
+            sg.Column([
+                [sg.T("Analyse Style", size=text_size_long),
+                 sg.DropDown(values=worklist_analyse_style, key="-WORKLIST_ANALYSE_STYLE-", size=dropdown_size,
+                             default_value=worklist_analyse_style[0],
+                             tooltip="This determines how many wells each compounds goes to."
+                                     "Using custom will give you options to chose any number.")],
+                [sg.Text("Sample Direction", size=text_size_long),
+                 sg.DropDown(values=sample_directions, default_value=sample_directions[0], size=dropdown_size,
+                             key="-WORKLIST_DROPDOWN_SAMPLE_DIRECTION-")],
+                [sg.Checkbox("Use Positive Control?", key="-WORKLIST_USE_POSITIVE_CONTROL-", enable_events=True)],
+                [sg.T("Positive Control ID:", size=text_size_long),
+                 sg.InputText(key="-WORKLIST_POSITIVE_CONTROL_ID-", size=input_size_long, disabled=True,
+                              tooltip="Use the ID for compound. "
+                                      "The ID should fit with the naming scheme in the Plate Layout file")],
+                [sg.Checkbox("Use Negative Control?", key="-WORKLIST_USE_NEGATIVE_CONTROL-", enable_events=True)],
+                [sg.T("Positive Control ID:", size=text_size_long),
+                 sg.InputText(key="-WORKLIST_NEGATIVE_CONTROL_ID-", size=input_size_long, disabled=True,
+                              tooltip="Use the ID for compound. "
+                                      "The ID should fit with the naming scheme in the Plate Layout file")],
+                [sg.Checkbox("Use Bonus Compound", key="-WORKLIST_USE_BONUS_COMPOUND-", enable_events=True,
+                             tooltip="This will add this compound to all selected well states"),
+                 sg.Text("Compound Name:", size=text_size_short)],
+                [sg.InputText(key="-WORKLIST_BONUS_COMPOUND-", size=input_size_long, disabled=True,
+                              tooltip="Name Needs to fit with a name in the Control Layout.")],
+                [sg.Checkbox("Max", key="-WORKLIST_BONUS_MAX-"),
+                 sg.Checkbox("Positive", key="-WORKLIST_BONUS_POSITIVE-"),
+                 sg.Checkbox("Empty", key="-WORKLIST_BONUS_EMPTY-")],
+                [sg.Checkbox("Min", key="-WORKLIST_BONUS_MIN-"),
+                 sg.Checkbox("Negative", key="-WORKLIST_BONUS_NEGATIVE-"),
+                 sg.Checkbox("Blank", key="-WORKLIST_BONUS_BLANK-"),
+                 sg.Checkbox("Sample", key="-WORKLIST_BONUS_SAMPLE-")],
+                [sg.FileBrowse("Control Layout", target="-WORKLIST_CONTROL_LAYOUT_TARGET-",
+                               key="-WORKLIST_CONTROL_LAYOUT-",
+                               tooltip="Choose a Plate Layout where the controls are located. "
+                                   "It should be either CSV formate or excel."),
+                 sg.T(key="-WORKLIST_CONTROL_LAYOUT_TARGET-", visible=False)]
             ])
         ]])
 
         motherplates=[]
 
-        col_ms_settings = sg.Frame("Mother Plates", [[
+        col_mp_settings = sg.Frame("Mother Plates to use", [[
             sg.Column([
-                [sg.Listbox(values=motherplates, key="-WORKLIST_MP_LIST-", select_mode="LISTBOX_SELECT_MODE_MULTIPLE")]
+                [sg.Listbox(values=motherplates, key="-WORKLIST_MP_LIST-", size=(15, 7),
+                            select_mode=sg.LISTBOX_SELECT_MODE_MULTIPLE,
+                            tooltip="Multiple plates can be selected")],
+                [sg.Checkbox("Use all", key="-WORKLIST_USE_ALL_MOTHERPLATES-",
+                             tooltip="Will use as many MP as needed, in order. Will compare to previous worklist, "
+                                     "and skipp any duplicated compounds.")]
             ])
         ]])
 
-        layout = [sg.vtop([col_ms_buttons, col_ms_settings])]
+        col_assay_settings = sg.Frame("Previuse assays", [[
+            sg.Column([
+                [sg.Listbox(values=motherplates, key="-WORKLIST_ASSAY_LIST-", size=(15, 7),
+                            select_mode=sg.LISTBOX_SELECT_MODE_MULTIPLE,
+                            tooltip='Multiple plates can be selected')],
+                [sg.DropDown(values=[], key="-WORKLIST_ASSAY_LIST_DROPDOWN-", size=dropdown_size)]
+            ])
+        ]])
+
+        layout = [sg.vtop([col_basic_setup, col_advance_setup, col_mp_settings, col_assay_settings])]
 
         return layout
 
@@ -1281,7 +1362,8 @@ class GUILayout:
         layout = [sg.vtop([col_table, col_search])]
         return layout
 
-    def setup_table_lc_experiment(self):
+    @staticmethod
+    def setup_table_lc_experiment():
         """
 
         :return: A layout for the compound experiment-module in the table box
@@ -1317,7 +1399,8 @@ class GUILayout:
         layout = [sg.vtop([col_table, col_search])]
         return layout
 
-    def setup_table_plate(self):
+    @staticmethod
+    def setup_table_plate():
         """
 
         :return: A layout for the plate table-module in the table box
@@ -1377,11 +1460,12 @@ class GUILayout:
         tab_1_purity_data = sg.Tab("purity data", self.setup_1_purity())
         tab_1_plate_layout = sg.Tab("Plate layout", self.setup_1_plate_layout())
         tab_1_add = sg.Tab("Update", self.setup_1_update())
+        tab_1_worklist = sg.Tab("Worklist", self.set_1_worklist())
         tab_1_extra = sg.Tab("Extra", self.setup_1_extra())
         tab_1_sim = sg.Tab("Sim", self.setup_1_simulator())
 
-        tab_group_1_list = [tab_1_search, tab_1_bio_data, tab_1_purity_data, tab_1_plate_layout, tab_1_add, tab_1_extra,
-                            tab_1_sim]
+        tab_group_1_list = [tab_1_search, tab_1_bio_data, tab_1_purity_data, tab_1_plate_layout, tab_1_add,
+                            tab_1_worklist, tab_1_extra, tab_1_sim]
 
         return [[sg.TabGroup([tab_group_1_list], selected_background_color=self.tab_colour, key="-TAB_GROUP_ONE-",
                              enable_events=True)]]

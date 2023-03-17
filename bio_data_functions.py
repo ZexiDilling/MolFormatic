@@ -323,7 +323,7 @@ def frequency_writer(ws, headline, data_set, free_col, initial_row, bin_min, bin
 
 
     # Setup a hist for values below bin_min
-    if data_bin_min:
+    if data_bin_min < bin_min:
         bin_min_width = bin_min - data_bin_min
         min_hist_list_1, min_hist_list_2 = histogram(data_set, bins=arange(data_bin_min, bin_min +
                                                                                 bin_width, bin_min_width))
@@ -344,12 +344,10 @@ def frequency_writer(ws, headline, data_set, free_col, initial_row, bin_min, bin
         ws.cell(column=col + 1, row=row + data_point + bin_min_seperator, value=temp_list_2[data_point])
 
     # Setup a hist for values above bin_max
-    if data_bin_max:
+    if data_bin_max > bin_max:
         bin_max_width = data_bin_max - bin_max
         max_hist_list_1, max_hist_list_2 = histogram(data_set, bins=arange(bin_max, data_bin_max +
                                                                  bin_width, bin_max_width))
-
-        bin_max_seperator = 1
 
         ws.cell(column=col, row=row + data_point + bin_min_seperator + bin_max_seperator
                 , value=max_hist_list_1[0])
@@ -369,9 +367,7 @@ def frequency_writer(ws, headline, data_set, free_col, initial_row, bin_min, bin
                          "max_col": free_col, "max_row": max_row}
         category_location = {"min_col": col, "min_row": initial_row,
                              "max_col": col, "max_row": max_row}
-    print(data_location)
-    print(category_location)
-    print("------------")
+
 
     return col, data_location, category_location
 

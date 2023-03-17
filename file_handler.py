@@ -14,8 +14,7 @@ def get_file_list(path):
     """
     file_list = _folder_scan(path)
     # file_list = [f"{path}/{files}" for files in os.listdir(path)]
-    file_list = natsorted(file_list)
-    print(file_list)
+
     return file_list
 
 
