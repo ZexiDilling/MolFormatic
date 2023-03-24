@@ -237,6 +237,7 @@ class DataBaseFunctions:
         self.conn = sqlite3.connect(self.database)
         self.conn.execute("PRAGMA foreign_keys = 1")
         self.cursor = self.conn.cursor()
+        # NEEDS TO BE ACTIVE AT STARTUP
         # return self.conn
 
     def list_of_all_tables(self):

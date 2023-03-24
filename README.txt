@@ -1,5 +1,4 @@
 # SCore_datahandler
-#### Video Demo:  https://youtu.be/w2VdWgn_ZQw
 #### Description:
 
 This project is a back-end for a database system, with some function for supporting a assay production and data handling. 
