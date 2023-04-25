@@ -426,7 +426,7 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
                 well_state = well_data_dict[well_id]["state"]
                 fill_colour = config["plate_colouring"][well_state]
 
-            if sample_layout and sample_layout != "single point":
+            if sample_layout and sample_layout.casefold() != "single point":
                 if well_state == "sample":
                     sample_counter += 1
                     temp_colour = group % 200
@@ -1502,7 +1502,7 @@ def generate_worklist(config, plate_amount, mps, plate_layout, used_plate_well_d
     :param initial_plate: the starting number of the plates
     :type initial_plate: int
     :param volume: How much volume to transfere to each well. The same amount of liquid will be transfered to each.
-    :type volume: int
+    :type volume: float
     :param worklist_analyse_method: The method use for the sample layout.
     :type worklist_analyse_method: str
     :param sample_direction: The direction for the sample layout. Only relevant if the analyse_method differ from
@@ -1516,7 +1516,6 @@ def generate_worklist(config, plate_amount, mps, plate_layout, used_plate_well_d
     :type bonus_compound: dict
     :return:
     """
-    print(type(control_layout))
     if used_plate_well_dict:
         motherplate_dict = _get_motherplates_with_wells_from_worklist_dict(used_plate_well_dict)
     else:
@@ -1530,14 +1529,11 @@ def generate_worklist(config, plate_amount, mps, plate_layout, used_plate_well_d
         if type(control_bonus_source) == str:
             return control_bonus_source
     elif control_layout.suffix == ".txt":
-        pass
+        pass            # ToDo add these ?
     elif control_layout.suffix == ".csv":
-        pass
+        pass            # ToDo add these ?
     else:
         return "error: wrong file format for Control Layout"
-
-    print(control_bonus_source)
-
     # destination_dict = _from_plate_layout_to_destination_dict(plate_layout, assay_name, plate_amount, initial_plate)
     csv_w = CSVWriter()
     msg = csv_w.worklist_writer(config, plate_layout, mps, free_well_dict, assay_name, plate_amount, initial_plate,

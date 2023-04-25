@@ -332,6 +332,11 @@ class CSVWriter:
         mp_well_counter = 0
 
         output_folder = Path(f'{config["output_folders"]["output"]}/worklist')
+        try:
+            os.mkdir(output_folder)
+        except OSError:
+            print("directory exist")
+
         path = output_folder/assay_name
         try:
             os.mkdir(path)
@@ -381,35 +386,33 @@ class CSVWriter:
                                 file.unlink()
                                 return "Not Enough MotherPlates"
 
-                    elif well_state == "positive" or well_state == "negative":
-                        if control_samples[well_state]["use"]:
-                            control_compound = control_samples[well_state]["sample"]
-                            control_wells = control_bonus_source[source_plate_bonus][control_compound]
-                            for control_well in control_wells:
-                                dead_vol = \
-                                config["plate_types_values"][control_wells[control_well]["plate_type"]].split(",")[0]
-                                if control_wells[control_well]["volume"] >= dead_vol + volume:
-                                    source_well = bonus_wells
-                                    source_plate = source_plate_bonus
-                                    control_wells[control_well]["volume"] -= volume
+                    else:
+                        if control_samples[well_state]["use"] or bonus_compound[well_state]:
+                            try:
+                                control_compound = control_bonus_source[well_state]["compound"]
+                            except KeyError:
+                                control_compound = control_bonus_source["bonus"]["compound"]
+                                well_state = "bonus"
+
+                            temp_plate_type = control_bonus_source[well_state]["plate_type"]
+                            temp_barcode = control_bonus_source[well_state]["barcode"]
+                            dead_vol = \
+                                config["plate_types_values"][temp_plate_type].split(",")[0]
+                            dead_vol = float(dead_vol)
+                            got_compound = True
+                            for well in control_bonus_source[well_state]["well_vol"]:
+                                if control_bonus_source[well_state]["well_vol"][well] >= dead_vol + volume:
+                                    source_well = well
+                                    source_plate = temp_barcode
+                                    control_bonus_source[well_state]["well_vol"][well] -= volume
+                                    got_compound = True
+                                    break
                                 else:
-                                    return f"Not enough {control_compound} in {source_plate_bonus}"
-
-                                csv_writer.writerow([destination_plate, destination_well, volume,
-                                                     source_well, source_plate])
-
-                    # Check if there needs to be added an extra compound to a specific well-state:
-                    if bonus_compound[well_state]:
-                        bonus_wells = control_bonus_source[source_plate_bonus][bonus_compound["sample_name"]]
-                        for bonus_well in bonus_wells:
-                            dead_vol = config["plate_types_values"][bonus_wells[bonus_well]["plate_type"]].split(",")[0]
-                            if bonus_wells[bonus_well]["volume"] >= dead_vol + volume:
-                                source_well = bonus_wells
-                                source_plate = source_plate_bonus
-                                bonus_wells[bonus_well]["volume"] -= volume
-                            else:
-                                return f"Not enough {bonus_compound['sample_name']} in {source_plate_bonus}"
-
+                                    source_well = f"Missing volume for {well_state}"
+                                    source_plate = temp_barcode
+                                    got_compound = False
+                            if not got_compound:
+                                print(f"Missing compound for {well_state}")
                             csv_writer.writerow([destination_plate, destination_well, volume,
                                                  source_well, source_plate])
 

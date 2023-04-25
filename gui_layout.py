@@ -458,9 +458,9 @@ class GUILayout:
                               tooltip="Use the ID for compound. "
                                       "The ID should fit with the naming scheme in the Plate Layout file")],
                 [sg.Checkbox("Use Bonus Compound", key="-WORKLIST_USE_BONUS_COMPOUND-", enable_events=True,
-                             tooltip="This will add this compound to all selected well states"),
-                 sg.Text("Compound Name:", size=text_size_short)],
-                [sg.InputText(key="-WORKLIST_BONUS_COMPOUND-", size=input_size_long, disabled=True,
+                             tooltip="This will add this compound to all selected well states")],
+                [sg.Text("Compound Name:", size=text_size_long),
+                 sg.InputText(key="-WORKLIST_BONUS_COMPOUND_ID-", size=input_size_long, disabled=True,
                               tooltip="Name Needs to fit with a name in the Control Layout.")],
                 [sg.Checkbox("Max", key="-WORKLIST_BONUS_MAX-"),
                  sg.Checkbox("Positive", key="-WORKLIST_BONUS_POSITIVE-"),
@@ -469,11 +469,11 @@ class GUILayout:
                  sg.Checkbox("Negative", key="-WORKLIST_BONUS_NEGATIVE-"),
                  sg.Checkbox("Blank", key="-WORKLIST_BONUS_BLANK-"),
                  sg.Checkbox("Sample", key="-WORKLIST_BONUS_SAMPLE-")],
-                [sg.FileBrowse("Control Layout", target="-WORKLIST_CONTROL_LAYOUT_TARGET-",
+                [sg.Button("Control Layout",
                                key="-WORKLIST_CONTROL_LAYOUT-",
                                tooltip="Choose a Plate Layout where the controls are located. "
                                    "It should be either CSV formate or excel."),
-                 sg.T(key="-WORKLIST_CONTROL_LAYOUT_TARGET-", visible=False)]
+                 sg.InputText(key="-WORKLIST_CONTROL_LAYOUT_TARGET-", visible=False)]
             ])
         ]])
 

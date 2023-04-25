@@ -1,7 +1,7 @@
 import PySimpleGUI as sg
 
-# from copy import deepcopy
-# from info import matrix_header
+from copy import deepcopy
+from info import matrix_header
 # from gui_functions import sub_settings_matrix
 # from database_controller import FetchData
 # from excel_handler import purity_sample_layout_import, purity_sample_layout_export

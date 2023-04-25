@@ -1356,6 +1356,7 @@ def main(config):
         if event == "-UPDATE_AUTO-":
             sg.PopupOKCancel("this is not working atm")
 
+        #     WINDOW 1 - Worklist     ###
         if event == "-TAB_GROUP_ONE-" and values["-TAB_GROUP_ONE-"] == "Worklist":
             temp_mp_plates, _ = grab_table_data(config, "mp_plates", None)
             worklist_mp_plates_list = []
@@ -1366,15 +1367,39 @@ def main(config):
             worklist_mp_plates_list = natsorted(worklist_mp_plates_list)
 
             window["-WORKLIST_MP_LIST-"].update(values=worklist_mp_plates_list)
-            window["-WORKLIST_ASSAY_LIST-"].update(values=worklist_mp_plates_list)
+            # window["-WORKLIST_ASSAY_LIST-"].update(values=worklist_mp_plates_list)    # ToDO add the right data here
 
             temp_assay_list, _ = grab_table_data(config, "assay", None)
+
+        if event == "-WORKLIST_CONTROL_LAYOUT-":
+            worklist_layout = sg.PopupGetFile("Please select a worklist layout file")
+            worklist_data = well_compound_list(worklist_layout)
+            for well_state in worklist_data:
+                well_state = well_state.casefold()
+                if well_state == "positive":
+                    window["-WORKLIST_USE_POSITIVE_CONTROL-"].update(value=True)
+                    window["-WORKLIST_POSITIVE_CONTROL_ID-"].update(disabled=False, 
+                                                                    value=worklist_data[well_state]["compound"])
+                if well_state == "negative":
+                    window["-WORKLIST_USE_NEGATIVE_CONTROL-"].update(value=True)
+                    window["-WORKLIST_NEGATIVE_CONTROL_ID-"].update(disabled=False,
+                                                                    value=worklist_data[well_state]["compound"])
+                if well_state == "bonus":
+                    window["-WORKLIST_USE_BONUS_COMPOUND-"].update(value=True)
+                    window["-WORKLIST_BONUS_COMPOUND_ID-"].update(disabled=False,
+                                                                  value=worklist_data[well_state]["compound"])
+            window["-WORKLIST_CONTROL_LAYOUT_TARGET-"].update(value=worklist_layout)
+            print(values["-WORKLIST_CONTROL_LAYOUT_TARGET-"])
+
 
         if event == "-WORKLIST_USE_POSITIVE_CONTROL-":
             window["-WORKLIST_POSITIVE_CONTROL_ID-"].update(disabled=not values["-WORKLIST_USE_POSITIVE_CONTROL-"])
 
         if event == "-WORKLIST_USE_NEGATIVE_CONTROL-":
             window["-WORKLIST_NEGATIVE_CONTROL_ID-"].update(disabled=not values["-WORKLIST_USE_NEGATIVE_CONTROL-"])
+
+        if event == "-WORKLIST_USE_BONUS_COMPOUND-":
+            window["-WORKLIST_BONUS_COMPOUND_ID-"].update(disabled=not values["-WORKLIST_USE_BONUS_COMPOUND-"])
 
         if event == "-WORKLIST_GENERATE-":
             if not values["-WORKLIST_PLATE_LAYOUT-"]:
@@ -1398,24 +1423,28 @@ def main(config):
             elif values["-WORKLIST_USE_NEGATIVE_CONTROL-"] and not values["-WORKLIST_NEGATIVE_CONTROL_ID-"]:
                 sg.PopupError("Please write an ID for the Negative control.")
 
-            elif values["-WORKLIST_USE_POSITIVE_CONTROL-"] and not values["-WORKLIST_CONTROL_LAYOUT-"]:
+            elif values["-WORKLIST_USE_POSITIVE_CONTROL-"] and not values["-WORKLIST_CONTROL_LAYOUT_TARGET-"]:
                 sg.PopupError("Please select a Plate Layout for the Positive control.")
 
-            elif values["-WORKLIST_USE_NEGATIVE_CONTROL-"] and not values["-WORKLIST_CONTROL_LAYOUT-"]:
+            elif values["-WORKLIST_USE_NEGATIVE_CONTROL-"] and not values["-WORKLIST_CONTROL_LAYOUT_TARGET-"]:
                 sg.PopupError("Please select a Plate Layout for the Negative control.")
 
-            elif values["-WORKLIST_USE_BONUS_COMPOUND-"] and not values["-WORKLIST_BONUS_COMPOUND-"]:
+            elif values["-WORKLIST_USE_BONUS_COMPOUND-"] and not values["-WORKLIST_BONUS_COMPOUND_ID-"]:
                 sg.PopupError("Please write an ID for the Bonus Compound.")
 
-            elif values["-WORKLIST_USE_BONUS_COMPOUND-"] and not values["-WORKLIST_BONUS_MAX-"]\
-                or values["-WORKLIST_USE_BONUS_COMPOUND-"] and not values["-WORKLIST_BONUS_POSITIVE-"]\
-                or values["-WORKLIST_USE_BONUS_COMPOUND-"] and not values["-WORKLIST_BONUS_EMPTY-"]\
-                or values["-WORKLIST_USE_BONUS_COMPOUND-"] and not values["-WORKLIST_BONUS_MIN-"]\
-                or values["-WORKLIST_USE_BONUS_COMPOUND-"] and not values["-WORKLIST_BONUS_NEGATIVE-"]\
-                or values["-WORKLIST_USE_BONUS_COMPOUND-"] and not values["-WORKLIST_BONUS_BLANK-"]:
-                sg.PopupError("Please select minimum one Well states where the Bonus compounds should be added")
+            elif values["-WORKLIST_USE_BONUS_COMPOUND-"] and not values["-WORKLIST_CONTROL_LAYOUT_TARGET-"]:
+                sg.PopupError("Please select a Plate Layout for the Negative control.")
+            # ToDo make this one work
+            # elif values["-WORKLIST_USE_BONUS_COMPOUND-"] and not values["-WORKLIST_BONUS_MAX-"]\
+            #     or values["-WORKLIST_USE_BONUS_COMPOUND-"] and not values["-WORKLIST_BONUS_POSITIVE-"]\
+            #     or values["-WORKLIST_USE_BONUS_COMPOUND-"] and not values["-WORKLIST_BONUS_EMPTY-"]\
+            #     or values["-WORKLIST_USE_BONUS_COMPOUND-"] and not values["-WORKLIST_BONUS_MIN-"]\
+            #     or values["-WORKLIST_USE_BONUS_COMPOUND-"] and not values["-WORKLIST_BONUS_NEGATIVE-"]\
+            #     or values["-WORKLIST_USE_BONUS_COMPOUND-"] and not values["-WORKLIST_BONUS_BLANK-"]:
+            #         sg.PopupError("Please select minimum one Well states where the Bonus compounds should be added")
             else:
                 if values["-WORKLIST_USE_ALL_MOTHERPLATES-"]:
+                    # This is a list of all MotherPlates. It is generated when the tab for "Worklist" is clicked
                     mps = worklist_mp_plates_list
                 else:
                     mps = values["-WORKLIST_MP_LIST-"]
@@ -1446,13 +1475,14 @@ def main(config):
                     else:
                         used_plate_well_dict = None
 
-                    if values["-WORKLIST_USE_POSITIVE_CONTROL-"] or values["-WORKLIST_USE_NEGATIVE_CONTROL-"]:
+                    if values["-WORKLIST_USE_POSITIVE_CONTROL-"] or values["-WORKLIST_USE_NEGATIVE_CONTROL-"] or \
+                            values["-WORKLIST_USE_BONUS_COMPOUND-"]:
                         use_control = True
                     else:
                         use_control = False
 
                     if use_control:
-                        control_layout = Path(values["-WORKLIST_CONTROL_LAYOUT-"])
+                        control_layout = Path(values["-WORKLIST_CONTROL_LAYOUT_TARGET-"])
 
                     else:
                         control_layout = None
@@ -1462,10 +1492,15 @@ def main(config):
                                             "sample": values["-WORKLIST_POSITIVE_CONTROL_ID-"]},
                                        "negative":
                                            {"use": values["-WORKLIST_USE_NEGATIVE_CONTROL-"],
-                                            "sample": values["-WORKLIST_NEGATIVE_CONTROL_ID-"]}
+                                            "sample": values["-WORKLIST_NEGATIVE_CONTROL_ID-"]},
+                                       "max": {"use": False},
+                                       "min": {"use": False},
+                                       "blank": {"use": False},
+                                       "empty": {"use": False},
+                                       "sample": {"use": False}
                                        }
 
-                    bonus_compound = {"sample_name": values["-WORKLIST_BONUS_COMPOUND-"].casefold(),
+                    bonus_compound = {"sample_name": values["-WORKLIST_BONUS_COMPOUND_ID-"].casefold(),
                                       "max": values["-WORKLIST_BONUS_MAX-"],
                                       "min": values["-WORKLIST_BONUS_MIN-"],
                                       "positive": values["-WORKLIST_BONUS_POSITIVE-"],
@@ -1473,7 +1508,6 @@ def main(config):
                                       "blank": values["-WORKLIST_BONUS_BLANK-"],
                                       "empty": values["-WORKLIST_BONUS_EMPTY-"],
                                       "sample": values["-WORKLIST_BONUS_SAMPLE-"]}
-
 
                     worklist_analyse_method = values["-WORKLIST_ANALYSE_STYLE-"]
                     sample_direction = values["-WORKLIST_DROPDOWN_SAMPLE_DIRECTION-"]
