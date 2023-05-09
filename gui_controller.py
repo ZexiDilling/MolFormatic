@@ -1217,7 +1217,8 @@ def main(config):
                     try:
                         temp_well = graph_plate.get_figures_at_location(values['-RECT_BIO_CANVAS-'])[0]
                         temp_well_id = well_dict[temp_well]["well_id"]
-                    except IndexError:
+                    except (IndexError or KeyError) as error:
+                        print(f"Canvas Error: {error}")
                         temp_well_id = ""
                     window["-INFO-"].update(value=f"{values['-RECT_BIO_CANVAS-']} {temp_well_id}")
 
@@ -1389,8 +1390,6 @@ def main(config):
                     window["-WORKLIST_BONUS_COMPOUND_ID-"].update(disabled=False,
                                                                   value=worklist_data[well_state]["compound"])
             window["-WORKLIST_CONTROL_LAYOUT_TARGET-"].update(value=worklist_layout)
-            print(values["-WORKLIST_CONTROL_LAYOUT_TARGET-"])
-
 
         if event == "-WORKLIST_USE_POSITIVE_CONTROL-":
             window["-WORKLIST_POSITIVE_CONTROL_ID-"].update(disabled=not values["-WORKLIST_USE_POSITIVE_CONTROL-"])
@@ -1494,7 +1493,7 @@ def main(config):
                                            {"use": values["-WORKLIST_USE_NEGATIVE_CONTROL-"],
                                             "sample": values["-WORKLIST_NEGATIVE_CONTROL_ID-"]},
                                        "max": {"use": False},
-                                       "min": {"use": False},
+                                       "minimum": {"use": False},
                                        "blank": {"use": False},
                                        "empty": {"use": False},
                                        "sample": {"use": False}
@@ -1502,7 +1501,7 @@ def main(config):
 
                     bonus_compound = {"sample_name": values["-WORKLIST_BONUS_COMPOUND_ID-"].casefold(),
                                       "max": values["-WORKLIST_BONUS_MAX-"],
-                                      "min": values["-WORKLIST_BONUS_MIN-"],
+                                      "minimum": values["-WORKLIST_BONUS_MIN-"],
                                       "positive": values["-WORKLIST_BONUS_POSITIVE-"],
                                       "negative": values["-WORKLIST_BONUS_NEGATIVE-"],
                                       "blank": values["-WORKLIST_BONUS_BLANK-"],
@@ -1516,7 +1515,6 @@ def main(config):
                     plate_amount = int(values["-WORKLIST_PLATE_AMOUNT-"])
                     initial_plate = int(values["-WORKLIST_INITIAL_PLATE-"])
                     volume = float(values["-WORKLIST_VOLUME-"])
-
                     worklist_check = generate_worklist(config, plate_amount, mps, plate_layout, used_plate_well_dict,
                                                        assay_name, initial_plate, volume, worklist_analyse_method,
                                                        sample_direction, control_layout, control_samples,

@@ -511,7 +511,7 @@ class BIOAnalyser:
         for methode in all_data["plates"]:
             counter_row = self._write_plate(ws_data, counter_row, all_data, methode, well_row_col, pw_dict)
         self._report_writer_controller(wb, all_data, plate_name, bio_sample_dict)
-
+        print(save_location)
         save_file = f"{save_location}/{plate_name}.xlsx"
         wb.save(save_file)
 
@@ -542,7 +542,7 @@ class BIOAnalyser:
 
         self.ex_file = ex_file
         self.plate = plate_layout
-
+        print(self.ex_file)
         all_data, pw_dict = self._data_converter(all_data, well_type)
         if write_to_excel:
             self._excel_controller(all_data, well_row_col, pw_dict, bio_sample_dict, save_location)

@@ -327,7 +327,8 @@ class CSVWriter:
 
         if control_bonus_source:
             source_plate_bonus = list(control_bonus_source.keys())[0]
-
+        print(plate_layout)
+        print(bonus_compound)
         mp_plate_counter = 0
         mp_well_counter = 0
 
@@ -343,7 +344,7 @@ class CSVWriter:
         except OSError:
             print("directory exist")
 
-        headlines = [headlines for headlines in config["worklist_headlines"]]
+        headlines = [headlines for headlines in config["worklist_headlines_v1"]]
         temp_file_name = f"Worklist_{assay_name}_{initial_plate}_to_{plate_amount + initial_plate}"
         file = path / f"{temp_file_name}.csv"
         file_name_counter = 1
@@ -351,7 +352,6 @@ class CSVWriter:
             file_name = f"{temp_file_name}_{file_name_counter}"
             file = path / f"{file_name}.csv"
             file_name_counter += 1
-
         file.touch()
         with open(file, "w", newline="\n") as csv_file:
 
@@ -625,8 +625,21 @@ class CSVReader:
         return temp_dict
 
     @staticmethod
-    def echo_worklist_to_dict(config, csv_file, right_headlines, new_headline, sample_dict):
+    def grab_headlines(csv_file):
+        splitter = [";", ",", "."]
+        split_indicator = 0
+        splitter = [";", ",", "."]
+        split_indicator = 0
+        with open(csv_file) as file:
+            for index, lines in enumerate(file):
+                lines = lines.removesuffix("\n")
+                if index == 0:
+                    # Check if the file is a CSV file
 
+                    headlines = lines.split(splitter[split_indicator])
+                    return headlines
+    @staticmethod
+    def echo_worklist_to_dict(config, config_headline, csv_file, right_headlines, new_headline, sample_dict):
         splitter = [";", ",", "."]
         split_indicator = 0
         with open(csv_file) as file:
@@ -651,13 +664,13 @@ class CSVReader:
                         if new_headline:
                             headline = new_headline[headline]
 
-                        if headline == config["worklist_headlines"]["source_plates"]:
+                        if headline == config[config_headline]["source_plates"]:
                             source_plates_index = headline_index
-                        elif headline == config["worklist_headlines"]["destination_plates"]:
+                        elif headline == config[config_headline]["destination_plates"]:
                             destination_plates_index = headline_index
-                        elif headline == config["worklist_headlines"]["source_well"]:
+                        elif headline == config[config_headline]["source_well"]:
                             source_well_index = headline_index
-                        elif headline == config["worklist_headlines"]["destination_well"]:
+                        elif headline == config[config_headline]["destination_well"]:
                             destination_well_index = headline_index
                 else:
                     line = lines.split(splitter[split_indicator])
@@ -679,6 +692,7 @@ class CSVReader:
                     else:
                         sample_dict[temp_destination_plate][temp_destination_well] = {"source_plate": temp_source_plate,
                                                                                       "source_well": temp_source_well}
+
         return "done", headlines, sample_dict
 
 

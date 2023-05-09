@@ -514,6 +514,7 @@ def original_data_dict(file, plate_layout):
                 plate_type_1536 = True
 
     # Load the data into a pandas dataframe, skipping the rows that were specified earlier
+
     df_plate = pd.read_excel(file, sheet_name=sheet, skiprows=skipped_rows, nrows=n_rows)
 
     # Convert the dataframe to a dictionary

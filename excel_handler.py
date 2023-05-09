@@ -251,7 +251,6 @@ def well_compound_list(file):
 
             for col, cells in enumerate(data):
                 if cells.value == None:
-                    print(row)
                     continue
                 elif col == 0:
                     temp_well = cells.value
@@ -275,7 +274,6 @@ def well_compound_list(file):
 
                 elif col == 5:
                     temp_compound_type = cells.value.casefold()
-                    print(temp_compound_type)
 
                     try:
                         compound_data[temp_compound_type]
@@ -288,7 +286,6 @@ def well_compound_list(file):
                     else:
                         compound_data[temp_compound_type]["well_vol"][temp_well] = temp_volume
 
-    print(compound_data)
     return compound_data
 
 

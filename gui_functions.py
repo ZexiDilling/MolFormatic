@@ -491,18 +491,35 @@ def bio_compound_info_from_worklist(config, sg, bio_sample_list):
     """
 
     # right_headlines = ["source_plates", "destination_plates", "source_well", "destination_well"]
-    right_headlines = [headlines for headlines in config["worklist_headlines"]]
+    right_headlines_v1 = [headlines for headlines in config["worklist_headlines_v1"]]
+    temp_headlines = [headlines for headlines in config["worklist_headlines_v2"]]
+    right_headlines_v2 = []
+    for headline in temp_headlines:
+        right_headlines_v2.append(config["worklist_headlines_v2"][headline])
+
+
     sample_dict = {}
     for files in bio_sample_list:
+        file_headlines = CSVReader.grab_headlines(files)
+        if file_headlines[0] in right_headlines_v1:
+            right_headlines = right_headlines_v1
+            config_headline = "worklist_headlines_v1"
+        elif file_headlines[0] in right_headlines_v2:
+            right_headlines = right_headlines_v2
+            config_headline = "worklist_headlines_v2"
+        else:
+            right_headlines = right_headlines_v1
+            config_headline = "worklist_headlines_v1"
+
         new_headline = None
-        msg, file_headlines, sample_dict = CSVReader.echo_worklist_to_dict(config, files, right_headlines, new_headline,
+        msg, file_headlines, sample_dict = CSVReader.echo_worklist_to_dict(config, config_headline, files, right_headlines, new_headline,
                                                                            sample_dict)
 
         # if the file uses wrong names for the headlines, this will give a popup with the "wrong headlines" and an
         # option to change them.
         if msg == "Wrong headlines":
             new_headline = new_headlines_popup(right_headlines, file_headlines)
-            msg, file_headlines, sample_dict = CSVReader.echo_worklist_to_dict(config, files, right_headlines, new_headline,
+            msg, file_headlines, sample_dict = CSVReader.echo_worklist_to_dict(config, config_headline, files, right_headlines, new_headline,
                                                                                sample_dict)
         elif msg == "Not a CSV file":
             sg.popup_error("Wrong file fomate!!!")              # ToDo sort out this guard so it dose not crash.
@@ -1520,7 +1537,6 @@ def generate_worklist(config, plate_amount, mps, plate_layout, used_plate_well_d
         motherplate_dict = _get_motherplates_with_wells_from_worklist_dict(used_plate_well_dict)
     else:
         motherplate_dict = None
-
     free_well_dict = _get_free_wells(mps, motherplate_dict)
     if not control_layout:
         control_bonus_source = None
@@ -1539,6 +1555,8 @@ def generate_worklist(config, plate_amount, mps, plate_layout, used_plate_well_d
     msg = csv_w.worklist_writer(config, plate_layout, mps, free_well_dict, assay_name, plate_amount, initial_plate,
                                 volume, sample_direction, worklist_analyse_method, control_bonus_source,
                                 control_samples, bonus_compound)
+
+    print(msg)
     return msg
 
 
