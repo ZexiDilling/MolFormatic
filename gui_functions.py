@@ -1429,8 +1429,8 @@ def _get_motherplates_with_wells_from_worklist_dict(used_plate_well_dict):
     """
 
     motherplate_dict = {}
-
     for destinations_plates in used_plate_well_dict:
+
         for wells in used_plate_well_dict[destinations_plates]:
             temp_mp = used_plate_well_dict[destinations_plates][wells]["source_plate"]
             try:
@@ -1438,8 +1438,9 @@ def _get_motherplates_with_wells_from_worklist_dict(used_plate_well_dict):
             except KeyError:
                 motherplate_dict[temp_mp] = []
 
-            if wells not in motherplate_dict[temp_mp]:
-                motherplate_dict[temp_mp].append(wells)
+            source_well = used_plate_well_dict[destinations_plates][wells]["source_well"]
+            if source_well not in motherplate_dict[temp_mp]:
+                motherplate_dict[temp_mp].append(source_well)
 
     return motherplate_dict
 
@@ -1457,7 +1458,6 @@ def _get_free_wells(mps, motherplate_dict):
     # This depends on the motherplate layout. We use a full 384 layout
     all_wells = plate_384_row
     free_wells = {}
-
     for motherplates in mps:
         free_wells[motherplates] = []
         for wells in all_wells:
@@ -1535,6 +1535,8 @@ def generate_worklist(config, plate_amount, mps, plate_layout, used_plate_well_d
     """
     if used_plate_well_dict:
         motherplate_dict = _get_motherplates_with_wells_from_worklist_dict(used_plate_well_dict)
+        print("motherplate_dict")
+        print(motherplate_dict)
     else:
         motherplate_dict = None
     free_well_dict = _get_free_wells(mps, motherplate_dict)

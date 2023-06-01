@@ -367,16 +367,26 @@ class CSVWriter:
                     # Check if the well is suppose to have samples in it, and if it does, add sample from MotherPlates
                     if well_state == "sample":
                         source_plate = mps[mp_plate_counter]
-                        source_well = free_well_dict[source_plate][mp_well_counter]
+                        if len(free_well_dict[source_plate]) > 0:
+                            source_well = free_well_dict[source_plate][mp_well_counter]
 
-                        # Writes the data to a CSV file
-                        csv_writer.writerow([destination_plate, destination_well, volume,
-                                             source_well, source_plate])
+                            # Writes the data to a CSV file
+                            csv_writer.writerow([destination_plate, destination_well, volume,
+                                                 source_well, source_plate])
 
-                        # counts the well used in each motherplates. If there are no compounds left, it will jump to
-                        # the next MotherPlate.
-                        mp_well_counter += 1
-                        if mp_well_counter == len(free_well_dict[source_plate]):
+                            # counts the well used in each motherplates. If there are no compounds left, it will jump to
+                            # the next MotherPlate.
+                            mp_well_counter += 1
+                            if mp_well_counter == len(free_well_dict[source_plate]):
+                                mp_plate_counter += 1
+                                mp_well_counter = 0
+                                if mp_plate_counter == len(mps):
+                                    # If there are not enough compounds in the MotherPlates selected, it will close the file
+                                    # delete the file, and inform the user.
+                                    csv_file.close()
+                                    file.unlink()
+                                    return "Not Enough MotherPlates"
+                        else:
                             mp_plate_counter += 1
                             mp_well_counter = 0
                             if mp_plate_counter == len(mps):
