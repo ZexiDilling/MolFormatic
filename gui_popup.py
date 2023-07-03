@@ -1,11 +1,14 @@
 import PySimpleGUI as sg
 
 from copy import deepcopy
+
 from info import matrix_header
 # from gui_functions import sub_settings_matrix
 # from database_controller import FetchData
 # from excel_handler import purity_sample_layout_import, purity_sample_layout_export
 # from gui_functions import sort_table
+
+# todo FIX THIS WHOLE THING!!!!!!!!
 
 
 def _matrix_popup_layout(calc, state=None, method=None):
@@ -430,6 +433,72 @@ def new_headlines_popup(right_headlines, wrong_headlines):
                 window["-POP_HEADLINE_TABLE-"].update(new_table)
                 # all_table_data[clicked_table] = [all_table_data[clicked_table][0]] + new_table
                 table_data = new_table
+
+
+def _plate_layout_chooser_layout(table_data, headings):
+    raw_table_col = sg.Frame("Please select plate layout for each plate", [[
+        sg.Column([
+            [sg.Table(values=table_data, headings=headings,
+                      key="-POP_HEADLINE_TABLE-", enable_events=True, enable_click_events=True,
+                      tooltip='double click to select a new headline in the "NEW headline" column ')]
+        ])
+    ]])
+
+    layout = [
+        [raw_table_col],
+        [sg.Button("Done", key="-POP_SAMPLE_CHECKER_OK-", expand_x=True),
+         sg.Button("Cancel", key="-WINDOW_TWO_CANCEL-", expand_x=True)]
+    ]
+    return sg.Window("Samples", layout, finalize=True, resizable=True), table_data
+
+
+def plate_layout_chooser(files, default_plate_layout, all_plate_layouts):
+    table_data = []
+    plate_to_layouy = {}
+    # Add the options to skip files.
+    all_plate_layouts.append("skip")
+
+    for file in files:
+        temp_data = [file, default_plate_layout]
+        table_data.append(temp_data)
+
+    table_headings = ["Plate", "Layout"]
+
+    window, table_data = _plate_layout_chooser_layout(table_data, table_headings)
+    window["-POP_HEADLINE_TABLE-"].bind('<Double-Button-1>', "+-double click-")
+
+    while True:
+        event, values = window.read()
+
+        if event == sg.WIN_CLOSED or event == "-WINDOW_TWO_CANCEL-" or event == "-POP_SAMPLE_CHECKER_OK-":
+            # Grabs all the data from the table
+            for row_index, row in enumerate(table_data):
+                if type(row[1]) == list:
+                    plate_to_layouy[row[0]] = row[1][0]
+                else:
+                    plate_to_layouy[row[0]] = row[1]
+
+            window.close()
+            return plate_to_layouy
+
+        if event == "-POP_HEADLINE_TABLE-+-double click-":
+            try:
+                table_row = values["-POP_HEADLINE_TABLE-"][0]
+            except IndexError:
+                pass
+            else:
+                event, values = sg.Window('Select One',
+                                          layout=[[sg.Listbox(all_plate_layouts, key='_LIST_',
+                                                              size=(max([len(str(v)) for v in all_plate_layouts]) + 2,
+                                                                    len(all_plate_layouts)), select_mode='extended',
+                                                              bind_return_key=True), sg.OK()]]).read(close=True)
+
+                temp_new_plate_layout = values['_LIST_'] if event is not None else None
+                if temp_new_plate_layout:
+                    table_data[table_row][1] = temp_new_plate_layout
+
+                window["-POP_HEADLINE_TABLE-"].update(values=table_data)
+
 
 if __name__ == "__main__":
     right_headlines = ["source_plates", "destination_plates", "source_well", "destination_well"]

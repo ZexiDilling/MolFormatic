@@ -3,6 +3,9 @@ from database_handler import DataBaseFunctions
 from pathlib import Path
 import xml.etree.ElementTree as ET
 from csv_handler import CSVWriter
+from file_handler import get_file_list
+from gui_functions import _folder_digger_for_file_names
+from gui_popup import plate_layout_chooser
 
 
 def finding_duplicate_compounds_in_mps(config):
@@ -46,8 +49,6 @@ def finding_duplicate_compounds_in_mps(config):
     print(len(dup_plates))
     print(dup_dup_compounds)
 
-
-
 def digger(folder):
     p = Path(folder).glob("**/*")
     files = [x for x in p if x.is_file()]
@@ -82,26 +83,20 @@ def compare(used_tubes, missing_tubes, folder):
     CSVWriter.compound_freezer_writer(folder, new_list)
 
 
+def plate_layout_check(folder, default_plate_layout, all_plate_layouts):
+
+    # file_list = _folder_digger_for_file_names(folder)
+    #
+    # plate_layout_chooser(file_list, default_plate_layout, all_plate_layouts)
+    file_list = get_file_list(folder)
+    for files in file_list:
+        print(files)
+
+
 if __name__ == "__main__":
     # config = configparser.ConfigParser()
     # config.read("config.ini")
-    # finding_duplicate_compounds_in_mps(config)
-    # folder = r"C:\Users\phch\Desktop\test\used_tubes"
-    # missing_tubes = r"C:\Users\phch\Desktop\test\comPOUND\comPOUND_'2023-06-06'.txt"
-    # # # folder = r"D:\compound_freezer_tube\TTP Test Vial on Vial Retrieve_15"
-    # # test_compound = "4036580177"
-    # used_tubes = digger(folder)
-    #
-    # compare(used_tubes, missing_tubes, folder)
-
-    tester = True
-    hit = None
-    threshold = 12
-
-    if tester and not hit and tester and not threshold:
-        print("Hey")
-    else:
-        print("YAY")
-
-
-    # print(new_list)
+    folder = r"C:\Users\phch\Desktop\test\test_data\export"
+    default_plate_layout = "Place_Holder"
+    all_plate_layouts = ["Place_holder", "something_else"]
+    plate_layout_check(folder, default_plate_layout, all_plate_layouts)

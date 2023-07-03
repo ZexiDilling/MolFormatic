@@ -182,6 +182,10 @@ class GUILayout:
                 [sg.Text(key="-BIO_IMPORT_TARGET-", size=self.standard_size*2)],
                 [sg.FolderBrowse(button_text="Export Folder", key="-BIO_EXPORT_FOLDER-", target="-BIO_EXPORT_TARGET-")],
                 [sg.Text(key="-BIO_EXPORT_TARGET-", size=self.standard_size*2)],
+                [sg.Checkbox("Same layout for all plates?", key="-BIO_PLATE_LAYOUT_CHECK-", default=True,
+                             tooltip="Will use the chosen platelayout in the dropdown for all plates if True, "
+                                     "else there will be a popup where you can choose the layout for each plate. "
+                                     "Default will be the layout chosen in the platelayouyt dropdown")],
                 [sg.Text("Plate Layout", size=self.standard_size),
                  sg.DropDown(sorted(self.plate_list), key="-BIO_PLATE_LAYOUT-", enable_events=True,
                              size=self.standard_size)],

@@ -835,8 +835,6 @@ def main(config):
                     window["-BIO_ASSAY_NAME-"].update(value=assay_name)
 
         if event == "-EXPORT_BIO-":
-            print(f"hit amount: {values['-BIO_FINAL_REPORT_HIT_AMOUNT-']}")
-            print(values["-BIO_FINAL_REPORT_INCLUDE_HITS-"])
             if not values["-BIO_PLATE_LAYOUT-"]:
                 sg.popup_error("Please choose a plate layout")
             elif not values["-BIO_IMPORT_FOLDER-"]:
@@ -860,16 +858,26 @@ def main(config):
             else:
                 # Sets values for different parametors
                 bio_import_folder = values["-BIO_IMPORT_FOLDER-"]
-                plate_layout = archive_plates_dict[values["-BIO_PLATE_LAYOUT-"]]
+                # default_plate_layout = archive_plates_dict[values["-BIO_PLATE_LAYOUT-"]]
+                default_plate_layout = values["-BIO_PLATE_LAYOUT-"]
                 include_hits = values["-BIO_FINAL_REPORT_INCLUDE_HITS-"]
                 threshold = values["-BIO_FINAL_REPORT_THRESHOLD-"]
                 hit_amount = values["-BIO_FINAL_REPORT_HIT_AMOUNT-"]
                 include_smiles = values["-BIO_FINAL_REPORT_INCLUDE_SMILES-"]
-
                 final_report_name = values["-FINAL_BIO_NAME-"]
+
                 if not bio_export_folder:
                     bio_export_folder = values["-BIO_EXPORT_FOLDER-"]
 
+                if not values["-BIO_PLATE_LAYOUT_CHECK-"]:
+                    print("Check")
+                    # If there are difference between what layout each plate is using, or if you know some data needs
+                    # to be dismissed, you can choose different plate layout for each plate.
+                    plate_layout_dict = plate_layout_setup(bio_import_folder, values["-BIO_PLATE_LAYOUT-"], plate_list)
+                else:
+                    # If all plate uses the same plate layout
+                    plate_layout_dict = default_plate_layout
+                print(default_plate_layout)
                 # If this is checked, it will ask for worklist, that can be converted to a sample dict, that can be used
                 # for finding sample info in the database.
                 if values["-BIO_COMPOUND_DATA-"]:
@@ -885,7 +893,9 @@ def main(config):
                 # excel file.
                 # analyse_method = values["-BIO_ANALYSE_TYPE-"]     # not used atm...
                 analyse_method = "single point"
-                worked, all_plates_data, date, used_plates = bio_data(config, bio_import_folder, plate_layout,
+
+                worked, all_plates_data, date, used_plates = bio_data(config, bio_import_folder, plate_layout_dict,
+                                                                      archive_plates_dict,
                                                                       bio_plate_report_setup,
                                                                       analyse_method, bio_sample_dict,
                                                                       bio_export_folder)

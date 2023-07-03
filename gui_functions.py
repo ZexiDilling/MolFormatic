@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import PySimpleGUI as sg
 import configparser
 from datetime import date
@@ -8,7 +10,7 @@ import natsort
 from natsort import natsorted
 from os import mkdir
 
-from gui_popup import new_headlines_popup
+from gui_popup import new_headlines_popup, plate_layout_chooser
 from csv_handler import CSVWriter, CSVConverter, CSVReader
 from lc_data_handler import LCMSHandler
 from database_handler import DataBaseFunctions
@@ -528,8 +530,46 @@ def bio_compound_info_from_worklist(config, sg, bio_sample_list):
     return sample_dict
 
 
-def bio_data(config, folder, plate_layout, bio_plate_report_setup, analysis, bio_sample_dict, save_location,
-             write_to_excel=True):
+def _folder_digger_for_file_names(folder):
+    """
+    List all files in a folder and all sup folders as there name alone:
+    :param folder: A folder
+    :type folder: str
+    :return: A list of file names without suffix
+    :rtype: list
+    """
+    all_files = Path(folder).glob("**/*")
+    files = [file for file in all_files if file.is_file()]
+    file_list = []
+    for file in files:
+        temp_file = file.name.split(".")[0]
+        file_list.append(temp_file)
+
+    return file_list
+
+
+def plate_layout_setup(folder, default_plate_layout, plate_layout_list):
+    """
+    Gets all files from a folder, and list them in a table, where the user can choose the layout for each plate
+    :param folder:
+    :type folder: str
+    :param default_plate_layout: The default plate layout
+    :type default_plate_layout: str
+    :param plate_layout_list: A list with all the plate layouts
+    :type plate_layout_list: list
+    :return: a dicts with each plate having its own layout
+    :rtype: dict
+    """
+
+    files = _folder_digger_for_file_names(folder)
+    all_plate_layouts = plate_layout_chooser(files, default_plate_layout, plate_layout_list)
+
+    return all_plate_layouts
+
+
+def bio_data(config, folder, plate_layout, archive_plates_dict, bio_plate_report_setup, analysis, bio_sample_dict,
+             save_location, write_to_excel=True):
+
     """
     Handles the Bio data.
 
@@ -537,8 +577,11 @@ def bio_data(config, folder, plate_layout, bio_plate_report_setup, analysis, bio
     :type config: configparser.ConfigParser
     :param folder: The folder where the raw data is located
     :type folder: str
-    :param plate_layout: The layout for the plate with values for each well, what state they are in
-    :type plate_layout: dict
+    :param plate_layout: Either the name of the default plate_layout that all plates are using or a dict over each
+        plate and the layout for that place
+    :type plate_layout: str or dict
+    :param archive_plates_dict: The layout for the plate with values for each well, what state they are in
+    :type archive_plates_dict: dict
     :param bio_plate_report_setup: The setup for what is included in the report
     :type bio_plate_report_setup: dict
     :param bio_sample_dict: None or a dict of sample ide, per plate analysed
@@ -558,14 +601,23 @@ def bio_data(config, folder, plate_layout, bio_plate_report_setup, analysis, bio
     for files in file_list:
         if isfile(files) and files.endswith(".txt"):
             files = txt_to_xlsx(files)
-        if isfile(files) and files.endswith(".xlsx"): #ToDo I needs to be able to deal with txt files at some point
-            all_data, well_row_col, well_type, barcode, date = original_data_dict(files, plate_layout)
-            if not all_data:
-                return False
-            used_plates.append(barcode)
-            all_plates_data[barcode] = bioa.bio_data_controller(files, plate_layout, all_data, well_row_col, well_type,
-                                                                analysis, write_to_excel, bio_sample_dict,
-                                                                save_location)
+        if isfile(files) and files.endswith(".xlsx"):
+            if type(plate_layout) is dict:
+                temp_barcode = files.split("/")[-1].split(".")[0]
+                temp_plate_layout_name = plate_layout[temp_barcode]
+            else:
+                temp_plate_layout_name = plate_layout
+            if temp_plate_layout_name == "skip":
+                continue
+            else:
+                temp_plate_layout = archive_plates_dict[temp_plate_layout_name]
+                all_data, well_row_col, well_type, barcode, date = original_data_dict(files, temp_plate_layout)
+                if not all_data:
+                    return False
+                used_plates.append(barcode)
+                all_plates_data[barcode] = bioa.bio_data_controller(files, temp_plate_layout, all_data, well_row_col, well_type,
+                                                                    analysis, write_to_excel, bio_sample_dict,
+                                                                    save_location)
         else:
             print(f"{files} is not the right formate")
     return True, all_plates_data, date, used_plates

@@ -1,5 +1,6 @@
 from math import floor
 
+
 def hex_to_rgb(hex_colour):
     """
     Changes Hex-colour to RBG-colour.
