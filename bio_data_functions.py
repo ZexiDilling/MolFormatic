@@ -303,7 +303,6 @@ def frequency_writer(ws, headline, data_set, free_col, initial_row, bin_min, bin
     bin_min_seperator = 0
     bin_max_seperator = 0
 
-
     row = initial_row
     # write headline:
     ws.cell(column=col, row=row, value=headline).font = Font(b=True)
@@ -498,7 +497,7 @@ def original_data_dict(file, plate_layout):
                 date = row[4]
 
             # Get the barcode
-            if value == "Name" and row[1]:
+            if value == "Barcode:" and row[1]:
                 barcode = row[1]
 
             # Get the number of rows to skip
@@ -514,7 +513,6 @@ def original_data_dict(file, plate_layout):
                 plate_type_1536 = True
 
     # Load the data into a pandas dataframe, skipping the rows that were specified earlier
-
     df_plate = pd.read_excel(file, sheet_name=sheet, skiprows=skipped_rows, nrows=n_rows)
 
     # Convert the dataframe to a dictionary

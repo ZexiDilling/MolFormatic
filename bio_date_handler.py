@@ -416,15 +416,22 @@ class BIOAnalyser:
                             freq_data[plate_analysed]["well_values"].append(well_value)
 
                             if bio_sample_dict:
-                                barcode = bio_sample_dict[plate_name][well]["source_plate"]
-                                id_number = bio_sample_dict[plate_name][well]["source_well"]
-                                sample_row = dbf.find_data(table_name, barcode, id_number, barcode_name, id_name)
                                 try:
-                                    sample_id = sample_row[0][3]
-                                except IndexError:
-                                    sample_id = "Not found"
+                                    barcode = bio_sample_dict[plate_name][well]["source_plate"]
+                                except KeyError:
+                                    print(f"Missing plate data for plate: {plate_name}; well: {well}")
+                                    sample_id = "Missing plate data"
+                                else:
+                                    source_well = bio_sample_dict[plate_name][well]["source_well"]
+                                    sample_row = dbf.find_data(table_name, barcode, source_well, barcode_name, id_name)
+                                    try:
+                                        sample_id = sample_row[0][3]
+                                    except IndexError:
+                                        sample_id = "Not found"
                                 ws.cell(column=indent_col + 3, row=row_counter,
                                         value=sample_id)
+                                bio_sample_dict[plate_name][well]["compound_id"] = sample_id
+
                             added = True
                             row_counter += 1
                     added = False
@@ -511,7 +518,6 @@ class BIOAnalyser:
         for methode in all_data["plates"]:
             counter_row = self._write_plate(ws_data, counter_row, all_data, methode, well_row_col, pw_dict)
         self._report_writer_controller(wb, all_data, plate_name, bio_sample_dict)
-        print(save_location)
         save_file = f"{save_location}/{plate_name}.xlsx"
         wb.save(save_file)
 
@@ -542,7 +548,6 @@ class BIOAnalyser:
 
         self.ex_file = ex_file
         self.plate = plate_layout
-        print(self.ex_file)
         all_data, pw_dict = self._data_converter(all_data, well_type)
         if write_to_excel:
             self._excel_controller(all_data, well_row_col, pw_dict, bio_sample_dict, save_location)

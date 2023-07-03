@@ -556,18 +556,31 @@ class AddData:
         :type clm_id: str
         :return: Adds MotherPlates to the database and updated the main database with new volumes
         """
+        test = 0
         for csv_file in file_list:
             data_dict, plates_dict = self.csv_r.csv_r_controller(csv_file, file_type)
             for plate in plates_dict:
-                self.dbf.add_records_controller(plate_table_name, plates_dict[plate])
+                self.dbf.add_records_controller(plate_table_name, plates_dict[plate], test)
             for transferee in data_dict:
                 new_dict = self._popper(destination_table, data_dict[transferee])
                 new_dict = self._re_ordering_dict(new_dict, destination_table)
                 new_dict["active"] = True
                 new_dict["freeze_thaw"] = 0
-                self.dbf.add_records_controller(destination_table, new_dict)
-                self.dbf.update_vol(source_table, data_dict[transferee]["Volume"],
-                                    data_dict[transferee]["compound_id"], clm_id)
+
+                #Check if line is allready in the database:
+                table = destination_table
+                barcode_name = "mp_barcode"
+                barcode = new_dict["DestinationBarcode"]
+                id_name = "compound_id"
+                id_number = new_dict["compound_id"]
+
+                test_db = self.dbf.find_data(table, barcode, id_number, barcode_name, id_name)
+                if not test_db:
+
+                    self.dbf.add_records_controller(destination_table, new_dict, test)
+                    self.dbf.update_vol(source_table, data_dict[transferee]["Volume"],
+                                        data_dict[transferee]["compound_id"], clm_id)
+                    test += 1
 
     def daughter_plate(self, file_list, plate_table_name="dp_plates",
                        destination_table="compound_dp", source_table="compound_mp", clm_id="rowid"):

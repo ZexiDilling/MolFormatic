@@ -327,8 +327,8 @@ class CSVWriter:
 
         if control_bonus_source:
             source_plate_bonus = list(control_bonus_source.keys())[0]
-        print(plate_layout)
-        print(bonus_compound)
+        # print(plate_layout)
+        # print(bonus_compound)
         mp_plate_counter = 0
         mp_well_counter = 0
 
@@ -345,7 +345,7 @@ class CSVWriter:
             print("directory exist")
 
         headlines = [headlines for headlines in config["worklist_headlines_v1"]]
-        temp_file_name = f"Worklist_{assay_name}_{initial_plate}_to_{plate_amount + initial_plate}"
+        temp_file_name = f"Worklist_{assay_name}_{initial_plate}_to_{plate_amount + initial_plate - 1}"
         file = path / f"{temp_file_name}.csv"
         file_name_counter = 1
         while file.exists():
@@ -383,18 +383,22 @@ class CSVWriter:
                                 if mp_plate_counter == len(mps):
                                     # If there are not enough compounds in the MotherPlates selected, it will close the file
                                     # delete the file, and inform the user.
-                                    csv_file.close()
-                                    file.unlink()
-                                    return "Not Enough MotherPlates"
+                                    msg = "Not Enough MotherPlates"
+                                    return file, msg
+                                    # csv_file.close()
+                                    # file.unlink()
+                                    # return "Not Enough MotherPlates"
                         else:
                             mp_plate_counter += 1
                             mp_well_counter = 0
                             if mp_plate_counter == len(mps):
                                 # If there are not enough compounds in the MotherPlates selected, it will close the file
                                 # delete the file, and inform the user.
-                                csv_file.close()
-                                file.unlink()
-                                return "Not Enough MotherPlates"
+                                msg = "Not Enough MotherPlates"
+                                return file, msg
+                                # csv_file.close()
+                                # file.unlink()
+                                # return "Not Enough MotherPlates"
 
                     else:
                         if control_samples[well_state]["use"] or bonus_compound[well_state]:
@@ -426,7 +430,7 @@ class CSVWriter:
                             csv_writer.writerow([destination_plate, destination_well, volume,
                                                  source_well, source_plate])
 
-        return file
+        return file, None
 
 
 class CSVReader:
@@ -490,7 +494,6 @@ class CSVReader:
                         destination_plates[value]["Date"] = date.today()
                 dict_data[f"Transferee_{row_index}"]["Date"] = date.today()
                 dict_data[f"Transferee_{row_index}"]["Row_Counter"] = row_index
-
 
         return dict_data, destination_plates
 
@@ -698,10 +701,14 @@ class CSVReader:
                     except KeyError:
                         sample_dict[temp_destination_plate] = {}
                         sample_dict[temp_destination_plate][temp_destination_well] = {"source_plate": temp_source_plate,
-                                                                                      "source_well": temp_source_well}
+                                                                                      "source_well": temp_source_well,
+                                                                                      "smiles": "",
+                                                                                      "compound_id": ""}
                     else:
                         sample_dict[temp_destination_plate][temp_destination_well] = {"source_plate": temp_source_plate,
-                                                                                      "source_well": temp_source_well}
+                                                                                      "source_well": temp_source_well,
+                                                                                      "smiles": "",
+                                                                                      "compound_id": ""}
 
         return "done", headlines, sample_dict
 

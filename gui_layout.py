@@ -225,13 +225,31 @@ class GUILayout:
                 [sg.InputText(key="-FINAL_BIO_NAME-", size=14, tooltip="The Name the final report will be saved as"),
                  sg.InputText(key="-BIO_ASSAY_NAME-", size=14,
                               tooltip="The assay name the analyse will saved under in the database"),
-                 sg.DropDown(values=[], key="-BIO_ASSAY_LIST_DROPDOWN-",
+                 sg.DropDown(values=[], key="-BIO_ASSAY_LIST_DROPDOWN-", size=12,
                              tooltip="If you want to add new data to an assay that have been run before")],
                 [sg.T("Responsible:", size=12),
                  sg.DropDown(responsible, key="-BIO_RESPONSIBLE-", size=14)],
-                [sg.Button("Select Worklist", key="-BIO_SELECT_WORKLIST-",
-                           tooltip="Use Control til select multiple files")],
-                [sg.T(key="-BIO_SAMPLE_LIST_TARGET-")]
+                [sg.HorizontalSeparator()],
+                [sg.Checkbox("Include Hits", key="-BIO_FINAL_REPORT_INCLUDE_HITS-",
+                             tooltip="Include a list of compounds with a score lower than the threshold sat, "
+                                     "or x-amount of the lowest once, depending on the Hit Amount sat",
+                             enable_events=True),
+                 sg.Checkbox("Include smiles", key="-BIO_FINAL_REPORT_INCLUDE_SMILES-",
+                             tooltip="Include the smiles for the Hits.",
+                             disabled=True, enable_events=True)],
+                [sg.Checkbox("Use Threshold", key="-BIO_FINAL_REPORT_USE_THRESHOLD-",
+                             disabled=True, enable_events=True),
+                 sg.Checkbox("Use Amount", key="-BIO_FINAL_REPORT_USE_AMOUNT-",
+                             disabled=True, enable_events=True)],
+                [sg.T("Threshold", size=12), sg.T("Hit Amount", size=12)],
+                [sg.InputText(key="-BIO_FINAL_REPORT_THRESHOLD-", size=14, disabled=True,
+                              tooltip="The threshold where samples should be included. Any sample with a score "
+                                      "lower than the threshold will be included in the report"),
+                 sg.InputText(key="-BIO_FINAL_REPORT_HIT_AMOUNT-", size=14, disabled=True,
+                              tooltip="The Amount of sample to list. Will be sorted after lowest score")],
+                # [sg.Button("Select Worklist", key="-BIO_SELECT_WORKLIST-",
+                #            tooltip="Use Control til select multiple files")],
+                # [sg.T(key="-BIO_SAMPLE_LIST_TARGET-")]
             ])
         ]])
 

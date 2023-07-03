@@ -21,7 +21,6 @@ from config_writer import ConfigWriter
 from database_startup import DatabaseSetUp
 
 
-
 def main(config):
     """
     The main control modul for the GUI.
@@ -41,8 +40,6 @@ def main(config):
             db_active = False
     except KeyError:
         db_active = False
-
-
 
     # File names, for files with dict over different kind of data.
     plate_file = config["files"]["plate_layouts"]
@@ -150,7 +147,8 @@ def main(config):
                                     "use": config["Settings_bio"].getboolean("final_report_pora_threshold_th_9_use")},
                            "th_10": {"min": config["Settings_bio"].getfloat("final_report_pora_threshold_th_10_min"),
                                      "max": config["Settings_bio"].getfloat("final_report_pora_threshold_th_10_max"),
-                                     "use": config["Settings_bio"].getboolean("final_report_pora_threshold_th_10_use")}},
+                                     "use": config["Settings_bio"].getboolean(
+                                         "final_report_pora_threshold_th_10_use")}},
         "data": {"sample": {"matrix": config["Settings_bio"].getboolean("final_report_data_sample_matrix"),
                             "list": config["Settings_bio"].getboolean("final_report_data_sample_list"),
                             "max_min": config["Settings_bio"].getboolean("final_report_data_sample_max_min")},
@@ -196,10 +194,14 @@ def main(config):
         "calc_dict": {"original": {"use": config["Settings_bio"].getboolean("plate_report_calc_dict_original_use"),
                                    "avg": config["Settings_bio"].getboolean("plate_report_calc_dict_original_avg"),
                                    "stdev": config["Settings_bio"].getboolean("plate_report_calc_dict_original_stdev"),
-                                   "pstdev": config["Settings_bio"].getboolean("plate_report_calc_dict_original_pstdev"),
-                                   "pvariance": config["Settings_bio"].getboolean("plate_report_calc_dict_original_pvariance"),
-                                   "variance": config["Settings_bio"].getboolean("plate_report_calc_dict_original_variance"),
-                                   "st_dev_%": config["Settings_bio"].getboolean("plate_report_calc_dict_original_st_dev_%"),
+                                   "pstdev": config["Settings_bio"].getboolean(
+                                       "plate_report_calc_dict_original_pstdev"),
+                                   "pvariance": config["Settings_bio"].getboolean(
+                                       "plate_report_calc_dict_original_pvariance"),
+                                   "variance": config["Settings_bio"].getboolean(
+                                       "plate_report_calc_dict_original_variance"),
+                                   "st_dev_%": config["Settings_bio"].getboolean(
+                                       "plate_report_calc_dict_original_st_dev_%"),
                                    "state": {"sample": config["Settings_bio"].
                                        getboolean("plate_report_calc_dict_original_state_sample"),
                                              "minimum": config["Settings_bio"].
@@ -297,9 +299,12 @@ def main(config):
                          "avg": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_original_avg"),
                          "stdev": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_original_stdev"),
                          "pstdev": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_original_pstdev"),
-                         "pvariance": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_original_pvariance"),
-                         "variance": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_original_variance"),
-                         "st_dev_%": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_original_st_dev_%"),
+                         "pvariance": config["Settings_bio"].getboolean(
+                             "plate_report_plate_calc_dict_original_pvariance"),
+                         "variance": config["Settings_bio"].getboolean(
+                             "plate_report_plate_calc_dict_original_variance"),
+                         "st_dev_%": config["Settings_bio"].getboolean(
+                             "plate_report_plate_calc_dict_original_st_dev_%"),
                          "state": {"sample": config["Settings_bio"].
                              getboolean("plate_report_plate_calc_dict_original_state_sample"),
                                    "minimum": config["Settings_bio"].
@@ -317,10 +322,14 @@ def main(config):
             "normalised": {"use": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_normalised_use"),
                            "avg": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_normalised_avg"),
                            "stdev": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_normalised_stdev"),
-                           "pstdev": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_normalised_pstdev"),
-                           "pvariance": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_normalised_pvariance"),
-                           "variance": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_normalised_variance"),
-                           "st_dev_%": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_normalised_st_dev_%"),
+                           "pstdev": config["Settings_bio"].getboolean(
+                               "plate_report_plate_calc_dict_normalised_pstdev"),
+                           "pvariance": config["Settings_bio"].getboolean(
+                               "plate_report_plate_calc_dict_normalised_pvariance"),
+                           "variance": config["Settings_bio"].getboolean(
+                               "plate_report_plate_calc_dict_normalised_variance"),
+                           "st_dev_%": config["Settings_bio"].getboolean(
+                               "plate_report_plate_calc_dict_normalised_st_dev_%"),
                            "state": {"sample": config["Settings_bio"].
                                getboolean("plate_report_plate_calc_dict_normalised_state_sample"),
                                      "minimum": config["Settings_bio"].
@@ -750,14 +759,45 @@ def main(config):
 
         if event == "-SUB_SEARCH_DRAW_MOL-":
             sg.popup("This does not work yet, sorry. Use Chemdraw and copy the smiles code in, instead")
-        #
-        # if event == "-SEARCH_ALL_COMPOUNDS-":
-        #     window["-SEACH_ALL_NON_PLATED-"].update(value=False)
-        #
-        # if event == "-SEACH_ALL_NON_PLATED-":
-        #     window["-SEARCH_ALL_COMPOUNDS-"].update(value=False)
 
         #     WINDOW 1 - BIO DATA         ###
+        if event == "-BIO_FINAL_REPORT_INCLUDE_HITS-" and values["-BIO_FINAL_REPORT_INCLUDE_HITS-"] is True:
+            window["-BIO_FINAL_REPORT_INCLUDE_SMILES-"].update(disabled=False)
+            window["-BIO_FINAL_REPORT_INCLUDE_SMILES-"].update(value=False)
+            window["-BIO_FINAL_REPORT_USE_THRESHOLD-"].update(disabled=False)
+            window["-BIO_FINAL_REPORT_USE_THRESHOLD-"].update(value=False)
+            window["-BIO_FINAL_REPORT_USE_AMOUNT-"].update(disabled=False)
+            window["-BIO_FINAL_REPORT_USE_AMOUNT-"].update(value=False)
+
+        if event == "-BIO_FINAL_REPORT_INCLUDE_HITS-" and values["-BIO_FINAL_REPORT_INCLUDE_HITS-"] is False:
+            window["-BIO_FINAL_REPORT_INCLUDE_SMILES-"].update(disabled=True)
+            window["-BIO_FINAL_REPORT_USE_THRESHOLD-"].update(disabled=True)
+            window["-BIO_FINAL_REPORT_USE_AMOUNT-"].update(disabled=True)
+            window["-BIO_FINAL_REPORT_THRESHOLD-"].update(value="")
+            window["-BIO_FINAL_REPORT_THRESHOLD-"].update(disabled=True)
+            window["-BIO_FINAL_REPORT_HIT_AMOUNT-"].update(value="")
+            window["-BIO_FINAL_REPORT_HIT_AMOUNT-"].update(disabled=True)
+
+        if event == "-BIO_FINAL_REPORT_USE_THRESHOLD-" and values["-BIO_FINAL_REPORT_USE_THRESHOLD-"] is True:
+            window["-BIO_FINAL_REPORT_USE_AMOUNT-"].update(value=False)
+            window["-BIO_FINAL_REPORT_HIT_AMOUNT-"].update(value="")
+            window["-BIO_FINAL_REPORT_HIT_AMOUNT-"].update(disabled=True)
+            window["-BIO_FINAL_REPORT_THRESHOLD-"].update(disabled=False)
+
+        if event == "-BIO_FINAL_REPORT_USE_THRESHOLD-" and values["-BIO_FINAL_REPORT_USE_THRESHOLD-"] is False:
+            window["-BIO_FINAL_REPORT_THRESHOLD-"].update(value="")
+            window["-BIO_FINAL_REPORT_THRESHOLD-"].update(disabled=True)
+
+        if event == "-BIO_FINAL_REPORT_USE_AMOUNT-" and values["-BIO_FINAL_REPORT_USE_AMOUNT-"] is True:
+            window["-BIO_FINAL_REPORT_USE_THRESHOLD-"].update(value=False)
+            window["-BIO_FINAL_REPORT_THRESHOLD-"].update(value="")
+            window["-BIO_FINAL_REPORT_THRESHOLD-"].update(disabled=True)
+            window["-BIO_FINAL_REPORT_HIT_AMOUNT-"].update(disabled=False)
+
+        if event == "-BIO_FINAL_REPORT_USE_AMOUNT-" and values["-BIO_FINAL_REPORT_USE_AMOUNT-"] is False:
+            window["-BIO_FINAL_REPORT_HIT_AMOUNT-"].update(value="")
+            window["-BIO_FINAL_REPORT_HIT_AMOUNT-"].update(disabled=True)
+
         if event == "-BIO_PLATE_LAYOUT-":
             well_dict.clear()
             well_dict = copy.deepcopy(archive_plates_dict[values["-BIO_PLATE_LAYOUT-"]]["well_layout"])
@@ -795,6 +835,8 @@ def main(config):
                     window["-BIO_ASSAY_NAME-"].update(value=assay_name)
 
         if event == "-EXPORT_BIO-":
+            print(f"hit amount: {values['-BIO_FINAL_REPORT_HIT_AMOUNT-']}")
+            print(values["-BIO_FINAL_REPORT_INCLUDE_HITS-"])
             if not values["-BIO_PLATE_LAYOUT-"]:
                 sg.popup_error("Please choose a plate layout")
             elif not values["-BIO_IMPORT_FOLDER-"]:
@@ -807,13 +849,22 @@ def main(config):
                 sg.popup_error("Please choose an Assay name")
             elif values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"] and not values["-BIO_RESPONSIBLE-"]:
                 sg.popup_error("Please choose an Responsible ")
+            elif values["-BIO_FINAL_REPORT_INCLUDE_HITS-"] and not values["-BIO_FINAL_REPORT_HIT_AMOUNT-"] \
+                    and values["-BIO_FINAL_REPORT_INCLUDE_HITS-"] and not values["-BIO_FINAL_REPORT_THRESHOLD-"]:
+                sg.popup_error("Please either select amount of hits or the threshold for the score, if "
+                               "Hits are to be included in the report")
             # Missing setting move moving files after analyse is done.
             # elif not values["-BIO_ANALYSE_TYPE-"]:
             #     sg.popup_error("Please choose an analyse type")
             # ToDo add guards for wrong file-formate
             else:
+                # Sets values for different parametors
                 bio_import_folder = values["-BIO_IMPORT_FOLDER-"]
                 plate_layout = archive_plates_dict[values["-BIO_PLATE_LAYOUT-"]]
+                include_hits = values["-BIO_FINAL_REPORT_INCLUDE_HITS-"]
+                threshold = values["-BIO_FINAL_REPORT_THRESHOLD-"]
+                hit_amount = values["-BIO_FINAL_REPORT_HIT_AMOUNT-"]
+                include_smiles = values["-BIO_FINAL_REPORT_INCLUDE_SMILES-"]
 
                 final_report_name = values["-FINAL_BIO_NAME-"]
                 if not bio_export_folder:
@@ -834,13 +885,17 @@ def main(config):
                 # excel file.
                 # analyse_method = values["-BIO_ANALYSE_TYPE-"]     # not used atm...
                 analyse_method = "single point"
-                worked, all_plates_data, date = bio_data(config, bio_import_folder, plate_layout,
-                                                         bio_plate_report_setup,
-                                                         analyse_method, bio_sample_dict, bio_export_folder)
+                worked, all_plates_data, date, used_plates = bio_data(config, bio_import_folder, plate_layout,
+                                                                      bio_plate_report_setup,
+                                                                      analyse_method, bio_sample_dict,
+                                                                      bio_export_folder)
 
                 if values["-BIO_COMBINED_REPORT-"]:
-                    bio_full_report(analyse_method, all_plates_data, bio_final_report_setup, bio_export_folder,
-                                    final_report_name)
+
+                    bio_full_report(config, analyse_method, all_plates_data, used_plates, bio_final_report_setup,
+                                    bio_export_folder,
+                                    final_report_name, include_hits, threshold, hit_amount, include_smiles,
+                                    bio_sample_dict)
 
                 if values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"]:
                     assay_name = values["-BIO_ASSAY_NAME-"]
@@ -878,8 +933,8 @@ def main(config):
                 analyse_method = values["-BIO_ANALYSE_TYPE-"]
                 write_to_excel = False
                 _, all_plates_data, date = bio_data(config, bio_import_folder, plate_layout,
-                                                         bio_plate_report_setup,
-                                                         analyse_method, write_to_excel)
+                                                    bio_plate_report_setup,
+                                                    analyse_method, write_to_excel)
 
                 gui_tab = "bio_exp"
                 archive = True
@@ -977,7 +1032,7 @@ def main(config):
         #   WINDOW 1 - Purity           ###
         if event == "-PURITY_DATA_IMPORT-":
             if purit_info_values:
-                #clearing purity info window:
+                # clearing purity info window:
                 window["-PURITY_INFO_RT_START-"].update(value="")
                 window["-PURITY_INFO_RT_END-"].update(value="")
                 window["-PURITY_INFO_WAVELENGTH-"].update(value="")
@@ -1000,14 +1055,15 @@ def main(config):
                 window["-PURITY_DATA_IMPORT-"].update(text="Import Data")
                 purit_info_values = False
 
-            elif not purit_info_values: #ToDo add threading
+            elif not purit_info_values:  # ToDo add threading
                 temp_wavelength = values["-PURITY_DATA_UV_WAVE-"]
                 temp_wave_test, wavelength_data = guard_purity_data_wavelength(temp_wavelength)
 
                 if not values["-PURITY_DATA_IMPORT_FOLDER-"]:
                     sg.PopupError("Please select a folder")
                 # Check for excel file if needed
-                elif values["-PURITY_DATA_CALC_PURITY-"] and not values["-PURITY_DATA_COMPOUND_DATA-"] and not values["-PURITY_DATA_USE_COMPOUNDS-"]:
+                elif values["-PURITY_DATA_CALC_PURITY-"] and not values["-PURITY_DATA_COMPOUND_DATA-"] and not values[
+                    "-PURITY_DATA_USE_COMPOUNDS-"]:
                     sg.PopupError("Please select an import file")
 
                 elif not temp_wave_test:
@@ -1018,13 +1074,14 @@ def main(config):
                     folder = values["-PURITY_DATA_IMPORT_FOLDER-"]
                     all_data = import_ms_data(folder)
 
-                    #GAURD# Checking if there are UV data
+                    # GAURD# Checking if there are UV data
                     if isinstance(all_data, str):
                         sg.Popup("Missing UV Data")
                     else:
                         _, purity_samples, purity_data, missing_samples = all_data
                         if missing_samples:
-                            guard = sg.PopupYesNo(f"Missing following data: {missing_samples}. Do you want to continue (for now this will stop the process!!!)") #ToDo Fix this, make it possible to continue
+                            guard = sg.PopupYesNo(
+                                f"Missing following data: {missing_samples}. Do you want to continue (for now this will stop the process!!!)")  # ToDo Fix this, make it possible to continue
                         else:
                             compound_data = values["-PURITY_DATA_USE_COMPOUNDS-"]
                             slope_threshold = int(values["-PURITY_DATA_SLOPE_THRESHOLD-"])
@@ -1035,7 +1092,8 @@ def main(config):
 
                             # Make sure that the names are correct for the compound data. Will change the name in purity-data
                             if compound_data:
-                                new_names = sample_to_compound_name_controller(config, purity_data) #ToDo duplicate code later on, for checking data that is not compound data
+                                new_names = sample_to_compound_name_controller(config,
+                                                                               purity_data)  # ToDo duplicate code later on, for checking data that is not compound data
                                 if new_names:
                                     for sample in new_names:
                                         if new_names[sample] == "Delete":
@@ -1051,7 +1109,8 @@ def main(config):
                                 purity_data_added_to_db = True
 
                             peak_information, peak_table_data, sample_peak_dict = get_peak_information(
-                                purity_data, slope_threshold, uv_threshold, rt_solvent_peak, sample_data, wavelength_data)
+                                purity_data, slope_threshold, uv_threshold, rt_solvent_peak, sample_data,
+                                wavelength_data)
 
                             if values["-PURITY_DATA_CALC_PURITY-"]:
                                 if not values["-PURITY_DATA_USE_COMPOUNDS-"]:
@@ -1073,17 +1132,19 @@ def main(config):
 
                                     if raw_data_samples != excel_data_samples:
                                         # If they are not the same, a popup will show, where you can set names for the data.
-                                        new_names = ms_raw_name_guard(raw_data_samples, excel_data_samples, db_data, config)
+                                        new_names = ms_raw_name_guard(raw_data_samples, excel_data_samples, db_data,
+                                                                      config)
 
-                                    name_changer(new_names, purity_data, sample_data, peak_information, sample_peak_dict)
-
+                                    name_changer(new_names, purity_data, sample_data, peak_information,
+                                                 sample_peak_dict)
 
                                 all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"], \
                                 purity_peak_list_table_data = purity_ops(sample_data, purity_data, peak_information,
-                                                                         ms_mode, delta_mass, mz_threshold, peak_amounts)
+                                                                         ms_mode, delta_mass, mz_threshold,
+                                                                         peak_amounts)
 
                                 add_start_end_time(purity_peak_list_table_data, sample_peak_dict)
-                                window["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"].\
+                                window["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"]. \
                                     update(values=all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"])
 
                             window["-PURITY_INFO_SAMPLE_BOX-"].update(values=purity_samples)
@@ -1091,7 +1152,7 @@ def main(config):
                             purit_info_values = True
                             # window["-PURITY_INFO_OVERVIEW_TABLE-"].update(values=all_table_data["-PURITY_INFO_OVERVIEW_TABLE-"])
 
-        if event == "-PURITY_INFO_PURITY_OVERVIEW_IMPORT-" and purity_data:     #ToDo Check if this works
+        if event == "-PURITY_INFO_PURITY_OVERVIEW_IMPORT-" and purity_data:  # ToDo Check if this works
             if not "-PURITY_DATA_USE_COMPOUNDS-":
                 sg.PopupError("Not compound data. Can't be added to the database. ")
             else:
@@ -1101,7 +1162,7 @@ def main(config):
                 purity_data_compounds_to_db(config, all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"])
 
         if event == "-PURITY_DATA_REPORT-":
-            sg.Popup("Not working atm") # ToDo Make this work. create a report based on data.
+            sg.Popup("Not working atm")  # ToDo Make this work. create a report based on data.
 
         #     WINDOW 1 - PLATE LAYOUT     ###
         if event == "-PLATE_LAYOUT_COLOUR_CHOSE_TARGET-":
@@ -1210,7 +1271,8 @@ def main(config):
                         temp_plate_name = values["-BIO_INFO_PLATES-"]
                         temp_analyse_method = values["-BIO_INFO_ANALYSE_METHOD-"]
 
-                        temp_plate_wells_bio_info = plate_bio_info[temp_plate_name]["plates"][temp_analyse_method]["wells"]
+                        temp_plate_wells_bio_info = plate_bio_info[temp_plate_name]["plates"][temp_analyse_method][
+                            "wells"]
                         window["-INFO_BIO_WELL_VALUE-"].update(value=temp_plate_wells_bio_info[temp_well_id_bio_info])
 
                 if values["-RECT_BIO_CANVAS-"][0] and values["-RECT_BIO_CANVAS-"][1]:
@@ -1301,7 +1363,8 @@ def main(config):
                     for index_x, cords_x in enumerate(temp_x):
                         for index_y, cords_y in enumerate(temp_y):
                             if min_x <= temp_x[index_x] <= max_x and min_y <= temp_y[index_y] <= max_y:
-                                graphs_list.add(graph_plate.get_figures_at_location((temp_x[index_x], temp_y[index_y]))[0])
+                                graphs_list.add(
+                                    graph_plate.get_figures_at_location((temp_x[index_x], temp_y[index_y]))[0])
 
                     # colours the wells in different colour, depending on if they are samples or blanks
                     for wells in graphs_list:
@@ -1379,7 +1442,7 @@ def main(config):
                 well_state = well_state.casefold()
                 if well_state == "positive":
                     window["-WORKLIST_USE_POSITIVE_CONTROL-"].update(value=True)
-                    window["-WORKLIST_POSITIVE_CONTROL_ID-"].update(disabled=False, 
+                    window["-WORKLIST_POSITIVE_CONTROL_ID-"].update(disabled=False,
                                                                     value=worklist_data[well_state]["compound"])
                 if well_state == "negative":
                     window["-WORKLIST_USE_NEGATIVE_CONTROL-"].update(value=True)
@@ -1460,8 +1523,8 @@ def main(config):
                     else:
                         worklist = None
                 else:
-                     worklist = None
-                     assays = values["-WORKLIST_ASSAY_LIST-"]
+                    worklist = None
+                    assays = values["-WORKLIST_ASSAY_LIST-"]
                 if worklist != "cancelled":
                     plate_layout = archive_plates_dict[values["-WORKLIST_PLATE_LAYOUT-"]]
 
@@ -1515,17 +1578,17 @@ def main(config):
                     plate_amount = int(values["-WORKLIST_PLATE_AMOUNT-"])
                     initial_plate = int(values["-WORKLIST_INITIAL_PLATE-"])
                     volume = float(values["-WORKLIST_VOLUME-"])
-                    worklist_check = generate_worklist(config, plate_amount, mps, plate_layout, used_plate_well_dict,
-                                                       assay_name, initial_plate, volume, worklist_analyse_method,
-                                                       sample_direction, control_layout, control_samples,
-                                                       bonus_compound)
+                    file, msg = generate_worklist(config, plate_amount, mps, plate_layout, used_plate_well_dict,
+                                                  assay_name, initial_plate, volume, worklist_analyse_method,
+                                                  sample_direction, control_layout, control_samples,
+                                                  bonus_compound)
 
-                    if not worklist_check:
+                    if not file:
                         sg.PopupError("Something crashed up")
-                    elif type(worklist_check) == str:
-                        sg.Popup(worklist_check)
+                    elif type(msg) == str:
+                        sg.Popup(f"{msg} - File still created with fewer plates, saved here {file}")
                     else:
-                        sg.Popup(f"Worklist have been created and saved here: {worklist_check}")
+                        sg.Popup(f"Worklist have been created and saved here: {file}")
 
         #       WINDOW 1 - EXTRA            ###
         if event == "-PD_METHOD_DD-" and values["-PD_METHOD_DD-"] == "Generate":
@@ -1808,12 +1871,13 @@ def main(config):
             window["-COMPOUND_INFO_CONCENTRATION-"].update(value=compound_data[temp_id]["concentration"])
 
             search_limiter_origin = {"academic_commercial": {"value": values["-SEARCH_AC-"],
-                                                      "operator": "IN",
-                                                      "target_column": "ac",
-                                                      "use": ac_use}, "vendor_center": {"value": values["-SEARCH_ORIGIN-"],
-                                                "operator": "IN",
-                                                "target_column": "origin",
-                                                "use": origin_use}}
+                                                             "operator": "IN",
+                                                             "target_column": "ac",
+                                                             "use": ac_use},
+                                     "vendor_center": {"value": values["-SEARCH_ORIGIN-"],
+                                                       "operator": "IN",
+                                                       "target_column": "origin",
+                                                       "use": origin_use}}
             all_data_origin, _ = grab_table_data(config, "origin", search_limiter_origin)
             window["-COMPOUND_INFO_AC-"].update(value=all_data_origin[0][1])
             window["-COMPOUND_INFO_ORIGIN-"].update(value=all_data_origin[0][2])
@@ -1868,7 +1932,8 @@ def main(config):
                     if not values["-SEARCH_IGNORE_VOLUME-"]:
                         vol_converter = {"mL": 1, "uL": 100, "nL": 1000000}
 
-                        transferee_volume = float(values["-SEARCH_TRANS_VOL-"]) / vol_converter[values["-SEARCH_VOL_PARAMETERS-"]]
+                        transferee_volume = float(values["-SEARCH_TRANS_VOL-"]) / vol_converter[
+                            values["-SEARCH_VOL_PARAMETERS-"]]
                     else:
                         transferee_volume = None
 
@@ -1909,14 +1974,15 @@ def main(config):
                                                                        "use": not values["-SEARCH_IGNORE_VOLUME-"]}},
                         "join_tables": {config["Tables"]["compound_main"]: {},
                                         config["Tables"]["compound_mp_table"]: {
-                                             "compound_id": {"value": "",
-                                                             "operator": "IN",
-                                                             "target_column": "compound_id",
-                                                             "use": False}},
-                                         "shared_data": "compound_id"}
+                                            "compound_id": {"value": "",
+                                                            "operator": "IN",
+                                                            "target_column": "compound_id",
+                                                            "use": False}},
+                                        "shared_data": "compound_id"}
                     }
                     min_mp = values["-SEARCH_MP_MINIMIZED-"]
-                    table_data = table_update_tree(mp_amount, min_mp, samples_per_plate, ignore_active, sub_search, smiles,
+                    table_data = table_update_tree(mp_amount, min_mp, samples_per_plate, ignore_active, sub_search,
+                                                   smiles,
                                                    sub_search_methode, threshold, source_table, search_limiter, config)
                     if table_data:
                         treedata, all_data, compound_data, counter = table_data
@@ -1970,11 +2036,13 @@ def main(config):
                         sample_amount = int(values["-SEARCH_PLATE_LAYOUT_SAMPLE_AMOUNT-"])
                         vol_converter = {"mL": 1000000, "uL": 10000, "nL": 1}
 
-                        transferee_volume = values["-SEARCH_TRANS_VOL-"] * vol_converter[values["-SEARCH_VOL_PARAMETERS-"]]
+                        transferee_volume = values["-SEARCH_TRANS_VOL-"] * vol_converter[
+                            values["-SEARCH_VOL_PARAMETERS-"]]
                         output_folder = values["-SEARCH_OUTPUT_FOLDER-"]
                         mp_data = all_data["mp_data"]
 
-                        dp_creator(config, plate_layout, sample_amount, mp_data, transferee_volume, dp_name, output_folder)
+                        dp_creator(config, plate_layout, sample_amount, mp_data, transferee_volume, dp_name,
+                                   output_folder)
 
                         file_location = f"{values['-SEARCH_OUTPUT_FOLDER-']}/dp_output/"
 
@@ -2193,8 +2261,8 @@ def main(config):
             window["-PLATE_TABLE_BARCODE_LIST_BOX-"].update(values=mp_plates_list)
             window.Element("-PLATE_TABLE_TABLE-").Widget.configure(displaycolumns=plate_table_table_heading_mp)
 
-        if event == "-PLATE_TABLE_CHOOSER-"\
-                or event == "-PLATE_TABLE_START_DATE_TARGET-" and values["-PLATE_TABLE_CHOOSER-"]\
+        if event == "-PLATE_TABLE_CHOOSER-" \
+                or event == "-PLATE_TABLE_START_DATE_TARGET-" and values["-PLATE_TABLE_CHOOSER-"] \
                 or event == "-PLATE_TABLE_END_DATE_TARGET-" and values["-PLATE_TABLE_CHOOSER-"]:
 
             window["-PLATE_TABLE_TABLE-"].update(values=[])
@@ -2212,9 +2280,9 @@ def main(config):
 
             search_limiter = {
                 "start_date": {"value": values["-PLATE_TABLE_START_DATE_TARGET-"], "operator": "<", "target_column":
-                               "date", "use": use_start_date},
+                    "date", "use": use_start_date},
                 "end_date": {"value": values["-PLATE_TABLE_END_DATE_TARGET-"], "operator": ">", "target_column":
-                             "date", "use": use_end_date},
+                    "date", "use": use_end_date},
             }
             plate_data, _ = grab_table_data(config, table_dict[values["-PLATE_TABLE_CHOOSER-"]], search_limiter)
             if plate_data:
@@ -2236,10 +2304,13 @@ def main(config):
                           "Daughter Plates": {"clm": "dp_barcode", "table": "compound_dp"}}
             search_limiter = {"academic_commercial": {"value": values["-PLATE_TABLE_BARCODE_LIST_BOX-"],
                                                       "operator": "IN",
-                                                      "target_column": table_dict[values["-PLATE_TABLE_CHOOSER-"]]["clm"],
+                                                      "target_column": table_dict[values["-PLATE_TABLE_CHOOSER-"]][
+                                                          "clm"],
                                                       "use": True}}
 
-            all_table_data["-PLATE_TABLE_TABLE-"], _ = grab_table_data(config, table_dict[values["-PLATE_TABLE_CHOOSER-"]]["table"], search_limiter)
+            all_table_data["-PLATE_TABLE_TABLE-"], _ = grab_table_data(config,
+                                                                       table_dict[values["-PLATE_TABLE_CHOOSER-"]][
+                                                                           "table"], search_limiter)
 
             # print(headings)
             if values["-PLATE_TABLE_BARCODE_LIST_BOX-"]:
@@ -2255,7 +2326,6 @@ def main(config):
                     mp_plates_list.append(rows[0])
 
             window["-PLATE_TABLE_BARCODE_LIST_BOX-"].update(values=mp_plates_list)
-
 
         #   WINDOW 2 - COMPOUND INFO    ###
         if event == "-COMPOUND_INFO_SEARCH_COMPOUND_ID-":
@@ -2287,10 +2357,10 @@ def main(config):
 
                 # Table updates:
                 all_table_data["-COMPOUND_INFO_ALL_PLATE_INFO_TABLE-"], \
-                    all_table_data["-COMPOUND_INFO_PURITY_INFO_TABLE-"],\
-                    all_table_data["-COMPOUND_INFO_MP_PLATE_INFO_TABLE-"],\
-                    all_table_data["-COMPOUND_INFO_DP_PLATE_INFO_TABLE-"],\
-                    all_table_data["-COMPOUND_INFO_BIO_INFO_TABLE-"] = compound_info_table_data(config, sample)
+                all_table_data["-COMPOUND_INFO_PURITY_INFO_TABLE-"], \
+                all_table_data["-COMPOUND_INFO_MP_PLATE_INFO_TABLE-"], \
+                all_table_data["-COMPOUND_INFO_DP_PLATE_INFO_TABLE-"], \
+                all_table_data["-COMPOUND_INFO_BIO_INFO_TABLE-"] = compound_info_table_data(config, sample)
 
                 window["-COMPOUND_INFO_ALL_PLATE_INFO_TABLE-"].update(
                     values=all_table_data["-COMPOUND_INFO_ALL_PLATE_INFO_TABLE-"])
@@ -2314,32 +2384,32 @@ def main(config):
         # Updating Sub setting data
         if event == "-BIO_INFO_HEATMAP_LOW_COLOUR_TARGET-":
             if values["-BIO_INFO_HEATMAP_LOW_COLOUR_TARGET-"] != "None":
-                window["-BIO_INFO_HEATMAP_LOW_COLOUR_BOX-"].\
+                window["-BIO_INFO_HEATMAP_LOW_COLOUR_BOX-"]. \
                     update(background_color=values["-BIO_INFO_HEATMAP_LOW_COLOUR_TARGET-"])
         if event == "-BIO_INFO_HEATMAP_MID_COLOUR_TARGET-":
             if values["-BIO_INFO_HEATMAP_MID_COLOUR_TARGET-"] != "None":
-                window["-BIO_INFO_HEATMAP_MID_COLOUR_BOX-"].\
+                window["-BIO_INFO_HEATMAP_MID_COLOUR_BOX-"]. \
                     update(background_color=values["-BIO_INFO_HEATMAP_MID_COLOUR_TARGET-"])
         if event == "-BIO_INFO_HEATMAP_HIGH_COLOUR_TARGET-":
             if values["-BIO_INFO_HEATMAP_HIGH_COLOUR_TARGET-"] != "None":
-                window["-BIO_INFO_HEATMAP_HIGH_COLOUR_BOX-"].\
+                window["-BIO_INFO_HEATMAP_HIGH_COLOUR_BOX-"]. \
                     update(background_color=values["-BIO_INFO_HEATMAP_HIGH_COLOUR_TARGET-"])
 
         if event == "-BIO_INFO_HIT_MAP_LOW_COLOUR_TARGET-":
             if values["-BIO_INFO_HIT_MAP_LOW_COLOUR_TARGET-"] != "None":
-                window["-BIO_INFO_HIT_MAP_LOW_COLOUR_BOX-"].\
+                window["-BIO_INFO_HIT_MAP_LOW_COLOUR_BOX-"]. \
                     update(background_color=values["-BIO_INFO_HIT_MAP_LOW_COLOUR_TARGET-"])
         if event == "-BIO_INFO_HIT_MAP_MID_COLOUR_TARGET-":
             if values["-BIO_INFO_HIT_MAP_MID_COLOUR_TARGET-"] != "None":
-                window["-BIO_INFO_HIT_MAP_MID_COLOUR_BOX-"].\
+                window["-BIO_INFO_HIT_MAP_MID_COLOUR_BOX-"]. \
                     update(background_color=values["-BIO_INFO_HIT_MAP_MID_COLOUR_TARGET-"])
         if event == "-BIO_INFO_HIT_MAP_HIGH_COLOUR_TARGET-":
             if values["-BIO_INFO_HIT_MAP_HIGH_COLOUR_TARGET-"] != "None":
-                window["-BIO_INFO_HIT_MAP_HIGH_COLOUR_BOX-"].\
+                window["-BIO_INFO_HIT_MAP_HIGH_COLOUR_BOX-"]. \
                     update(background_color=values["-BIO_INFO_HIT_MAP_HIGH_COLOUR_TARGET-"])
         if event == "-BIO_INFO_BOUNDS_BUTTON-":
-            sg.PopupError("This is not working")    #ToDo make this button work. Should get a small popup, to choose all the bins for the bio analysis.
-
+            sg.PopupError(
+                "This is not working")  # ToDo make this button work. Should get a small popup, to choose all the bins for the bio analysis.
 
         if event == "-BIO_INFO_SUB_SETTINGS_TABS-" and values["-BIO_INFO_SUB_SETTINGS_TABS-"] == "Plate Overview" \
                 and bio_info_sub_setting_tab_plate_overview_calc or event == "-BIO_INFO_PLATE_OVERVIEW_METHOD_LIST-" \
@@ -2347,7 +2417,8 @@ def main(config):
             method = values["-BIO_INFO_PLATE_OVERVIEW_METHOD_LIST-"]
             state = values["-BIO_INFO_PLATE_OVERVIEW_STATE_LIST-"]
             plate = values["-BIO_INFO_PLATE_OVERVIEW_PLATE-"]
-            all_table_data["-BIO_INFO_OVERVIEW_TABLE-"] = sub_settings_plate_overview(plate_bio_info, method, plate, state)
+            all_table_data["-BIO_INFO_OVERVIEW_TABLE-"] = sub_settings_plate_overview(plate_bio_info, method, plate,
+                                                                                      state)
             window["-BIO_INFO_OVERVIEW_TABLE-"].update(values=all_table_data["-BIO_INFO_OVERVIEW_TABLE-"])
             bio_info_sub_setting_tab_plate_overview_calc = False
 
@@ -2361,7 +2432,8 @@ def main(config):
             all_table_data["-BIO_INFO_OVERVIEW_Z_PRIME_TABLE-"] = sub_settings_overview_table_data
             window["-BIO_INFO_OVERVIEW_AVG_TABLE-"].update(values=all_table_data["-BIO_INFO_OVERVIEW_AVG_TABLE-"])
             window["-BIO_INFO_OVERVIEW_STDEV_TABLE-"].update(values=all_table_data["-BIO_INFO_OVERVIEW_STDEV_TABLE-"])
-            window["-BIO_INFO_OVERVIEW_Z_PRIME_TABLE-"].update(values=all_table_data["-BIO_INFO_OVERVIEW_Z_PRIME_TABLE-"])
+            window["-BIO_INFO_OVERVIEW_Z_PRIME_TABLE-"].update(
+                values=all_table_data["-BIO_INFO_OVERVIEW_Z_PRIME_TABLE-"])
             bio_info_sub_setting_tab_overview_calc = False
 
         # if event == "-BIO_INFO_SUB_SETTINGS_TABS-" and values["-BIO_INFO_SUB_SETTINGS_TABS-"] == "List" \
@@ -2378,7 +2450,7 @@ def main(config):
         if event == "-BIO_INFO_SUB_SETTINGS_TABS-" and values["-BIO_INFO_SUB_SETTINGS_TABS-"] == "Z-Prime" \
                 and bio_info_sub_setting_tab_z_prime_calc:
             z_prime_data = sub_settings_z_prime(plate_bio_info)
-            all_table_data["-BIO_INFO_Z_PRIME_LIST_TABLE-"], z_prime_max_barcode, z_prime_max_value, z_prime_min_barcode\
+            all_table_data["-BIO_INFO_Z_PRIME_LIST_TABLE-"], z_prime_max_barcode, z_prime_max_value, z_prime_min_barcode \
                 , z_prime_min_value = z_prime_data
             window["-BIO_INFO_Z_PRIME_LIST_TABLE-"].update(values=all_table_data["-BIO_INFO_Z_PRIME_LIST_TABLE-"])
             window["-BIO_INFO_Z_PRIME_MAX_BARCODE-"].update(value=z_prime_max_barcode)
@@ -2526,7 +2598,8 @@ def main(config):
                 method = values["-BIO_INFO_MATRIX_METHOD-"]
 
             try:
-                all_table_data["-BIO_INFO_MATRIX_TABLE-"], display_columns = sub_settings_matrix(data_dict, calc, method, state)
+                all_table_data["-BIO_INFO_MATRIX_TABLE-"], display_columns = sub_settings_matrix(data_dict, calc,
+                                                                                                 method, state)
             except KeyError:
                 sg.popup_error("Please select all information")
             else:
@@ -2534,7 +2607,6 @@ def main(config):
 
                 window["-BIO_INFO_MATRIX_TABLE-"].update(values=all_table_data["-BIO_INFO_MATRIX_TABLE-"])
             # window["-BIO_INFO_MATRIX_TABLE-"].update(headings=headings)
-
 
         if event == "-BIO_INFO_EXPORT-":
             sg.popup("This functions does nothing ATM ")
@@ -2554,7 +2626,6 @@ def main(config):
             wavelength_data = values["-PURITY_INFO_UV_WAVE-"]
 
             for sample in samples:
-
                 temp_peak_information, temp_peak_table_data, temp_sample_peak_dict = get_peak_information(
                     purity_data, slope_threshold, uv_threshold, rt_solvent_peak, None, wavelength_data, sample)
 
@@ -2594,16 +2665,15 @@ def main(config):
             print("HEY")
             print(values)
 
-
         # if event == "-PURITY_INFO_PURITY_OVERVIEW_TABLE-":
         #     print(purity_peak_list_table_data)
         #   WINDOW 2 - DRAWING THINGY!!!    ###
         if event == "-PURITY_INFO_SAMPLE_BOX-" and values["-PURITY_INFO_SAMPLE_BOX-"] \
                 or event == "-PURITY_INFO_PURITY_OVERVIEW_TABLE-" and purit_info_values and \
-                all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"]\
+                all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"] \
                 or event == "-PURITY_INFO_GRAPH_SHOWING-" and purity_info_samples \
-                or event == "-PURITY_INFO_PURITY_PEAK_LIST_TABLE-" and purit_info_values\
-                or event == "-PURITY_INFO_DRAW_PEAKS-" and plot_style\
+                or event == "-PURITY_INFO_PURITY_PEAK_LIST_TABLE-" and purit_info_values \
+                or event == "-PURITY_INFO_DRAW_PEAKS-" and plot_style \
                 or event == "-PURITY_INFO_PEAK_TABLE-" and plot_style:
 
             if event == "-PURITY_INFO_SAMPLE_BOX-":
@@ -2661,7 +2731,8 @@ def main(config):
                     update_purity_info_peak_table = False
 
             elif event == "-PURITY_INFO_PEAK_TABLE-" and values["-PURITY_INFO_PEAK_TABLE-"]:
-                purity_info_samples = [all_table_data["-PURITY_INFO_PEAK_TABLE-"][values["-PURITY_INFO_PEAK_TABLE-"][0]][0]]
+                purity_info_samples = [
+                    all_table_data["-PURITY_INFO_PEAK_TABLE-"][values["-PURITY_INFO_PEAK_TABLE-"][0]][0]]
                 peak = all_table_data["-PURITY_INFO_PEAK_TABLE-"][values["-PURITY_INFO_PEAK_TABLE-"][0]][1]
                 start = all_table_data["-PURITY_INFO_PEAK_TABLE-"][values["-PURITY_INFO_PEAK_TABLE-"][0]][3]
                 end = all_table_data["-PURITY_INFO_PEAK_TABLE-"][values["-PURITY_INFO_PEAK_TABLE-"][0]][4]
@@ -2762,7 +2833,8 @@ def main(config):
                 if update_purity_info_peak_table:
                     all_table_data["-PURITY_INFO_PEAK_TABLE-"] = temp_peak_table_data
                     window["-PURITY_INFO_PEAK_TABLE-"].update(values=all_table_data["-PURITY_INFO_PEAK_TABLE-"])
-                all_table_data["-PURITY_INFO_RAW_DATA_TABLE-"] = purity_data[purity_info_samples[0]]["peak_table_raw"][1]
+                all_table_data["-PURITY_INFO_RAW_DATA_TABLE-"] = purity_data[purity_info_samples[0]]["peak_table_raw"][
+                    1]
                 window["-PURITY_INFO_RAW_DATA_TABLE-"].update(values=all_table_data["-PURITY_INFO_RAW_DATA_TABLE-"])
 
                 update_purity_info_peak_table = True
@@ -2772,7 +2844,6 @@ def main(config):
                     "uv": None,
                     "peak_lines": {}
                 }
-
 
         # Sorting when clicking on Table headers. All tables should be in here execpt compound table, as it is a tree
         # Table...

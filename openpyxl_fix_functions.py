@@ -117,17 +117,20 @@ def merge_cells_single_row(value, ws, row, start_clm,  end_clm, border=False, bo
                      "medium": border_medium,
                      "thick": border_thick,
                      "red_line": border_style_red}
-
-    ws.merge_cells(start_row=row, start_column=start_clm, end_row=row, end_column=end_clm)
-    temp_cell = ws.cell(row=row, column=start_clm)
-    temp_cell.value = value
-    temp_cell.font = Font(b=True)
-    temp_cell.alignment = Alignment(horizontal='center', vertical='center')
-    range_merge = end_clm - start_clm + 1
-    if border:
-        for i in range(range_merge):
-            temp_cell = ws.cell(row=row, column=start_clm + i)
-            temp_cell.border = border_styles[border_style]()
+    try:
+        ws.merge_cells(start_row=row, start_column=start_clm, end_row=row, end_column=end_clm)
+    except ValueError:
+        print("To many lines")
+    else:
+        temp_cell = ws.cell(row=row, column=start_clm)
+        temp_cell.value = value
+        temp_cell.font = Font(b=True)
+        temp_cell.alignment = Alignment(horizontal='center', vertical='center')
+        range_merge = end_clm - start_clm + 1
+        if border:
+            for i in range(range_merge):
+                temp_cell = ws.cell(row=row, column=start_clm + i)
+                temp_cell.border = border_styles[border_style]()
 
 
 def _get_sheet_name(ws):

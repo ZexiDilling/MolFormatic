@@ -554,6 +554,7 @@ def bio_data(config, folder, plate_layout, bio_plate_report_setup, analysis, bio
     bioa = BIOAnalyser(config, bio_plate_report_setup)
     file_list = get_file_list(folder)
     all_plates_data = {}
+    used_plates = []
     for files in file_list:
         if isfile(files) and files.endswith(".txt"):
             files = txt_to_xlsx(files)
@@ -561,34 +562,51 @@ def bio_data(config, folder, plate_layout, bio_plate_report_setup, analysis, bio
             all_data, well_row_col, well_type, barcode, date = original_data_dict(files, plate_layout)
             if not all_data:
                 return False
-
+            used_plates.append(barcode)
             all_plates_data[barcode] = bioa.bio_data_controller(files, plate_layout, all_data, well_row_col, well_type,
                                                                 analysis, write_to_excel, bio_sample_dict,
                                                                 save_location)
         else:
             print(f"{files} is not the right formate")
-    return True, all_plates_data, date
+    return True, all_plates_data, date, used_plates
 
 
-def bio_full_report(analyse_method, all_plate_data, final_report_setup, output_folder, final_report_name):
+def bio_full_report(config, analyse_method, all_plate_data, used_plates, final_report_setup, output_folder, final_report_name,
+                    include_hits, threshold, hit_amount, include_smiles, bio_sample_dict):
     """
     Writes the final report for the bio data
-
+    :param config: The config handler, with all the default information in the config file.
+    :type config: configparser.ConfigParser
     :param analyse_method: The analysed method used for the data
     :type analyse_method: str
     :param all_plate_data: All the data for all the plates, raw and calculations
     :type all_plate_data: dict
+    :param used_plates: A list of plates that are used
+    :type used_plates: list
     :param final_report_setup: The settings for the report
     :type final_report_name: dict
     :param output_folder: The output folder, where the final report ends up
     :type output_folder: str
     :param final_report_name: The name for the report
     :type final_report_name: str
+    :param include_hits: If the final reports should include hits
+    :type include_hits: bool
+    :param threshold: If the report should include hits, then this is the threshold for what is consideret as hits
+        It can either use threshold or hit_amount
+    :type threshold: int or None
+    :param hit_amount: If the report should include hits, then how many hits should be included
+        It can either use threshold or hit_amount
+    :type hit_amount: int or None
+    :param include_smiles: If there should be id and smiles on the hits
+    :type include_smiles: bool
+    :param bio_sample_dict: A dict for ID's and smiles for each well on each plate
+    :type bio_sample_dict: dict or None
     :return: A excel report file with all the data
     """
 
     output_file = f"{output_folder}/{final_report_name}.xlsx"
-    bio_final_report_controller(analyse_method, all_plate_data, output_file, final_report_setup)
+    bio_final_report_controller(config, analyse_method, all_plate_data, used_plates, output_file, final_report_setup,
+                                include_hits, threshold, hit_amount, include_smiles, bio_sample_dict)
 
 
 def mp_production_2d_to_pb_simulate(folder_output, barcodes_2d, mp_name, trans_vol):
@@ -1273,7 +1291,8 @@ def purity_ops(sample_data, purity_data, peak_information, ms_mode, delta_mass, 
                mass=None):
     """
 
-    :param config:
+    :param config: The config handler, with all the default information in the config file.
+    :type config: configparser.ConfigParser
     :param sample_data_file:
     :param purity_data:
     :param peak_information:
@@ -1554,12 +1573,13 @@ def generate_worklist(config, plate_amount, mps, plate_layout, used_plate_well_d
         return "error: wrong file format for Control Layout"
     # destination_dict = _from_plate_layout_to_destination_dict(plate_layout, assay_name, plate_amount, initial_plate)
     csv_w = CSVWriter()
-    msg = csv_w.worklist_writer(config, plate_layout, mps, free_well_dict, assay_name, plate_amount, initial_plate,
+    file, msg = csv_w.worklist_writer(config, plate_layout, mps, free_well_dict, assay_name, plate_amount, initial_plate,
                                 volume, sample_direction, worklist_analyse_method, control_bonus_source,
                                 control_samples, bonus_compound)
 
-    print(msg)
-    return msg
+    if type(msg) == str:
+        print(msg)
+    return file, msg
 
 
 if __name__ == "__main__":

@@ -82,7 +82,7 @@ class DataBaseFunctions:
         self.conn.commit()
         self.cursor.close()
 
-    def add_records_controller(self, table_name, data):
+    def add_records_controller(self, table_name, data, counter=None):
         """
         Adds data to the database, main access point to multiple functions
 
@@ -92,11 +92,17 @@ class DataBaseFunctions:
         :type data: dict
         :return: Data added to the database
         """
+
         self.create_connection()
         list_columns = self._list_columns(data)
+        if "Row_Counter" in list_columns:
+            rows = self.number_of_rows(table_name)
+            data["Row_Counter"] = rows + 2
         place_holder = self._add_place_holders(list_columns)
         layout = self._add_layout(table_name, place_holder)
         data_layout = self._data_layout(data, list_columns)
+        if counter < 5:
+            print(data_layout)
         self._add_data_to_table(layout, data_layout)
 
     def update_vol(self, source_table, vol, barcode_source, row_id):
@@ -136,21 +142,20 @@ class DataBaseFunctions:
         find = f"SELECT rowid, * FROM '{table}' WHERE {barcode_name} = '{barcode}' AND {id_name} = '{id_number}'"
         return self.fetch(find)
 
-    def find_plates(self, table, barcode, barcode_name):
+    def find_plates(self, table, data_value, headline):
         """
         Finds plates in a table from the database
 
         :param table: What table are the plates in
         :type table: str
-        :param barcode: Barcode of the plates
-        :type barcode: str
-        :param barcode_name: Headline for the plates in the table
-        :type barcode_name: str
+        :param data_value: The value of the thing you are looking for
+        :type data_value: str
+        :param headline: Headline for the coloumn where  the data is, in the table
+        :type headline: str
         :return: Data from the database
         :rtype: dict
         """
-        find = f"SELECT rowid, * FROM '{table}' WHERE {barcode_name} = '{barcode}' "
-
+        find = f"SELECT rowid, * FROM '{table}' WHERE {headline} = '{data_value}' "
         return self.fetch(find)
 
     def delete_records(self):
