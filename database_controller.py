@@ -578,8 +578,8 @@ class AddData:
                 if not test_db:
 
                     self.dbf.add_records_controller(destination_table, new_dict, test)
-                    self.dbf.update_vol(source_table, data_dict[transferee]["Volume"],
-                                        data_dict[transferee]["compound_id"], clm_id)
+                    # self.dbf.update_vol(source_table, data_dict[transferee]["Volume"],
+                    #                     data_dict[transferee]["compound_id"], clm_id)
                     test += 1
 
     def daughter_plate(self, file_list, plate_table_name="dp_plates",

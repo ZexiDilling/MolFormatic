@@ -10,7 +10,6 @@ from plate_formatting import mother_plate_generator as mpg
 from gui_popup import new_headlines_popup
 
 
-
 class CSVWriter:
     def __str__(self):
         """
@@ -244,7 +243,6 @@ class CSVWriter:
         except OSError:
             print("directory exist")
 
-
         file_name = f"{path}/plate_dilution_{date.today()}.csv"
 
         with open(file_name, "w", newline="\n") as csv_file:
@@ -327,8 +325,7 @@ class CSVWriter:
 
         if control_bonus_source:
             source_plate_bonus = list(control_bonus_source.keys())[0]
-        # print(plate_layout)
-        # print(bonus_compound)
+
         mp_plate_counter = 0
         mp_well_counter = 0
 
@@ -366,39 +363,30 @@ class CSVWriter:
 
                     # Check if the well is suppose to have samples in it, and if it does, add sample from MotherPlates
                     if well_state == "sample":
+                        # Check if there are any wells left, that have not been used, else it skips to the next plate
                         source_plate = mps[mp_plate_counter]
-                        if len(free_well_dict[source_plate]) > 0:
-                            source_well = free_well_dict[source_plate][mp_well_counter]
-
-                            # Writes the data to a CSV file
-                            csv_writer.writerow([destination_plate, destination_well, volume,
-                                                 source_well, source_plate])
-
-                            # counts the well used in each motherplates. If there are no compounds left, it will jump to
-                            # the next MotherPlate.
-                            mp_well_counter += 1
-                            if mp_well_counter == len(free_well_dict[source_plate]):
-                                mp_plate_counter += 1
-                                mp_well_counter = 0
-                                if mp_plate_counter == len(mps):
-                                    # If there are not enough compounds in the MotherPlates selected, it will close the file
-                                    # delete the file, and inform the user.
-                                    msg = "Not Enough MotherPlates"
-                                    return file, msg
-                                    # csv_file.close()
-                                    # file.unlink()
-                                    # return "Not Enough MotherPlates"
-                        else:
+                        while len(free_well_dict[source_plate]) == 0:
+                            print(source_plate)
                             mp_plate_counter += 1
                             mp_well_counter = 0
                             if mp_plate_counter == len(mps):
-                                # If there are not enough compounds in the MotherPlates selected, it will close the file
-                                # delete the file, and inform the user.
                                 msg = "Not Enough MotherPlates"
                                 return file, msg
-                                # csv_file.close()
-                                # file.unlink()
-                                # return "Not Enough MotherPlates"
+
+                            source_plate = mps[mp_plate_counter]
+
+                        source_well = free_well_dict[source_plate][mp_well_counter]
+
+                        # Writes the data to a CSV file
+                        csv_writer.writerow([destination_plate, destination_well, volume,
+                                             source_well, source_plate])
+                        mp_well_counter += 1
+                        if mp_well_counter >= len(free_well_dict[source_plate]):
+                            mp_plate_counter += 1
+                            mp_well_counter = 0
+                            if mp_plate_counter == len(mps):
+                                msg = "Not Enough MotherPlates"
+                                return file, msg
 
                     else:
                         if control_samples[well_state]["use"] or bonus_compound[well_state]:
@@ -479,6 +467,7 @@ class CSVReader:
         :return: 2 dict. 1 for the data and 1 for the plates
         :rtype: dict, dict
         """
+
         headline = ["DestinationBarcode", "DestinationWell", "compound_id", "Volume", "Date"]
         dict_data = {}
         destination_plates = {}
@@ -555,8 +544,6 @@ class CSVReader:
                                 destination_plates[value]["DestinationBarcode"] = value.strip("\n")
                                 destination_plates[value]["date"] = date.today()
                                 #destination_plates[clm_info]["location"] = "Freezer-1"
-
-
 
         return dict_data, destination_plates
 
@@ -651,6 +638,7 @@ class CSVReader:
 
                     headlines = lines.split(splitter[split_indicator])
                     return headlines
+
     @staticmethod
     def echo_worklist_to_dict(config, config_headline, csv_file, right_headlines, new_headline, sample_dict):
         splitter = [";", ",", "."]
@@ -659,14 +647,15 @@ class CSVReader:
             for index, lines in enumerate(file):
                 lines = lines.removesuffix("\n")
                 if index == 0:
-                    # Check if the file is a CSV file
 
+                    # Check if the file is a CSV file
                     headlines = lines.split(splitter[split_indicator])
                     while len(headlines) < 2:
                         split_indicator += 1
                         headlines = lines.split(splitter[split_indicator])
                         if split_indicator > len(splitter):
                             return "Not a CSV file", headlines, sample_dict
+
                     # Check if the headlines for the CSV file is correct, if not sends it back to be corrected
                     if not new_headline:
                         for right_headline in right_headlines:

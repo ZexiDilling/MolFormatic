@@ -76,7 +76,7 @@ class DataBaseFunctions:
         try:
             self.cursor.execute(layout, data)
         except sqlite3.IntegrityError:
-            pass
+            print(f"Data is properly in the database: {data}")
             #print("ERROR") # NEEDS TO WRITE REPORT OVER ERRORS TO SEE WHY DATA WAS NOT ADDED!!!
             # EITHER DUE TO DUPLICATES OR MISSING REFERENCE(FOREIGN KEY)
         self.conn.commit()
@@ -97,6 +97,10 @@ class DataBaseFunctions:
         list_columns = self._list_columns(data)
         if "Row_Counter" in list_columns:
             rows = self.number_of_rows(table_name)
+            # This is due to me deleting some data that should not have been deleted, but should have been changed
+            # active to zero .
+            if table_name == "compound_mp":
+                rows += 384
             data["Row_Counter"] = rows + 2
         place_holder = self._add_place_holders(list_columns)
         layout = self._add_layout(table_name, place_holder)

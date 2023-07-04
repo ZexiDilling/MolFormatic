@@ -499,7 +499,6 @@ def bio_compound_info_from_worklist(config, sg, bio_sample_list):
     for headline in temp_headlines:
         right_headlines_v2.append(config["worklist_headlines_v2"][headline])
 
-
     sample_dict = {}
     for files in bio_sample_list:
         file_headlines = CSVReader.grab_headlines(files)
@@ -520,6 +519,7 @@ def bio_compound_info_from_worklist(config, sg, bio_sample_list):
         # if the file uses wrong names for the headlines, this will give a popup with the "wrong headlines" and an
         # option to change them.
         if msg == "Wrong headlines":
+            print(files)
             new_headline = new_headlines_popup(right_headlines, file_headlines)
             msg, file_headlines, sample_dict = CSVReader.echo_worklist_to_dict(config, config_headline, files, right_headlines, new_headline,
                                                                                sample_dict)
@@ -1516,22 +1516,44 @@ def _get_motherplates_with_wells_from_worklist_dict(used_plate_well_dict):
     return motherplate_dict
 
 
-def _get_free_wells(mps, motherplate_dict):
+def _get_motherplate_layout(config, mps):
     """
-    Compare MPS with previuse used plates, and finds the wells that have not been used and add them to a dict
+    Generate a dict with the key of each motherplate and the value for all the wells that have compounds.
     :param mps: A list of MotherPlates
     :type: mps: list
+    :return: a dict with the key of each motherplate and the value for all the wells that have compounds.
+    :rtype: dict
+    """
+
+    dbf = DataBaseFunctions(config)
+    table = "compound_mp"
+    clm_header = "mp_barcode"
+    plate_data_dict = {}
+    for mp in mps:
+        plate_data_dict[mp] = []
+        temp_rows = dbf.records_to_rows(table, mp, clm_header)
+        for data in temp_rows:
+            temp_well = temp_rows[data]["mp_well"]
+            plate_data_dict[mp].append(temp_well)
+
+    return plate_data_dict
+
+
+def _get_free_wells(mps_layout, motherplate_dict):
+    """
+    Compare MPS with previuse used plates, and finds the wells that have not been used and add them to a dict
+    :param mps_layout: A dict with the layout for each motherplate
+    :type: mps_layout: dict
     :param motherplate_dict: A dicts of MotherPlates and the wells that have been used
     :type motherplate_dict: dict
     :return: a dict with MotherPlates as keys, and list of free wells as values
     :rtype: dict
     """
     # This depends on the motherplate layout. We use a full 384 layout
-    all_wells = plate_384_row
     free_wells = {}
-    for motherplates in mps:
+    for motherplates in mps_layout:
         free_wells[motherplates] = []
-        for wells in all_wells:
+        for wells in mps_layout[motherplates]:
 
             if motherplate_dict and motherplates in motherplate_dict:
                 if wells not in motherplate_dict[motherplates]:
@@ -1604,13 +1626,21 @@ def generate_worklist(config, plate_amount, mps, plate_layout, used_plate_well_d
     :type bonus_compound: dict
     :return:
     """
+
+    # Gets a dict of motherplates that have been used, and what wells in each motherplate,
+    # based on the worklist provided.
     if used_plate_well_dict:
         motherplate_dict = _get_motherplates_with_wells_from_worklist_dict(used_plate_well_dict)
-        print("motherplate_dict")
-        print(motherplate_dict)
     else:
         motherplate_dict = None
-    free_well_dict = _get_free_wells(mps, motherplate_dict)
+
+    # Get the layout of the motherplates. incase the motherplate is not a full 384 plate.
+    mps_layout = _get_motherplate_layout(config, mps)
+
+    # gets all the free wells, based on the layout of each motherplate, and what wells have been used before,
+    # based on the worklist provided
+    free_well_dict = _get_free_wells(mps_layout, motherplate_dict)
+
     if not control_layout:
         control_bonus_source = None
     elif control_layout.suffix == ".xlsx":
@@ -1625,9 +1655,9 @@ def generate_worklist(config, plate_amount, mps, plate_layout, used_plate_well_d
         return "error: wrong file format for Control Layout"
     # destination_dict = _from_plate_layout_to_destination_dict(plate_layout, assay_name, plate_amount, initial_plate)
     csv_w = CSVWriter()
-    file, msg = csv_w.worklist_writer(config, plate_layout, mps, free_well_dict, assay_name, plate_amount, initial_plate,
-                                volume, sample_direction, worklist_analyse_method, control_bonus_source,
-                                control_samples, bonus_compound)
+    file, msg = csv_w.worklist_writer(config, plate_layout, mps, free_well_dict, assay_name, plate_amount,
+                                      initial_plate, volume, sample_direction, worklist_analyse_method,
+                                      control_bonus_source, control_samples, bonus_compound)
 
     if type(msg) == str:
         print(msg)
