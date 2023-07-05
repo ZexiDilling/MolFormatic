@@ -277,6 +277,7 @@ def hit_mapping(ws, temp_dict, pora_threshold, methode, translate_wells_to_cells
 
 def frequency_writer(ws, headline, data_set, free_col, initial_row, bin_min, bin_max, bin_width, include_outliers):
     """
+    Writes the frequency of samples with a score within the borders of each bin
 
     :param ws: The worksheet for the excel filere where the data is added
     :type ws: openpyxl.worksheet.worksheet.Worksheet
@@ -309,7 +310,6 @@ def frequency_writer(ws, headline, data_set, free_col, initial_row, bin_min, bin
     ws.cell(column=col + 1, row=row, value="Bin Values").font = Font(b=True)
     row += 1
 
-
     # Sets bin range to be range of samples values
     if bin_min == "data_set":
         bin_min = min(data_set)
@@ -319,7 +319,6 @@ def frequency_writer(ws, headline, data_set, free_col, initial_row, bin_min, bin
         bin_max = max(data_set)
     else:
         data_bin_max = max(data_set)
-
 
     # Setup a hist for values below bin_min
     if data_bin_min < bin_min:

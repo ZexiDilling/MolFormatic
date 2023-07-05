@@ -761,6 +761,19 @@ def main(config):
             sg.popup("This does not work yet, sorry. Use Chemdraw and copy the smiles code in, instead")
 
         #     WINDOW 1 - BIO DATA         ###
+        if event == "-BIO_COMBINED_REPORT-" and values["-BIO_COMBINED_REPORT-"] is True:
+            window["-BIO_FINAL_REPORT_INCLUDE_HITS-"].update(disabled=False)
+
+        if event == "-BIO_COMBINED_REPORT-" and values["-BIO_COMBINED_REPORT-"] is False:
+            window["-BIO_FINAL_REPORT_INCLUDE_HITS-"].update(disabled=True)
+            window["-BIO_FINAL_REPORT_INCLUDE_SMILES-"].update(disabled=True)
+            window["-BIO_FINAL_REPORT_USE_THRESHOLD-"].update(disabled=True)
+            window["-BIO_FINAL_REPORT_USE_AMOUNT-"].update(disabled=True)
+            window["-BIO_FINAL_REPORT_THRESHOLD-"].update(value="")
+            window["-BIO_FINAL_REPORT_THRESHOLD-"].update(disabled=True)
+            window["-BIO_FINAL_REPORT_HIT_AMOUNT-"].update(value="")
+            window["-BIO_FINAL_REPORT_HIT_AMOUNT-"].update(disabled=True)
+
         if event == "-BIO_FINAL_REPORT_INCLUDE_HITS-" and values["-BIO_FINAL_REPORT_INCLUDE_HITS-"] is True:
             window["-BIO_FINAL_REPORT_INCLUDE_SMILES-"].update(disabled=False)
             window["-BIO_FINAL_REPORT_INCLUDE_SMILES-"].update(value=False)
@@ -822,11 +835,11 @@ def main(config):
         if event == "-BIO_COMPOUND_DATA-" and values["-BIO_COMPOUND_DATA-"]:
             window["-BIO_EXPERIMENT_ADD_TO_DATABASE-"].update(value=True)
 
-        if event == "-BIO_FINAL_REPORT_ADD_COMPOUNDS-" and values["-BIO_FINAL_REPORT_ADD_COMPOUNDS-"]:
+        if event == "-BIO_REPORT_ADD_COMPOUND_IDS-" and values["-BIO_REPORT_ADD_COMPOUND_IDS-"]:
             window["-BIO_COMPOUND_DATA-"].update(value=True)
 
         if event == "-BIO_COMPOUND_DATA-" and not values["-BIO_COMPOUND_DATA-"]:
-            window["-BIO_FINAL_REPORT_ADD_COMPOUNDS-"].update(value=False)
+            window["-BIO_REPORT_ADD_COMPOUND_IDS-"].update(value=False)
 
         if event == "-BIO_EXPERIMENT_ADD_TO_DATABASE-" and not values["-BIO_ASSAY_NAME-"]:
             if values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"]:
@@ -870,14 +883,14 @@ def main(config):
                     bio_export_folder = values["-BIO_EXPORT_FOLDER-"]
 
                 if not values["-BIO_PLATE_LAYOUT_CHECK-"]:
-                    print("Check")
+                    print("Bio Plate Layout Check")
                     # If there are difference between what layout each plate is using, or if you know some data needs
                     # to be dismissed, you can choose different plate layout for each plate.
                     plate_layout_dict = plate_layout_setup(bio_import_folder, values["-BIO_PLATE_LAYOUT-"], plate_list)
                 else:
                     # If all plate uses the same plate layout
                     plate_layout_dict = default_plate_layout
-                print(default_plate_layout)
+                print(f"default_plate_layout: {default_plate_layout}")
                 # If this is checked, it will ask for worklist, that can be converted to a sample dict, that can be used
                 # for finding sample info in the database.
                 if values["-BIO_COMPOUND_DATA-"]:
@@ -893,12 +906,13 @@ def main(config):
                 # excel file.
                 # analyse_method = values["-BIO_ANALYSE_TYPE-"]     # not used atm...
                 analyse_method = "single point"
+                add_compound_ids = values["-BIO_REPORT_ADD_COMPOUND_IDS-"]
 
                 worked, all_plates_data, date, used_plates = bio_data(config, bio_import_folder, plate_layout_dict,
                                                                       archive_plates_dict,
                                                                       bio_plate_report_setup,
                                                                       analyse_method, bio_sample_dict,
-                                                                      bio_export_folder)
+                                                                      bio_export_folder, add_compound_ids)
 
                 if values["-BIO_COMBINED_REPORT-"]:
 
@@ -918,9 +932,21 @@ def main(config):
                 if worked:
                     sg.popup("Done")
 
-        if event == "-BIO_COMBINED_REPORT-" and not values["-FINAL_BIO_NAME-"]:
+        if event == "-BIO_COMBINED_REPORT-" and not values["-FINAL_BIO_NAME-"] and \
+                values["-BIO_COMBINED_REPORT-"] is True:
             final_report_name = sg.popup_get_text("Final Report Name?")
-            window["-FINAL_BIO_NAME-"].update(value=final_report_name)
+            if final_report_name:
+                window["-FINAL_BIO_NAME-"].update(value=final_report_name)
+            else:
+                window["-BIO_COMBINED_REPORT-"].update(value=False)
+                window["-BIO_FINAL_REPORT_INCLUDE_HITS-"].update(disabled=True)
+                window["-BIO_FINAL_REPORT_INCLUDE_SMILES-"].update(disabled=True)
+                window["-BIO_FINAL_REPORT_USE_THRESHOLD-"].update(disabled=True)
+                window["-BIO_FINAL_REPORT_USE_AMOUNT-"].update(disabled=True)
+                window["-BIO_FINAL_REPORT_THRESHOLD-"].update(value="")
+                window["-BIO_FINAL_REPORT_THRESHOLD-"].update(disabled=True)
+                window["-BIO_FINAL_REPORT_HIT_AMOUNT-"].update(value="")
+                window["-BIO_FINAL_REPORT_HIT_AMOUNT-"].update(disabled=True)
 
         if event == "-BIO_REPORT_SETTINGS-" or event == "-PURITY_ADVANCED_SETTINGS-":
             reports = gsc.main_settings_controller(bio_final_report_setup, bio_plate_report_setup, ms_settings)
@@ -1581,7 +1607,7 @@ def main(config):
                                       "empty": values["-WORKLIST_BONUS_EMPTY-"],
                                       "sample": values["-WORKLIST_BONUS_SAMPLE-"]}
 
-                    worklist_analyse_method = values["-WORKLIST_ANALYSE_STYLE-"]
+                    worklist_analyse_method = values["-WORKLIST_SAMPLE_STYLE-"]
                     sample_direction = values["-WORKLIST_DROPDOWN_SAMPLE_DIRECTION-"]
 
                     assay_name = values["-WORKLIST_ASSAY_NAME-"]
@@ -1661,37 +1687,37 @@ def main(config):
                 headings = config["Extra_tab_database_headings"]["responsible"].split(",")
                 responsible_data = database_to_table(config, table, headings)
                 window["-EXTRA_DATABASE_RESPONSIBLE_TABLE-"].update(values=[responsible_data])
-                print(responsible_data)
+                print(f"responsible_data: {responsible_data}")
             elif values["-EXTRA_SUB_DATABASE_TABS-"] == "Customers" and not customers_data:
                 table = "customers"
                 headings = config["Extra_tab_database_headings"]["customers"].split(",")
                 customers_data = database_to_table(config, table, headings)
                 window["-EXTRA_DATABASE_CUSTOMERS_TABLE-"].update(values=[customers_data])
-                print(customers_data)
+                print(f"customers_data: {customers_data}")
             elif values["-EXTRA_SUB_DATABASE_TABS-"] == "Vendors" and not vendors_data:
                 table = "vendors"
                 headings = config["Extra_tab_database_headings"]["vendors"].split(",")
                 vendors_data = database_to_table(config, table, headings)
                 window["-EXTRA_DATABASE_VENDORS_TABLE-"].update(values=[vendors_data])
-                print(vendors_data)
+                print(f"vendors_data: {vendors_data}")
             elif values["-EXTRA_SUB_DATABASE_TABS-"] == "AC" and not ac_data:
                 table = "origin"
                 headings = config["Extra_tab_database_headings"]["origin"].split(",")
                 ac_data = database_to_table(config, table, headings)
                 window["-EXTRA_DATABASE_AC_TABLE-"].update(values=[ac_data])
-                print(ac_data)
+                print(f"ac_data/origine: {ac_data}")
             elif values["-EXTRA_SUB_DATABASE_TABS-"] == "Plate Types" and not plate_types_data:
                 table = "plate_type"
                 headings = config["Extra_tab_database_headings"]["plate_type"].split(",")
                 plate_types_data = database_to_table(config, table, headings)
                 window["-EXTRA_PLATE_TYPE_LISTBOX-"].update(values=[plate_types_data])
-                print(plate_types_data)
+                print(f"plate_types_data: {plate_types_data}")
             elif values["-EXTRA_SUB_DATABASE_TABS-"] == "Location" and not location_data:
                 table = "locations"
                 headings = config["Extra_tab_database_headings"]["locations"].split(",")
                 location_data = database_to_table(config, table, headings)
                 window["-EXTRA_DATABASE_LOCATIONS_TABLE-"].update(values=[location_data])
-                print(location_data)
+                print(f"location_data: {location_data}")
 
         if event == "-EXTRA_DATABASE_RESPONSIBLE_IMPORT_DB-":
             if not values["-EXTRA_DATABASE_RESPONSIBLE_NAME-"]:
@@ -1863,7 +1889,7 @@ def main(config):
                     sg.Popup("not working atm")
 
             else:
-                print(values["-SIM_INPUT_EQ-"])
+                print(f"SIM_INPUT_EQ: {values['-SIM_INPUT_EQ-']}")
 
         #     WINDOW TABLES - COMPOUND TABLE      ###
         if event == "-TREE_DB-":
@@ -2672,8 +2698,7 @@ def main(config):
             sg.Popup("DO NOT WORK ATM :D Still figuring out how to do stuff")
 
         if event == "-PURITY_INFO_CANVAS-":
-            print("HEY")
-            print(values)
+            print(f"PURITY_INFO_CANVAS: {values}")
 
         # if event == "-PURITY_INFO_PURITY_OVERVIEW_TABLE-":
         #     print(purity_peak_list_table_data)
@@ -2702,7 +2727,7 @@ def main(config):
             elif event == "-PURITY_INFO_PURITY_OVERVIEW_TABLE-" and values["-PURITY_INFO_GRAPH_SHOWING-"]:
                 lc_method = lc_graph_showing[0]
                 window["-PURITY_INFO_GRAPH_SHOWING-"].update(value=lc_method)
-                print(all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"])
+                print(f'All table data - purity info: {all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"]}')
                 window["-PURITY_INFO_MZ-"].update(value=all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"][values[
                     "-PURITY_INFO_PURITY_OVERVIEW_TABLE-"][0]][1])
                 purity_info_samples = [all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"][values[
@@ -2827,7 +2852,7 @@ def main(config):
                 try:
                     window.refresh()
                 except AttributeError:
-                    print("AttributeError")
+                    print("Canvas - AttributeError on window.refresh")
                 temp_purity_info_canvas = plot_style
                 temp_peak_table_data = []
                 if len(purity_info_samples) > 1:

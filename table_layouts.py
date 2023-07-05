@@ -104,18 +104,22 @@ bio_experiment_table = """ CREATE TABLE IF NOT EXISTS bio_experiment(
             exp_id INTEGER PRIMARY KEY AUTOINCREMENT,
             assay_name TEXT NOT NULL,
             raw_data TEXT NOT NULL,
-            plate_layout TEXT NOT NULL,
-            responsible TEXT NOT NULL,
+            responsible TEXT,
             date REAL NOT NULL,
-            FOREIGN KEY (assay_name) REFERENCES compound_dp(dp_barcode)
+            plate_name	TEXT NOT NULL UNIQUE,
+            approval	TEXT NOT NULL,
+            z_prime	REAL,
+            process_data    TEXT,
+            plate_layout	TEXT NOT NULL,
+            FOREIGN KEY("assay_name") REFERENCES "assay"("assay_name")
             ); """
 
 biological_data = """ CREATE TABLE IF NOT EXISTS biological(
-            bio_data_id INTEGER PRIMARY KEY,
+            bio_data_id INTEGER PRIMARY KEY UNIQUE,
             compound_id INTEGER NOT NULL,
             exp_id INTEGER NOT NULL,
-            result_max REAL NOT NULL,
-            result_total TEXT NOT NULL,
+            score REAL NOT NULL,
+            hit TEXT NOT NULL,
             FOREIGN KEY (compound_id) REFERENCES compound_main(compound_id),
             FOREIGN KEY (exp_id) REFERENCES exp_id(bio_experiment)
             ); """
@@ -181,9 +185,14 @@ responsible = """ CREATE TABLE IF NOT EXISTS responsible(
             ); """
 
 assay = """ CREATE TABLE IF NOT EXISTS assay(
-            row_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            assay_name TEXT NOT NULL UNIQUE,
-            info BLOB
+            row_id INTEGER PRIMARY KEY AUTOINCREMENT,         
+            assay TEXT NOT NULL UNIQUE,
+            plate_layout TEXT,
+            sop TEXT,
+            plates_run INTEGER,
+            compounds_run INTEGER,
+            z_prime_threshold	REAL,
+            hit_threshold	REAL
             ); """
 
 assay_customers = """ CREATE TABLE IF NOT EXISTS assay_customers(

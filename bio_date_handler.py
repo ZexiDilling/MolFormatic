@@ -361,7 +361,7 @@ class BIOAnalyser:
         free_col += 1
         return free_col
 
-    def _well_writer(self, ws, all_data, initial_row, free_col, plate_name, bio_sample_dict):
+    def _well_writer(self, ws, all_data, initial_row, free_col, plate_name, bio_sample_dict, add_compound_ids):
         """
         Writes Well data from the different analysis method into the report sheet on the excel ark
 
@@ -377,6 +377,8 @@ class BIOAnalyser:
         type plate_name: str
         :param bio_sample_dict: None or a dict of sample ide, per plate analysed
         :type bio_sample_dict: dict
+        :param add_compound_ids: Will add the compound ID to each well on the hit-list
+        :type add_compound_ids: bool
         :return: All the wells writen in a list in the worksheet called: report
         """
         indent_col = free_col
@@ -396,7 +398,7 @@ class BIOAnalyser:
             if self.well_states_report_method[plate_analysed]:
                 # Writes headline for data inserts to see where the data is coming from
                 headlines = [plate_analysed, "Well", "value"]
-                if bio_sample_dict:
+                if add_compound_ids:
                     headlines.append("Compound ID")
                 for headline_counter, headline in enumerate(headlines):
                     ws.cell(column=indent_col + headline_counter, row=row_counter, value=headline).font = Font(b=True)
@@ -415,7 +417,7 @@ class BIOAnalyser:
                             freq_data[plate_analysed]["wells"].append(well)
                             freq_data[plate_analysed]["well_values"].append(well_value)
 
-                            if bio_sample_dict:
+                            if add_compound_ids:
                                 try:
                                     barcode = bio_sample_dict[plate_name][well]["source_plate"]
                                 except KeyError:
@@ -435,7 +437,7 @@ class BIOAnalyser:
                             added = True
                             row_counter += 1
                     added = False
-                if not bio_sample_dict:
+                if not add_compound_ids:
                     indent_col += 4
                 else:
                     indent_col += 5
@@ -443,7 +445,7 @@ class BIOAnalyser:
         free_col = indent_col
         return freq_data, free_col
 
-    def _report_writer_controller(self, wb, all_data, plate_name, bio_sample_dict):
+    def _report_writer_controller(self, wb, all_data, plate_name, bio_sample_dict, add_compound_ids):
         """
         pass the data into different modules to write data in to an excel ark
 
@@ -455,6 +457,8 @@ class BIOAnalyser:
         type plate_name: str
         :param bio_sample_dict: None or a dict of sample ide, per plate analysed
         :type bio_sample_dict: dict
+        :param add_compound_ids: Will add the compound ID to each well on the hit-list
+        :type add_compound_ids: bool
         :return: Create a new sheet in the workbook, called Report, and writes in wells and calculations depending on
             the analysis.
         """
@@ -470,7 +474,8 @@ class BIOAnalyser:
             ws_report = wb.create_sheet("Report")
 
         free_col = self.cal_writer(ws_report, all_data, initial_row)
-        freq_data, free_col = self._well_writer(ws_report, all_data, initial_row, free_col, plate_name, bio_sample_dict)
+        freq_data, free_col = self._well_writer(ws_report, all_data, initial_row, free_col, plate_name, bio_sample_dict,
+                                                add_compound_ids)
 
         bin_min = 0
         bin_max = 150
@@ -483,11 +488,11 @@ class BIOAnalyser:
                 titel = "Frequency"
                 temp_data_set = freq_data[data_set]["well_values"]
                 free_col, data_location, category_location = \
-                    frequency_writer(ws_report, data_set, temp_data_set, free_col, initial_row, bin_min, bin_max, bin_width,
-                                           include_outliers)
+                    frequency_writer(ws_report, data_set, temp_data_set, free_col, initial_row, bin_min, bin_max,
+                                     bin_width, include_outliers)
                 bar_chart(ws_report, titel, free_col, initial_row, data_location, category_location)
 
-    def _excel_controller(self, all_data, well_row_col, pw_dict, bio_sample_dict, save_location):
+    def _excel_controller(self, all_data, well_row_col, pw_dict, bio_sample_dict, save_location, add_compound_ids):
         """
         Controls the flow for the data, to write into an excel file
 
@@ -501,6 +506,8 @@ class BIOAnalyser:
         :type bio_sample_dict: dict
         :param save_location: where to save all the excel files
         :type save_location: str
+        :param add_compound_ids: Will add the compound ID to each well on the hit-list
+        :type add_compound_ids: bool
         :return: A modified excel file, with all the calculations and data added, depending on the analysis method used.
         """
         plate_name = self.ex_file.split("/")[-1].split(".")[0]
@@ -517,12 +524,12 @@ class BIOAnalyser:
         # sends each plate-analysed-type into the excel file
         for methode in all_data["plates"]:
             counter_row = self._write_plate(ws_data, counter_row, all_data, methode, well_row_col, pw_dict)
-        self._report_writer_controller(wb, all_data, plate_name, bio_sample_dict)
+        self._report_writer_controller(wb, all_data, plate_name, bio_sample_dict, add_compound_ids)
         save_file = f"{save_location}/{plate_name}.xlsx"
         wb.save(save_file)
 
     def bio_data_controller(self, ex_file, plate_layout, all_data, well_row_col, well_type, analysis, write_to_excel,
-                            bio_sample_dict, save_location):
+                            bio_sample_dict, save_location, add_compound_ids):
         """
         The control modul for the bio analysing
 
@@ -542,6 +549,8 @@ class BIOAnalyser:
         :type bio_sample_dict: dict
         :param save_location: where to save all the excel files
         :type save_location: str
+        :param add_compound_ids: Will add the compound ID to each well on the hit-list
+        :type add_compound_ids: bool
         :return: A dict over all plate date. all the analysed data will be added to this dict
         :rtype: dict
         """
@@ -550,7 +559,7 @@ class BIOAnalyser:
         self.plate = plate_layout
         all_data, pw_dict = self._data_converter(all_data, well_type)
         if write_to_excel:
-            self._excel_controller(all_data, well_row_col, pw_dict, bio_sample_dict, save_location)
+            self._excel_controller(all_data, well_row_col, pw_dict, bio_sample_dict, save_location, add_compound_ids)
 
         return all_data
 

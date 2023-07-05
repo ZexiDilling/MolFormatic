@@ -1,6 +1,7 @@
 import PySimpleGUI as sg
 from info import matrix_header
 
+#ToDo add tooltips to everything!!!!!!!!! ARG!!!!!!
 
 class GUILayout:
     def __init__(self, config, plate_list):
@@ -9,7 +10,8 @@ class GUILayout:
         self.button_height = 1
         self.tab_colour = config["GUI"]["tab_colour"]
         self.plate_list = plate_list
-        self.analyse_style = ["Single Point", "Duplicate", "Triplicate", "Custom", "Dose Response"]
+        self.sample_style = ["Single Point", "Duplicate", "Triplicate", "Custom"]
+        self.analyse_style = ["Single", "Dose Response"]
 
     @staticmethod
     def menu_top():
@@ -174,7 +176,7 @@ class GUILayout:
         # Colours for the heatmap, if added back in
         # colours = [keys for keys in list(self.config["colours to hex"].keys())]
 
-        sample_type = self.analyse_style
+        sample_type = self.sample_style
 
         col_bio_analysis = sg.Frame("Analyse setup", [[
             sg.Column([
@@ -218,26 +220,30 @@ class GUILayout:
 
         col_extra = sg.Frame("Extra Settings", [[
             sg.Column([
-
-                [sg.Checkbox("Combined Report ", key="-BIO_COMBINED_REPORT-", default=False, enable_events=True)
-                 , sg.Push(), sg.B("Report Settings", key="-BIO_REPORT_SETTINGS-")],
-                [sg.Checkbox("Compound Related Data", key="-BIO_COMPOUND_DATA-", enable_events=True),
-                 sg.Checkbox("Add To Database", key="-BIO_EXPERIMENT_ADD_TO_DATABASE-", enable_events=True)],
-                [sg.Checkbox("Add Compound Info To Final Report", key="-BIO_FINAL_REPORT_ADD_COMPOUNDS-",
-                             enable_events=True)],
-                [sg.T("Report Name", size=12), sg.T("New Assay", size=14), sg.T("Old Assay", size=14)],
-                [sg.InputText(key="-FINAL_BIO_NAME-", size=14, tooltip="The Name the final report will be saved as"),
-                 sg.InputText(key="-BIO_ASSAY_NAME-", size=14,
-                              tooltip="The assay name the analyse will saved under in the database"),
-                 sg.DropDown(values=[], key="-BIO_ASSAY_LIST_DROPDOWN-", size=12,
-                             tooltip="If you want to add new data to an assay that have been run before")],
+                [sg.Checkbox("Compound Related Assay", key="-BIO_COMPOUND_DATA-", enable_events=True,
+                             tooltip="Will ask the user for a worklist when analysing the data, to track what compounds"
+                                     "is in each well")
+                 , sg.Push(), sg.B("Report Settings", key="-BIO_REPORT_SETTINGS-", size=10)],
+                [sg.Checkbox("Add To Database", key="-BIO_EXPERIMENT_ADD_TO_DATABASE-", enable_events=True,
+                             tooltip="Will add the data to the database")],
+                [sg.Checkbox("Add Compound ID", key="-BIO_REPORT_ADD_COMPOUND_IDS-", enable_events=True,
+                             tooltip="Will add ID's to each report")],
+                [sg.T("Assay:", size=12),
+                 sg.DropDown(values=[], key="-BIO_ASSAY_NAME-", size=14,
+                             tooltip="If you want to add new data to an assay that have been run before"),
+                 sg.Button("New Assay", size=10, key="-BIO_NEW_ASSAY-",
+                           tooltip="Will give a pop-up where you can fill in the data needed for an assay")],
                 [sg.T("Responsible:", size=12),
-                 sg.DropDown(responsible, key="-BIO_RESPONSIBLE-", size=14)],
+                 sg.DropDown(responsible, key="-BIO_RESPONSIBLE-", size=14,
+                             tooltip="The main responsible for the data")],
                 [sg.HorizontalSeparator()],
+                [sg.Checkbox("Combined Report ", key="-BIO_COMBINED_REPORT-", default=False, enable_events=True)],
+                [sg.T("Report Name:", size=12),
+                 sg.InputText(key="-FINAL_BIO_NAME-", size=14, tooltip="The Name the final report will be saved as")],
                 [sg.Checkbox("Include Hits", key="-BIO_FINAL_REPORT_INCLUDE_HITS-",
                              tooltip="Include a list of compounds with a score lower than the threshold sat, "
                                      "or x-amount of the lowest once, depending on the Hit Amount sat",
-                             enable_events=True),
+                             disabled=True, enable_events=True),
                  sg.Checkbox("Include smiles", key="-BIO_FINAL_REPORT_INCLUDE_SMILES-",
                              tooltip="Include the smiles for the Hits.",
                              disabled=True, enable_events=True)],
@@ -245,7 +251,10 @@ class GUILayout:
                              disabled=True, enable_events=True),
                  sg.Checkbox("Use Amount", key="-BIO_FINAL_REPORT_USE_AMOUNT-",
                              disabled=True, enable_events=True)],
-                [sg.T("Threshold", size=12), sg.T("Hit Amount", size=12)],
+                [sg.T("Threshold", size=12,
+                      tooltip="Will use threshold, for hits. Can't use threshold and 'Hit Amount' at the same time"),
+                 sg.T("Hit Amount", size=12,
+                      tooltip="Will use amount of hits. Can't use threshold and 'Hit Amount' at the same time")],
                 [sg.InputText(key="-BIO_FINAL_REPORT_THRESHOLD-", size=14, disabled=True,
                               tooltip="The threshold where samples should be included. Any sample with a score "
                                       "lower than the threshold will be included in the report"),
@@ -363,7 +372,7 @@ class GUILayout:
             color_select[keys] = self.config["plate_colouring"][keys]
 
         plate_type = ["plate_96", "plate_384", "plate_1536"]
-        sample_type = self.analyse_style
+        sample_type = self.sample_style
 
 
         col_graph = sg.Frame("Plate Layout", [[
@@ -457,15 +466,19 @@ class GUILayout:
             ])
         ]])
 
-        worklist_analyse_style = self.analyse_style
+
         sample_directions = ["Vertical", "Horizontale"]
         col_advance_setup = sg.Frame("Extra settings", [[
             sg.Column([
-                [sg.T("Analyse Style", size=text_size_long),
-                 sg.DropDown(values=worklist_analyse_style, key="-WORKLIST_ANALYSE_STYLE-", size=dropdown_size,
-                             default_value=worklist_analyse_style[0],
+                [sg.T("Sample Style", size=text_size_long),
+                 sg.DropDown(values=self.sample_style, key="-WORKLIST_SAMPLE_STYLE-", size=dropdown_size,
+                             default_value=self.sample_style[0],
                              tooltip="This determines how many wells each compounds goes to."
                                      "Using custom will give you options to chose any number.")],
+                [sg.T("Analyse Style", size=text_size_long),
+                 sg.DropDown(values=self.analyse_style, key="-WORKLIST_ANALYSE_STYLE-", size=dropdown_size,
+                             default_value=self.analyse_style[0],
+                             tooltip="This is a choose between how the sample are layout.")],
                 [sg.Text("Sample Direction", size=text_size_long),
                  sg.DropDown(values=sample_directions, default_value=sample_directions[0], size=dropdown_size,
                              key="-WORKLIST_DROPDOWN_SAMPLE_DIRECTION-")],
@@ -613,6 +626,8 @@ class GUILayout:
     def setup_1_extra_database(self):
         text_size = 15
 
+        #ToDo Add "remove and update" options to all the tabs
+
         resp_headings = self.config["Extra_tab_database_headings"]["responsible"].split(",")
         responsible = sg.Frame("Responsible", [
             sg.vtop([
@@ -742,12 +757,17 @@ class GUILayout:
             ])
         ]])
 
-        tab_responsible = sg.Tab("Responsible", [[responsible]])
-        tab_customers = sg.Tab("Customers", [[customers]])
-        tab_vendors = sg.Tab("Vendors", [[vendors]])
-        tab_ac = sg.Tab("AC", [[ac]])
-        tab_plate_types = sg.Tab("Plate Types", [[plate_types]])
-        tab_location = sg.Tab("Location", [[locations]])
+        tab_responsible = sg.Tab("Responsible", [[responsible]],
+                                 tooltip="Add, remove or update people that can be responsible for an assay or other")
+        tab_customers = sg.Tab("Customers", [[customers]],
+                               tooltip="Add, remove or update customers for screens")
+        tab_vendors = sg.Tab("Vendors", [[vendors]],
+                             tooltip="Add, remove or update vendors that sells other stuff than compounds")
+        tab_ac = sg.Tab("Origin", [[ac]],
+                        tooltip="Add or update Academic or Commercial sites to the database, for compound origin")
+        tab_plate_types = sg.Tab("Plate Types", [[plate_types]],
+                                 tooltip="Add, remove or update plate-types")
+        tab_location = sg.Tab("Location", [[locations]], tooltip="Add, remove or update storrage locations")
 
 
         tab_list = [tab_responsible, tab_customers, tab_vendors, tab_ac, tab_plate_types, tab_location]
@@ -1477,14 +1497,23 @@ class GUILayout:
         :return: the layout for the tab groups in the top box
         :rtype: list
         """
-        tab_1_search = sg.Tab("search", self.setup_1_search())
-        tab_1_bio_data = sg.Tab("bio data", self.setup_1_bio())
-        tab_1_purity_data = sg.Tab("purity data", self.setup_1_purity())
-        tab_1_plate_layout = sg.Tab("Plate layout", self.setup_1_plate_layout())
-        tab_1_add = sg.Tab("Update", self.setup_1_update())
-        tab_1_worklist = sg.Tab("Worklist", self.set_1_worklist())
-        tab_1_extra = sg.Tab("Extra", self.setup_1_extra())
-        tab_1_sim = sg.Tab("Sim", self.setup_1_simulator())
+        tab_1_search = sg.Tab("Search", self.setup_1_search(),
+                              tooltip="Search for compounds in the database")
+        tab_1_bio_data = sg.Tab("Bio Data", self.setup_1_bio(),
+                                tooltip="Handles analysing of bio-data from platereader")
+        tab_1_purity_data = sg.Tab("Purity Data", self.setup_1_purity(),
+                                   tooltip="Handles data from LC/MS to get purity of compounds")
+        tab_1_plate_layout = sg.Tab("Plate Layout", self.setup_1_plate_layout(),
+                                    tooltip="Where you can draw a plate-layout used for analysing data, "
+                                            "or generate worklist ect.")
+        tab_1_add = sg.Tab("Update", self.setup_1_update(),
+                           tooltip="Updates the Database with new compounds, Mother-Plates or Daugther-Plates")
+        tab_1_worklist = sg.Tab("Worklist", self.set_1_worklist(),
+                                tooltip="A module for generating worklist for en Echo.")
+        tab_1_extra = sg.Tab("Extra", self.setup_1_extra(),
+                             tooltip="Updates the database with other stuff, and misc")
+        tab_1_sim = sg.Tab("Sim", self.setup_1_simulator(),
+                           tooltip="simulate output files from different aspect of the HTS for testing purpose")
 
         tab_group_1_list = [tab_1_search, tab_1_bio_data, tab_1_purity_data, tab_1_plate_layout, tab_1_add,
                             tab_1_worklist, tab_1_extra, tab_1_sim]

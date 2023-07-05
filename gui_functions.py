@@ -568,7 +568,7 @@ def plate_layout_setup(folder, default_plate_layout, plate_layout_list):
 
 
 def bio_data(config, folder, plate_layout, archive_plates_dict, bio_plate_report_setup, analysis, bio_sample_dict,
-             save_location, write_to_excel=True):
+             save_location, add_compound_ids, write_to_excel=True):
 
     """
     Handles the Bio data.
@@ -590,6 +590,8 @@ def bio_data(config, folder, plate_layout, archive_plates_dict, bio_plate_report
     :type analysis: str
     :param save_location: where to save all the excel files
     :type save_location: str
+    :param add_compound_ids: Will add the compound ID to each well on the hit-list
+    :type add_compound_ids: bool
     :return: All the data for the plates raw data, and their calculations
     :rtype: dict
     """
@@ -617,7 +619,7 @@ def bio_data(config, folder, plate_layout, archive_plates_dict, bio_plate_report
                 used_plates.append(barcode)
                 all_plates_data[barcode] = bioa.bio_data_controller(files, temp_plate_layout, all_data, well_row_col, well_type,
                                                                     analysis, write_to_excel, bio_sample_dict,
-                                                                    save_location)
+                                                                    save_location, add_compound_ids)
         else:
             print(f"{files} is not the right formate")
     return True, all_plates_data, date, used_plates
