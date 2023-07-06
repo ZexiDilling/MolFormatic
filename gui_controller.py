@@ -630,10 +630,11 @@ def main(config):
     #                   "-PURITY_INFO_PURITY_OVERVIEW_TABLE-": "",
     #                   "-PURITY_INFO_PEAK_TABLE-": "",
     #                   "-PURITY_INFO_PURITY_PEAK_LIST_TABLE-": "",
-    #                   "-BIO_EXP_TABLE-": "",
+    #                   "-BIO_EXP_PLATE_TABLE-": "",
     #                   "-LC_MS_SAMPLE_TABLE-": "",
     #                   "-PLATE_TABLE_TABLE-": "",
     #                   }
+    # Makes a dict over all tables in the software. Is used for updating the tables with data
     all_table_data = {"-COMPOUND_INFO_PLATE_TABLE-": None,
                       "-BIO_INFO_OVERVIEW_TABLE-": None,
                       "-BIO_INFO_OVERVIEW_AVG_TABLE-": None,
@@ -648,7 +649,8 @@ def main(config):
                       "-PURITY_INFO_PURITY_OVERVIEW_TABLE-": None,
                       "-PURITY_INFO_PEAK_TABLE-": None,
                       "-PURITY_INFO_PURITY_PEAK_LIST_TABLE-": None,
-                      "-BIO_EXP_TABLE-": None,
+                      "-BIO_EXP_PLATE_TABLE-": None,
+                      "-BIO_EXP_COMPOUND_TABLE-": None,
                       "-LC_MS_SAMPLE_TABLE-": None,
                       "-PLATE_TABLE_TABLE-": None,
                       "-PURITY_INFO_RAW_DATA_TABLE-": None,
@@ -973,7 +975,7 @@ def main(config):
                 archive = True
 
                 file_name = "bio_experiments.txt"
-                # plate_dict_name = bio_exp_table_data[values["-BIO_EXP_TABLE-"][0]][2]
+                # plate_dict_name = bio_exp_table_data[values["-BIO_EXP_PLATE_TABLE-"][0]][2]
                 plate_bio_info = all_plates_data
 
                 bio_info_plate_layout = plate_layout
@@ -1489,7 +1491,7 @@ def main(config):
 
         #     WINDOW 1 - Worklist     ###
         if event == "-TAB_GROUP_ONE-" and values["-TAB_GROUP_ONE-"] == "Worklist":
-            temp_mp_plates, _ = grab_table_data(config, "mp_plates", None)
+            temp_mp_plates, _ = grab_table_data(config, "mp_plates")
             worklist_mp_plates_list = []
             for rows in temp_mp_plates:
                 worklist_mp_plates_list.append(rows[0])
@@ -1500,7 +1502,7 @@ def main(config):
             window["-WORKLIST_MP_LIST-"].update(values=worklist_mp_plates_list)
             # window["-WORKLIST_ASSAY_LIST-"].update(values=worklist_mp_plates_list)    # ToDO add the right data here
 
-            temp_assay_list, _ = grab_table_data(config, "assay", None)
+            temp_assay_list, _ = grab_table_data(config, "assay")
 
         if event == "-WORKLIST_CONTROL_LAYOUT-":
             worklist_layout = sg.PopupGetFile("Please select a worklist layout file")
@@ -2118,7 +2120,7 @@ def main(config):
         #   WINDOW TABLE - BIO EXPERIMENT TABLE     ###
 
         # ToDo Re-design
-        if event == "-BIO_EXP_TABLE-":
+        if event == "-BIO_EXP_PLATE_TABLE-":
             if bio_exp_table_data:
                 if not values["-BIO_INFO_ANALYSE_METHOD-"]:
                     window["-BIO_INFO_ANALYSE_METHOD-"].Update(value="original")
@@ -2129,10 +2131,10 @@ def main(config):
             archive = True
 
             file_name = "bio_experiments.txt"
-            plate_dict_name = bio_exp_table_data[values["-BIO_EXP_TABLE-"][0]][2]
+            plate_dict_name = bio_exp_table_data[values["-BIO_EXP_PLATE_TABLE-"][0]][2]
             plate_bio_info = dict_reader(file_name)[plate_dict_name]
 
-            bio_info_plate_layout = bio_exp_table_data[values["-BIO_EXP_TABLE-"][0]][3]
+            bio_info_plate_layout = bio_exp_table_data[values["-BIO_EXP_PLATE_TABLE-"][0]][3]
             bio_info_plate_size = archive_plates_dict[bio_info_plate_layout]["plate_type"]
             bio_info_state_dict = copy.deepcopy(archive_plates_dict[bio_info_plate_layout]["well_layout"])
             bio_info_state_dict = plate_layout_re_formate(bio_info_state_dict)
@@ -2242,23 +2244,23 @@ def main(config):
 
             table_name = "bio_experiment"
 
-            all_table_data["-BIO_EXP_TABLE-"], headlines = grab_table_data(config, table_name, search_limiter)
+            all_table_data["-BIO_EXP_PLATE_TABLE-"], headlines = grab_table_data(config, table_name, search_limiter)
             # print(table_data)
 
-            window["-BIO_EXP_TABLE-"].update(values=all_table_data["-BIO_EXP_TABLE-"])
+            window["-BIO_EXP_PLATE_TABLE-"].update(values=all_table_data["-BIO_EXP_PLATE_TABLE-"])
 
         if event == "-TABLE_TAB_GRP-" and values["-TABLE_TAB_GRP-"] == "Bio Experiment table":
-            temp_bio_exp_data, headlines = grab_table_data(config, "bio_experiment", None)
+            temp_bio_exp_data, headlines = grab_table_data(config, "bio_experiment")
             bio_exp_data = []
             for rows in temp_bio_exp_data:
                 bio_exp_data.append([temp_bio_exp_data[rows]["assay_name"], temp_bio_exp_data[rows]["date"]])
 
-            window["-BIO_EXP_TABLE_BATCH_LIST_BOX-"].update(values=bio_exp_data)
+            window["-BIO_EXP_TABLE_ASSAY_LIST_BOX-"].update(values=bio_exp_data)
 
         #   WINDOW TABLE - LC EXPERIMENT    ###
         if event == "-TABLE_TAB_GRP-" and values["-TABLE_TAB_GRP-"] == "LC Experiment table":
             # print("update listbox with data, if list box is empty")
-            lc_exp_data, headlines = grab_table_data(config, "lc_experiment", None)
+            lc_exp_data, headlines = grab_table_data(config, "lc_experiment")
             window["-LC_MS_TABLE_BATCH_LIST_BOX-"].update(values=lc_exp_data)
 
         if event == "-LC_MS_TABLE_DATE_START_TARGET-" or event == "-LC_MS_TABLE_DATE_END_TARGET-":
@@ -2282,7 +2284,7 @@ def main(config):
             table_name = "lc_experiment"
 
             table_data, _ = grab_table_data(config, table_name, search_limiter)
-            table_data_2, _ = grab_table_data(config, table_name, None)
+            table_data_2, _ = grab_table_data(config, table_name)
 
             window["-LC_MS_TABLE_BATCH_LIST_BOX-"].update(values=table_data)
 
@@ -2297,13 +2299,13 @@ def main(config):
                     "batch": {"value": batch, "operator": "IN", "target_column": "batch", "use": True},
                 }
                 table_name = "lc_raw"
-                all_table_data["-LC_MS_SAMPLE_TABLE-"], _ = grab_table_data(config, table_name, None)
+                all_table_data["-LC_MS_SAMPLE_TABLE-"], _ = grab_table_data(config, table_name)
 
                 window["-LC_MS_SAMPLE_TABLE-"].update(values=all_table_data["-LC_MS_SAMPLE_TABLE-"])
 
         #   WINDOW TABLE - PLATE TABLE      ###
         if event == "-TABLE_TAB_GRP-" and values["-TABLE_TAB_GRP-"] == "Plate tables":
-            temp_mp_plates, _ = grab_table_data(config, "mp_plates", None)
+            temp_mp_plates, _ = grab_table_data(config, "mp_plates")
             mp_plates_list = []
             for rows in temp_mp_plates:
                 mp_plates_list.append(rows[0])
@@ -2319,7 +2321,7 @@ def main(config):
             window["-PLATE_TABLE_END_DATE_TARGET-"].update(value="")
             window["-PLATE_TABLE_CHOOSER-"].update(value="Mother Plates")
 
-            temp_mp_plates, _ = grab_table_data(config, "mp_plates", None)
+            temp_mp_plates, _ = grab_table_data(config, "mp_plates")
             mp_plates_list = []
             for rows in temp_mp_plates:
                 mp_plates_list.append(rows[0])

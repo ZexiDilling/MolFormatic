@@ -118,8 +118,10 @@ biological_data = """ CREATE TABLE IF NOT EXISTS biological(
             bio_data_id INTEGER PRIMARY KEY UNIQUE,
             compound_id INTEGER NOT NULL,
             exp_id INTEGER NOT NULL,
+            raw_data REAL NOT NULL,
             score REAL NOT NULL,
             hit TEXT NOT NULL,
+            concentration   REAL NOT NULL,
             FOREIGN KEY (compound_id) REFERENCES compound_main(compound_id),
             FOREIGN KEY (exp_id) REFERENCES exp_id(bio_experiment)
             ); """

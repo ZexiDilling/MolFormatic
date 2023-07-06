@@ -88,7 +88,6 @@ def plate_layout_re_formate(plate_layout):
     :rtype: dict
     """
     plate_layout_re = {}
-    print(plate_layout)
     for counter in plate_layout:
         plate_layout_re[plate_layout[counter]["well_id"]] = {}
 

@@ -1376,21 +1376,39 @@ class GUILayout:
         """
         responsible = [keys for keys in list(self.config["Responsible"].keys())]
 
-        table_data = []
-        headings = ["exp_id", "assay_name", "raw_data", "plate_layout", "responsible", "date"]
+        compound_table_data = []
+        compound_table_headings = ["Compound ID", "well", "Raw Data", "Concentration", "Score"]
+        col_compound_table = sg.Frame("Experimental Data", [[
+            sg.Column([
+                [sg.Table(values=compound_table_data, headings=compound_table_headings, key="-BIO_EXP_COMPOUND_TABLE-",
+                          auto_size_columns=False, col_widths=[10, 10, 10], enable_events=True,
+                          enable_click_events=True)],
+                [sg.T("Amount of Compounds: "), sg.T(key="-BIO_EXP_COMPOUND_COUNTER-")],
+                [sg.T("Set Threshold"), sg.Input(key="-BIO_EXP_SET_THRESHOLD-")],
+                [sg.T("Set Compound Amount"), sg.Input(key="-BIO_EXP_SET_COMPOUND_AMOUNT-")],
+                [sg.Button("Export Compound List", key="-BIO_EXP_EXPORT_COMPOUNDS-")]
+            ])
+        ]])
 
-        col_table = sg.Column([
-            [sg.Text("Experimental data")],
-            [sg.Table(values=table_data, headings=headings, key="-BIO_EXP_TABLE-",
-                      auto_size_columns=False, col_widths=[10, 10, 10], enable_events=True, enable_click_events=True)],
-            [sg.B("Refresh", key="-BIO_EXP_TABLE_REFRESH-")]
+        plate_table_data = []
+        plate_table_headings = ["Plate Name", "Z-Prime", "Approved", "Layout", "responsible", "date"]
 
-        ])
+        col_plate_table = sg.Frame("Plates", [[
+            sg.Column([
+                [sg.Table(values=plate_table_data, headings=plate_table_headings, key="-BIO_EXP_PLATE_TABLE-",
+                          auto_size_columns=False, col_widths=[10, 10, 10],
+                          enable_events=True, enable_click_events=True)],
+                [sg.T("Amount of Plates: "), sg.T(key="-BIO_EXP_PLATE_COUNTER-")],
+                [sg.Checkbox("Only approved Plates", key="-BIO_EXP_APPROVED_PLATES_ONLY-", default=True,
+                             enable_events=True)]
+            ])
+        ]])
 
         col_search = sg.Frame("Search Criteria", [[
             sg.Column([
-                [sg.Listbox("", key="-BIO_EXP_TABLE_BATCH_LIST_BOX-", enable_events=True, size=(18, 10),
+                [sg.Listbox("", key="-BIO_EXP_TABLE_ASSAY_LIST_BOX-", enable_events=True, size=(18, 10),
                             select_mode=sg.LISTBOX_SELECT_MODE_MULTIPLE)],
+                [sg.T("Assay Name", size=10), sg.Input(key="-BIO_EXP_ASSAY_NAME_SEARCH-", size=10)]
                 [sg.CalendarButton("Start date", key="-BIO_EXP_TABLE_DATE_START-", format="%Y-%m-%d", enable_events=True
                                    , target="-BIO_EXP_TABLE_DATE_START_TARGET-", size=(10, 1)),
                  sg.Input(key="-BIO_EXP_TABLE_DATE_START_TARGET-", size=10, enable_events=True)],
@@ -1398,10 +1416,11 @@ class GUILayout:
                                    target="-BIO_EXP_TABLE_DATE_END_TARGET-", size=(10, 1)),
                  sg.Input(key="-BIO_EXP_TABLE_DATE_END_TARGET-", size=10)],
                 [sg.T("Responsible", size=10), sg.DropDown(responsible, key="-BIO_EXP_TABLE_RESPONSIBLE-", size=10)],
+                [sg.B("Refresh", key="-BIO_EXP_TABLE_REFRESH-")]
             ])
         ]])
 
-        layout = [sg.vtop([col_table, col_search])]
+        layout = [sg.vtop([col_compound_table, col_plate_table, col_search])]
         return layout
 
     @staticmethod

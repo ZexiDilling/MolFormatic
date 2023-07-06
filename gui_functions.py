@@ -719,7 +719,7 @@ def bio_experiment_to_database(assay_name, plate_data, plate_layout, date, respo
     update_database(data_dict, table, None, config)
 
 
-def grab_table_data(config, table_name, search_limiter):
+def grab_table_data(config, table_name, search_limiter=None):
     fd = FetchData(config)
 
     rows = fd.data_search(table_name, search_limiter)
