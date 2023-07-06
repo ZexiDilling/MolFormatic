@@ -513,7 +513,7 @@ def _fetch_smiles_data(config, bio_sample_dict, used_plates):
                 sample_id = bio_sample_dict[plates][wells]["compound_id"]
                 # Skips searching for data where there is no compound id. Like using DMSO or other solventer instead of a compound
                 if sample_id:
-                    row_data = dbf.find_plates(table_name, sample_id, headline_name)
+                    row_data = dbf.find_data_single_lookup(table_name, sample_id, headline_name)
                     try:
                         bio_sample_dict[plates][wells]["smiles"] = row_data[0][2]
                     except IndexError:

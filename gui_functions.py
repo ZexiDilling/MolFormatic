@@ -280,12 +280,12 @@ def compound_counter(config, table):
     return len(fd.data_search(table, None))
 
 
-def update_database(data, table, file_type, config):
+def update_database(config, table, data, file_type=None):
     """
     Update the database with data. Both for adding data to the different tables, but updating tables with new values
 
     :param data: Output file from the plate_butler system, tube files for the comPOUND freezer, or other data.
-    :type data: str
+    :type data: str or dict
     :param file_type: If the file is a CSV file, it needs a specific file_type to know how to handle the file. as the
         CSV files are different depending on where they are coming from.
     :type file_type: str
@@ -1533,7 +1533,7 @@ def _get_motherplate_layout(config, mps):
     plate_data_dict = {}
     for mp in mps:
         plate_data_dict[mp] = []
-        temp_rows = dbf.records_to_rows(table, mp, clm_header)
+        temp_rows = dbf.find_data_single_lookup(table, mp, clm_header)
         for data in temp_rows:
             temp_well = temp_rows[data]["mp_well"]
             plate_data_dict[mp].append(temp_well)
@@ -1665,6 +1665,105 @@ def generate_worklist(config, plate_amount, mps, plate_layout, used_plate_well_d
         print(msg)
     return file, msg
 
+
+def _get_plate_names(dbf, table, column_headline):
+    """
+    Gets a list of the plate names from the database
+    :param dbf: The DataBaseFunction
+    :type dbf: class
+    :param table: The table where the data is storage
+    :type table: str
+    :param column_headline: The headline of the column that is used for finding data
+    :type column_headline: str
+    :return:
+    """
+    temp_rows = dbf.find_column_data(table, column_headline)
+    plate_names = [names for names in temp_rows]
+    return plate_names
+
+
+def _get_plate_archive(dbf, table, column_headline, plate_names):
+    """
+    Gets a dict of the plate layouts from the database, based on a list of plate names
+    :param dbf: The DataBaseFunction
+    :type dbf: class
+    :param plate_names: A list of plate names
+    :type plate_names: list
+    :param table: The table where the data is storage
+    :type table: str
+    :param column_headline: The headline of the column that is used for finding data
+    :type column_headline: str
+    :return: a dict of the plate layouts
+    :rtype: dict
+    """
+    archive_plates_dict = {}
+
+    # loops over all the plates
+    for plates in plate_names:
+        temp_row_data = dbf.find_data_single_lookup(table, plates, column_headline)
+
+        # grabs data from the return rown
+        plate_name = temp_row_data[0][1]
+        well_layout = temp_row_data[0][2]
+        plate_type = temp_row_data[0][3]
+
+        # Generates the dict
+        archive_plates_dict[plate_name] = {"well_layout": eval(well_layout),
+                                           "plate_type": plate_type}
+    return archive_plates_dict
+
+
+def get_plate_layout(config):
+    """
+    Gets a list of plate names and their layout from the database
+    :param config: The config handler, with all the default information in the config file.
+    :type config: configparser.ConfigParser
+    :return: plate_names, archive_plates_dict
+    :rtype: list, dict
+    """
+
+    # Connects to the database and setting up standard values
+    dbf = DataBaseFunctions(config)
+    table = "plate_layout"
+    column_headline = "plate_name"
+
+    # gets a list of the plate names
+    plate_names = _get_plate_names(dbf, table, column_headline)
+
+    # Gets a dict over all the plate_layouts
+    archive_plates_dict = _get_plate_archive(dbf, table, column_headline, plate_names)
+
+    return plate_names, archive_plates_dict
+
+
+def delete_records_from_database(config, table, headline, data_value):
+    """
+    Deletes a record from the database
+    :param table: What table are the plates in
+    :type table: str
+    :param data_value: The value of the thing you are looking for
+    :type data_value: str
+    :param headline: Headline for the coloumn where  the data is, in the table
+    :type headline: str
+    :return:
+    """
+    dbf = DataBaseFunctions(config)
+    dbf.delete_records(table, headline, data_value)
+
+
+def rename_record_in_the_database(config, table, headline, old_value, new_value):
+    """
+    Deletes a record from the database
+    :param table: What table are the plates in
+    :type table: str
+    :param data_value: The value of the thing you are looking for
+    :type data_value: str
+    :param headline: Headline for the coloumn where  the data is, in the table
+    :type headline: str
+    :return:
+    """
+    dbf = DataBaseFunctions(config)
+    dbf.rename_record_value(table, headline, old_value, new_value)
 
 if __name__ == "__main__":
 

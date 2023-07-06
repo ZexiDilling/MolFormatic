@@ -192,7 +192,8 @@ assay = """ CREATE TABLE IF NOT EXISTS assay(
             plates_run INTEGER,
             compounds_run INTEGER,
             z_prime_threshold	REAL,
-            hit_threshold	REAL
+            hit_threshold	REAL,
+            FOREIGN KEY(plate_layout) REFERENCES plate_layout(plate_name)
             ); """
 
 assay_customers = """ CREATE TABLE IF NOT EXISTS assay_customers(
@@ -201,4 +202,10 @@ assay_customers = """ CREATE TABLE IF NOT EXISTS assay_customers(
             exp_id INTEGER NOT NULL, 
             FOREIGN KEY (customer) REFERENCES customers(name),
             FOREIGN KEY (exp_id) REFERENCES bio_experiment(exp_id)
+            ); """
+
+plate_layout = """ CREATE TABLE IF NOT EXISTS plate_layout(  
+            plate_name TEXT NOT NULL UNIQUE,
+            well_layout TEXT,
+            plate_type TEXT
             ); """

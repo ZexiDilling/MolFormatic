@@ -145,7 +145,7 @@ class FetchData:
         """
         plate_list = []
         for plate in plates:
-            plate_temp = self.dbf.find_plates(table, plate, barcode_name)
+            plate_temp = self.dbf.find_data_single_lookup(table, plate, barcode_name)
             plate_list.append(plate_temp)
 
         return plate_list
@@ -208,7 +208,7 @@ class FetchData:
         """
         rows = {}
         for compound_id in compound_list:
-            temp_dict = self.dbf.records_to_rows(table, compound_id, "compound_id")
+            temp_dict = self.dbf.find_data_single_lookup(table, compound_id, "compound_id")
             for key, value in temp_dict.items():
                 rows[key] = value
 
@@ -574,7 +574,7 @@ class AddData:
                 id_name = "compound_id"
                 id_number = new_dict["compound_id"]
 
-                test_db = self.dbf.find_data(table, barcode, id_number, barcode_name, id_name)
+                test_db = self.dbf.find_data_double_lookup(table, barcode, id_number, barcode_name, id_name)
                 if not test_db:
 
                     self.dbf.add_records_controller(destination_table, new_dict, test)
@@ -610,8 +610,8 @@ class AddData:
 
         # Find compound_ID based on source_plate_barcode and source_well from source_table. and add it to the data_dict
         for transferee in data_dict:
-            row_data = self.dbf.find_data(source_table, data_dict[transferee]["SourceBarcode"],
-                                          data_dict[transferee]["SourceWell"], "mp_barcode", "mp_well")
+            row_data = self.dbf.find_data_double_lookup(source_table, data_dict[transferee]["SourceBarcode"],
+                                                        data_dict[transferee]["SourceWell"], "mp_barcode", "mp_well")
             data_dict[transferee]["compoundID"] = row_data[0][1]
 
             # re-arrange the order to make it fit to the database setup
@@ -623,8 +623,8 @@ class AddData:
 
             # Finding row_id for making sure that it is the right data that gets updated...
             # This will fail with multiple copies of the same compounds in the same MotherPlate... ARG!!!!!
-            row = self.dbf.find_data(source_table, data_dict[transferee]["SourceBarcode"],
-                                     data_dict[transferee]["compoundID"], "mp_barcode", "compound_id")
+            row = self.dbf.find_data_double_lookup(source_table, data_dict[transferee]["SourceBarcode"],
+                                                   data_dict[transferee]["compoundID"], "mp_barcode", "compound_id")
             row_id = row[0][0]
 
             # Update the volume based on row_id.
@@ -701,18 +701,18 @@ class AddData:
         :param table: What table the data needs to be added to
         :type table: str
         :param data: The folder with all the data files / For purity data this is compound information!!
-        :type data: str
+        :type data: str or dict
         :param file_type: What kind of file it is
         :type file_type: str
         :return: Update the database with new values
         """
-        table_list = ["lc_experiment", "bio_experiment", "biological", "lc_raw", "purity", "customers", "assay",
-                      "assay_customers", "plate_type", "locations", "origin", "customers", "vendors", "responsible"]
+        table_list = ["compound_main", "compound_mp", "compound_dp", "location_table"]
+
         if table == "auto":
             self.auto_controller(data, file_type)
         elif table == "purity_data":
             self.purity_data(data)
-        elif table in table_list:
+        elif table not in table_list:
             self.dbf.add_records_controller(table, data)
 
         else:

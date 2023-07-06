@@ -170,13 +170,10 @@ class GUILayout:
         """
 
         # maybe make it a config file. and update the config file when new method are added ?
-        analyse_type = ["single point"]
         responsible = [keys for keys in list(self.config["Responsible"].keys())]
 
         # Colours for the heatmap, if added back in
         # colours = [keys for keys in list(self.config["colours to hex"].keys())]
-
-        sample_type = self.sample_style
 
         col_bio_analysis = sg.Frame("Analyse setup", [[
             sg.Column([
@@ -191,12 +188,15 @@ class GUILayout:
                 [sg.Text("Plate Layout", size=self.standard_size),
                  sg.DropDown(sorted(self.plate_list), key="-BIO_PLATE_LAYOUT-", enable_events=True,
                              size=self.standard_size)],
-                [sg.Text("Analyse Method", size=self.standard_size),
-                 sg.DropDown(analyse_type, key="-BIO_ANALYSE_TYPE-", size=self.standard_size, enable_events=True,
-                             default_value=analyse_type[0])],
                 [sg.Text("Sample Type (Not working)", size=self.standard_size),
-                 sg.DropDown(sample_type, key="-BIO_SAMPLE_TYPE-", default_value=sample_type[0],
-                             size=self.standard_size, enable_events=True)],
+                 sg.DropDown(self.sample_style, key="-BIO_SAMPLE_TYPE-", default_value=self.sample_style[0],
+                             size=self.standard_size, enable_events=True,
+                             tooltip="This indicates how many times each sample is on the plate. "
+                                     "Choosing custome, will let you choose more than 3 times.")],
+                [sg.Text("Analyse Style (Not working)", size=self.standard_size),
+                 sg.DropDown(self.analyse_style, key="-BIO_ANALYSE_TYPE-", size=self.standard_size, enable_events=True,
+                             default_value=self.analyse_style[0],
+                             tooltip="What style to use for analysing the samples")],
                 [sg.T("Sample Type:"),
                  sg.Radio("Use Layout", group_id="-BIO_INFO_SAMPLE_TYPE_RADIO-",
                           key="-BIO_INFO_SAMPLE_TYPE_RADIO_LAYOUT-"),
@@ -223,7 +223,7 @@ class GUILayout:
                 [sg.Checkbox("Compound Related Assay", key="-BIO_COMPOUND_DATA-", enable_events=True,
                              tooltip="Will ask the user for a worklist when analysing the data, to track what compounds"
                                      "is in each well")
-                 , sg.Push(), sg.B("Report Settings", key="-BIO_REPORT_SETTINGS-", size=10)],
+                 , sg.Push(), sg.B("Report Settings", key="-BIO_REPORT_SETTINGS-", size=12)],
                 [sg.Checkbox("Add To Database", key="-BIO_EXPERIMENT_ADD_TO_DATABASE-", enable_events=True,
                              tooltip="Will add the data to the database")],
                 [sg.Checkbox("Add Compound ID", key="-BIO_REPORT_ADD_COMPOUND_IDS-", enable_events=True,
@@ -231,7 +231,7 @@ class GUILayout:
                 [sg.T("Assay:", size=12),
                  sg.DropDown(values=[], key="-BIO_ASSAY_NAME-", size=14,
                              tooltip="If you want to add new data to an assay that have been run before"),
-                 sg.Button("New Assay", size=10, key="-BIO_NEW_ASSAY-",
+                 sg.Button("New Assay", size=12, key="-BIO_NEW_ASSAY-",
                            tooltip="Will give a pop-up where you can fill in the data needed for an assay")],
                 [sg.T("Responsible:", size=12),
                  sg.DropDown(responsible, key="-BIO_RESPONSIBLE-", size=14,

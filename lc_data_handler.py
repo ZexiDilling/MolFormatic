@@ -60,7 +60,7 @@ class LCMSHandler:
             item_header_1 = "compound_id"
             item_header_2 = "compound_id"
 
-            row = self.dbf.find_data(table, item_id_1, item_id_2, item_header_1, item_header_2)
+            row = self.dbf.find_data_double_lookup(table, item_id_1, item_id_2, item_header_1, item_header_2)
             try:
                 compound_info[sample]["mass"] = row[0][3]
             except IndexError:

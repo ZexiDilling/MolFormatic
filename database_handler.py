@@ -92,7 +92,6 @@ class DataBaseFunctions:
         :type data: dict
         :return: Data added to the database
         """
-
         self.create_connection()
         list_columns = self._list_columns(data)
         if "Row_Counter" in list_columns:
@@ -105,8 +104,6 @@ class DataBaseFunctions:
         place_holder = self._add_place_holders(list_columns)
         layout = self._add_layout(table_name, place_holder)
         data_layout = self._data_layout(data, list_columns)
-        if counter < 5:
-            print(data_layout)
         self._add_data_to_table(layout, data_layout)
 
     def update_vol(self, source_table, vol, barcode_source, row_id):
@@ -126,9 +123,25 @@ class DataBaseFunctions:
         table = f"UPDATE {source_table} SET volume = volume - {vol} WHERE {row_id} = {barcode_source} "
         self.submit_update(table)
 
-    def find_data(self, table, barcode, id_number, barcode_name, id_name):
+    def rename_record_value(self, table, headline, old_value, new_value):
         """
-        Finds data in the database
+        Renames a record based on the name of value of the record
+        :param table: The table where the data is located
+        :type table: str
+        :param headline: the column headline for the data that needs to be changed
+        :type headline: str
+        :param old_value: The old value, that needs to be changed from
+        :type old_value: str
+        :param new_value: The new value, that eeds to be changed to
+        :type new_value: str
+        :return: An updated database
+        """
+        table_update = f"UPDATE {table} SET {headline} = '{new_value}' WHERE {headline} = '{old_value}'"
+        self.submit_update(table_update)
+
+    def find_data_double_lookup(self, table, barcode, id_number, barcode_name, id_name):
+        """
+        Finds data in the database depending on two lookup values
 
         :param table: What table the data should be in
         :type table: str
@@ -146,9 +159,9 @@ class DataBaseFunctions:
         find = f"SELECT rowid, * FROM '{table}' WHERE {barcode_name} = '{barcode}' AND {id_name} = '{id_number}'"
         return self.fetch(find)
 
-    def find_plates(self, table, data_value, headline):
+    def find_data_single_lookup(self, table, data_value, headline):
         """
-        Finds plates in a table from the database
+        Finds data in the database depending on a single lookup value
 
         :param table: What table are the plates in
         :type table: str
@@ -162,8 +175,23 @@ class DataBaseFunctions:
         find = f"SELECT rowid, * FROM '{table}' WHERE {headline} = '{data_value}' "
         return self.fetch(find)
 
-    def delete_records(self):
-        pass
+    def delete_records(self, table, headline, data_value):
+        """
+        Deletes a record from the database
+        :param table: What table are the plates in
+        :type table: str
+        :param data_value: The value of the thing you are looking for
+        :type data_value: str
+        :param headline: Headline for the coloumn where  the data is, in the table
+        :type headline: str
+        :return:
+        """
+
+        delete = f"DELETE FROM {table} WHERE {headline} = '{data_value}'"
+        self.create_connection()
+        self.cursor.execute(delete)
+        self.conn.commit()
+        self.cursor.close()
 
     def run(self):
         pass
@@ -385,20 +413,18 @@ class DataBaseFunctions:
         temp_table = f"SELECT * FROM {table} {selector}"
         return self._row_creator(temp_table)
 
-    def records_to_rows(self, table, data, clm_header):
+    def find_column_data(self, table, clm_header):
         """
-        Gets record depending on a single data point
+        Gets all data from a single column from a table
 
         :param table: Table the data needs  to be pulled from
         :type table: str
-        :param data: The data the user is looking for
-        :type data: str
-        :param clm_header: The headline for the clm where the data is located
+        :param clm_header: The headline for the column
         :type clm_header: str
         :return: the row for the data
         :rtype: dict
         """
-        temp_table = f"SELECT * FROM {table} WHERE {clm_header} = '{data}'"
+        temp_table = f"SELECT {clm_header} FROM {table} "
         return self._row_creator(temp_table)
 
     def _row_creator(self, data):
@@ -434,7 +460,7 @@ if __name__ == "__main__":
     id_name = "mp_well"
     barcode = "MP2022-001"
     id_number = "q3"
-    sample_id = dbf.find_data(table_name, barcode, id_number, barcode_name, id_name)
+    sample_id = dbf.find_data_double_lookup(table_name, barcode, id_number, barcode_name, id_name)
     print(sample_id[0][3])
 
 

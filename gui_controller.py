@@ -13,7 +13,7 @@ from gui_settings_control import GUISettingsController
 from gui_functions import *
 from gui_guards import *
 from bio_data_functions import org, norm, pora, pora_internal
-from json_handler import plate_dict_reader, dict_writer, dict_reader
+from json_handler import dict_reader
 from plate_formatting import plate_layout_re_formate
 from gui_popup import matrix_popup, sample_to_compound_name_controller, ms_raw_name_guard
 from gui_help_info_controller import help_info_controller
@@ -42,14 +42,11 @@ def main(config):
         db_active = False
 
     # File names, for files with dict over different kind of data.
-    plate_file = config["files"]["plate_layouts"]
     bio_files = config["files"]["bio_experiments"]
 
-    try:
-        plate_list, archive_plates_dict = plate_dict_reader(plate_file)
-    except TypeError:
-        plate_list = []
-        archive_plates_dict = {}
+    # The archive could be removed from here, but then there would be a call to the DB everytime a layout is used...
+    # Grabs the updated data from the database
+    plate_list, archive_plates_dict = get_plate_layout(config)
 
     gl = GUILayout(config, plate_list)
 
@@ -1256,8 +1253,22 @@ def main(config):
 
                     archive_plates_dict[temp_dict_name]["well_layout"] = temp_well_dict
                     archive_plates_dict[temp_dict_name]["plate_type"] = values["-PLATE-"]
-                    dict_writer(plate_file, archive_plates_dict)
-                    plate_list, archive_plates_dict = plate_dict_reader(plate_file)
+
+                    # saves the layout to the Database
+                    # setting up the data for importing the new plate_layout to the database
+                    temp_table = "plate_layout"
+                    temp_plate_layout_data = {
+                        "plate_name": temp_dict_name,
+                        "well_layout": f"{temp_well_dict}",
+                        "plate_type": values["-PLATE-"]
+                    }
+
+                    update_database(config, temp_table, temp_plate_layout_data)
+
+                    # Updates the plate_list and archive_plates_dict with the new plate
+                    plate_list, archive_plates_dict = get_plate_layout(config)
+
+                    # Updates the window with new values
                     window["-ARCHIVE_PLATES-"].update(values=sorted(plate_list), value=plate_list[0])
                     window["-BIO_PLATE_LAYOUT-"].update(values=sorted(plate_list), value="")
                     window["-SEARCH_PLATE_LAYOUT-"].update(values=sorted(plate_list), value="")
@@ -1266,15 +1277,22 @@ def main(config):
             if not values["-ARCHIVE_PLATES-"]:
                 sg.PopupError("Please select a layout to delete")
             else:
-                archive_plates_dict.pop(values["-ARCHIVE_PLATES-"])
-                plate_list.remove(values["-ARCHIVE_PLATES-"])
+                # Set up values for the database, and deletes the record
+                table = "plate_layout"
+                headline = "plate_name"
+                data_value = values["-ARCHIVE_PLATES-"]
+                delete_records_from_database(config, table, headline, data_value)
+
+                # Grabs the updated data from the database
+                plate_list, archive_plates_dict = get_plate_layout(config)
+
+                # Updates the window with new values
                 try:
                     window["-ARCHIVE_PLATES-"].update(values=sorted(plate_list), value=plate_list[0])
                     window["-BIO_PLATE_LAYOUT-"].update(values=sorted(plate_list), value="")
                 except IndexError:
                     window["-ARCHIVE_PLATES-"].update(values=[], value="")
                     window["-BIO_PLATE_LAYOUT-"].update(values=[], value="")
-                dict_writer(plate_file, archive_plates_dict)
 
         if event == "-RENAME_LAYOUT-":
             if not values["-ARCHIVE_PLATES-"]:
@@ -1282,13 +1300,26 @@ def main(config):
             else:
                 temp_dict_name = sg.PopupGetText("Name plate layout")
                 if temp_dict_name:
-                    archive_plates_dict[temp_dict_name] = archive_plates_dict[values["-ARCHIVE_PLATES-"]]
-                    archive_plates_dict.pop(values["-ARCHIVE_PLATES-"])
-                    plate_list.remove(values["-ARCHIVE_PLATES-"])
-                    plate_list.append(temp_dict_name)
+
+                    # Updates the database with new values
+                    table = "plate_layout"
+                    headline = "plate_name"
+                    old_value = values["-ARCHIVE_PLATES-"]
+                    new_value = temp_dict_name
+                    rename_record_in_the_database(config, table, headline, old_value, new_value)
+
+                    # Grabs the updated data from the database
+                    plate_list, archive_plates_dict = get_plate_layout(config)
+
+                    # Removes the old name and data from the plate_list and archive_plates_dict and adds the new one
+                    # archive_plates_dict[temp_dict_name] = archive_plates_dict[values["-ARCHIVE_PLATES-"]]
+                    # archive_plates_dict.pop(values["-ARCHIVE_PLATES-"])
+                    # plate_list.remove(values["-ARCHIVE_PLATES-"])
+                    # plate_list.append(temp_dict_name)
+
+                    # Updates the window with new values
                     window["-ARCHIVE_PLATES-"].update(values=sorted(plate_list), value=plate_list[0])
                     window["-BIO_PLATE_LAYOUT-"].update(values=sorted(plate_list), value="")
-                    dict_writer(plate_file, archive_plates_dict)
 
         # Used both for Plate layout and Bio Info
         # prints coordinate and well under the plate layout
@@ -1430,7 +1461,7 @@ def main(config):
             if not values["-UPDATE_FOLDER-"]:
                 sg.popup_error("Please select a folder containing compound data")
             else:
-                update_database(values["-UPDATE_FOLDER-"], "compound_main", None, config)
+                update_database(config, "compound_main",  values["-UPDATE_FOLDER-"])
                 config_update(config)
                 window.close()
                 window = gl.full_layout()
@@ -1439,14 +1470,14 @@ def main(config):
             if not values["-UPDATE_FOLDER-"]:
                 sg.popup_error("Please select a folder containing MotherPlate data")
             else:
-                update_database(values["-UPDATE_FOLDER-"], "compound_mp", "pb_mp_output", config)
+                update_database(config, "compound_mp", values["-UPDATE_FOLDER-"], "pb_mp_output")
                 sg.popup("Done")
 
         if event == "-UPDATE_DP-":
             if not values["-UPDATE_FOLDER-"]:
                 sg.popup_error("Please select a folder containing AssayPlate data")
             else:
-                update_database(values["-UPDATE_FOLDER-"], "compound_dp", "echo_dp_out", config)
+                update_database(config, "compound_dp", values["-UPDATE_FOLDER-"], "echo_dp_out")
 
         if event == "-UPDATE_BIO-":
             if not values["-UPDATE_FOLDER-"]:
@@ -1734,7 +1765,7 @@ def main(config):
                         "name": name,
                         "e_mail": e_mail,
                         "info": info}
-                update_database(data, table, None, config)
+                update_database(config, table, data)
 
         if event == "-EXTRA_DATABASE_CUSTOMERS_IMPORT_DB-":
             if not values["-EXTRA_DATABASE_CUSTOMERS_NAME-"]:
@@ -1751,7 +1782,7 @@ def main(config):
                         "name": name,
                         "e_mail": e_mail,
                         "info": info}
-                update_database(data, table, None, config)
+                update_database(config, table, data)
 
         if event == "-EXTRA_DATABASE_VENDORS_IMPORT_DB-":
             if not values["-EXTRA_DATABASE_VENDORS_NAME-"]:
@@ -1768,7 +1799,7 @@ def main(config):
                         "name": name,
                         "e_mail": e_mail,
                         "info": info}
-                update_database(data, table, None, config)
+                update_database(config, table, data)
 
         if event == "-EXTRA_DATABASE_AC_IMPORT_DB-":
             if not values["-EXTRA_DATABASE_AC_NAME-"]:
@@ -1789,7 +1820,7 @@ def main(config):
                         "contact_person": contact_person,
                         "e_mail": e_mail,
                         "info": info}
-                update_database(data, table, None, config)
+                update_database(config, table, data)
 
         if event == "-EXTRA_DATABASE_PLACE_TYPE_IMPORT_DB-":
             if not values["-EXTRA_PLATE_TYPE_NAME-"]:
@@ -1820,7 +1851,7 @@ def main(config):
                         "max_volume": float(values["-EXTRA_PLATE_TYPE_MAX_VOL-"]),
                         "working_volume": float(values["-EXTRA_PLATE_TYPE_WORKING_VOL-"]),
                         "dead_volume": float(values["-EXTRA_PLATE_TYPE_WELL_DEAD_VOL-"])}
-                update_database(data, table, None, config)
+                update_database(config, table, data)
 
         if event == "-EXTRA_DATABASE_LOCATION_IMPORT_DB-":
             if not values["-EXTRA_DATABASE_LOCATIONS_ROOM-"]:
@@ -1837,7 +1868,7 @@ def main(config):
                         "room": room,
                         "building": building,
                         "spot": spot}
-                update_database(data, table, None, config)
+                update_database(config, table, data)
 
         #       WINDOW 1 - SIMULATE         ###
         if event == "-SIM_INPUT_EQ-":
@@ -2085,6 +2116,8 @@ def main(config):
                 sg.popup(f"Done - files are located {file_location}")
 
         #   WINDOW TABLE - BIO EXPERIMENT TABLE     ###
+
+        # ToDo Re-design
         if event == "-BIO_EXP_TABLE-":
             if bio_exp_table_data:
                 if not values["-BIO_INFO_ANALYSE_METHOD-"]:
