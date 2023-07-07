@@ -141,7 +141,7 @@ class Heatmap:
         return heatmap_dict
 
     @staticmethod
-    def get_well_colour(colour_dict, wells_percentile_dict, well_dict, well):
+    def get_well_colour(colour_dict, wells_percentile_dict, well):
 
         # temp_well_value = round(well_dict[well] / well_percentile_dict[well]["upper_bound"] * 1000)
         # well_percentile = well_percentile_dict[well]["lower_bound"]

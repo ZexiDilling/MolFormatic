@@ -213,7 +213,9 @@ class GUILayout:
                 #  sg.DropDown(colours, key="-HEAT_END-", size=self.standard_size,
                 #              default_value=colours[4])],
                 # [sg.Checkbox("State colours", key="-BIO_STATE-")],
-                [sg.Button("Export", key="-EXPORT_BIO-"), sg.Push(),
+                [sg.Button("Calculate", key="-BIO_CALCULATE-",
+                           tooltip="Will do calculations on all the files in the chosen folder. "
+                                   "Data can be exported to Excel and/or imported to the Database"), sg.Push(),
                  sg.Button("Send to Info", key="-BIO_SEND_TO_INFO-")]
             ])
         ]])
@@ -224,6 +226,7 @@ class GUILayout:
                              tooltip="Will ask the user for a worklist when analysing the data, to track what compounds"
                                      "is in each well")
                  , sg.Push(), sg.B("Report Settings", key="-BIO_REPORT_SETTINGS-", size=12)],
+                [sg.Checkbox("Export to Excel", key="-BIO_EXPORT_TO_EXCEL-", default=True)],
                 [sg.Checkbox("Add To Database", key="-BIO_EXPERIMENT_ADD_TO_DATABASE-", enable_events=True,
                              tooltip="Will add the data to the database")],
                 [sg.Checkbox("Add Compound ID", key="-BIO_REPORT_ADD_COMPOUND_IDS-", enable_events=True,
@@ -1377,15 +1380,15 @@ class GUILayout:
         responsible = [keys for keys in list(self.config["Responsible"].keys())]
 
         compound_table_data = []
-        compound_table_headings = ["Compound ID", "well", "Raw Data", "Concentration", "Score"]
+        compound_table_headings = ["Compound ID", "well", "Raw Data", "Concentration", "Score", "Approved"]
         col_compound_table = sg.Frame("Experimental Data", [[
             sg.Column([
                 [sg.Table(values=compound_table_data, headings=compound_table_headings, key="-BIO_EXP_COMPOUND_TABLE-",
                           auto_size_columns=False, col_widths=[10, 10, 10], enable_events=True,
                           enable_click_events=True)],
-                [sg.T("Amount of Compounds: "), sg.T(key="-BIO_EXP_COMPOUND_COUNTER-")],
-                [sg.T("Set Threshold"), sg.Input(key="-BIO_EXP_SET_THRESHOLD-")],
-                [sg.T("Set Compound Amount"), sg.Input(key="-BIO_EXP_SET_COMPOUND_AMOUNT-")],
+                [sg.T("Amount of Compounds: "), sg.T("0", key="-BIO_EXP_COMPOUND_COUNTER-")],
+                [sg.T("Set Threshold:", size=12), sg.Input(key="-BIO_EXP_SET_THRESHOLD-", size=12)],
+                [sg.T("Set Compound Amount:", size=12), sg.Input(key="-BIO_EXP_SET_COMPOUND_AMOUNT-", size=12)],
                 [sg.Button("Export Compound List", key="-BIO_EXP_EXPORT_COMPOUNDS-")]
             ])
         ]])
@@ -1398,7 +1401,7 @@ class GUILayout:
                 [sg.Table(values=plate_table_data, headings=plate_table_headings, key="-BIO_EXP_PLATE_TABLE-",
                           auto_size_columns=False, col_widths=[10, 10, 10],
                           enable_events=True, enable_click_events=True)],
-                [sg.T("Amount of Plates: "), sg.T(key="-BIO_EXP_PLATE_COUNTER-")],
+                [sg.T("Amount of Plates: "), sg.T("0", key="-BIO_EXP_PLATE_COUNTER-")],
                 [sg.Checkbox("Only approved Plates", key="-BIO_EXP_APPROVED_PLATES_ONLY-", default=True,
                              enable_events=True)]
             ])
@@ -1408,7 +1411,7 @@ class GUILayout:
             sg.Column([
                 [sg.Listbox("", key="-BIO_EXP_TABLE_ASSAY_LIST_BOX-", enable_events=True, size=(18, 10),
                             select_mode=sg.LISTBOX_SELECT_MODE_MULTIPLE)],
-                [sg.T("Assay Name", size=10), sg.Input(key="-BIO_EXP_ASSAY_NAME_SEARCH-", size=10)]
+                [sg.T("Assay Name", size=10), sg.Input(key="-BIO_EXP_ASSAY_NAME_SEARCH-", size=10)],
                 [sg.CalendarButton("Start date", key="-BIO_EXP_TABLE_DATE_START-", format="%Y-%m-%d", enable_events=True
                                    , target="-BIO_EXP_TABLE_DATE_START_TARGET-", size=(10, 1)),
                  sg.Input(key="-BIO_EXP_TABLE_DATE_START_TARGET-", size=10, enable_events=True)],

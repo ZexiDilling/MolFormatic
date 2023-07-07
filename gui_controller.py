@@ -13,7 +13,6 @@ from gui_settings_control import GUISettingsController
 from gui_functions import *
 from gui_guards import *
 from bio_data_functions import org, norm, pora, pora_internal
-from json_handler import dict_reader
 from plate_formatting import plate_layout_re_formate
 from gui_popup import matrix_popup, sample_to_compound_name_controller, ms_raw_name_guard
 from gui_help_info_controller import help_info_controller
@@ -41,8 +40,6 @@ def main(config):
     except KeyError:
         db_active = False
 
-    # File names, for files with dict over different kind of data.
-    bio_files = config["files"]["bio_experiments"]
 
     # The archive could be removed from here, but then there would be a call to the DB everytime a layout is used...
     # Grabs the updated data from the database
@@ -818,6 +815,8 @@ def main(config):
             archive = True
             gui_tab = "bio"
             sample_type = values["-BIO_SAMPLE_TYPE-"]
+            print(archive_plates_dict[values["-BIO_PLATE_LAYOUT-"]]["well_layout"])
+            print(well_dict)
             draw_plate(config, graph_bio, plate_size, well_dict, gui_tab, archive, sample_layout=sample_type)
 
         if event == "-BIO_SAMPLE_TYPE-":
@@ -842,16 +841,18 @@ def main(config):
 
         if event == "-BIO_EXPERIMENT_ADD_TO_DATABASE-" and not values["-BIO_ASSAY_NAME-"]:
             if values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"]:
-                assay_name = sg.popup_get_text("Assay Name?")
-                if assay_name:
-                    window["-BIO_ASSAY_NAME-"].update(value=assay_name)
+                sg.popup_error("Make a list to chose name from")
+                # if assay_name:
+                #     window["-BIO_ASSAY_NAME-"].update(value=assay_name)
 
-        if event == "-EXPORT_BIO-":
+        if event == "-BIO_CALCULATE-":
             if not values["-BIO_PLATE_LAYOUT-"]:
                 sg.popup_error("Please choose a plate layout")
             elif not values["-BIO_IMPORT_FOLDER-"]:
                 sg.popup_error("Please choose an import folder")
             elif values["-BIO_COMBINED_REPORT-"] and not values["-BIO_EXPORT_FOLDER-"]:
+                sg.popup_error("Please choose an export folder")
+            elif values["-BIO_EXPORT_TO_EXCEL-"] and not values["-BIO_EXPORT_FOLDER-"]:
                 sg.popup_error("Please choose an export folder")
             elif values["-BIO_COMBINED_REPORT-"] and not values["-FINAL_BIO_NAME-"]:
                 sg.popup_error("Please choose an Report name")
@@ -877,9 +878,10 @@ def main(config):
                 hit_amount = values["-BIO_FINAL_REPORT_HIT_AMOUNT-"]
                 include_smiles = values["-BIO_FINAL_REPORT_INCLUDE_SMILES-"]
                 final_report_name = values["-FINAL_BIO_NAME-"]
+                export_to_excel = values["-BIO_EXPORT_TO_EXCEL-"]
 
-                if not bio_export_folder:
-                    bio_export_folder = values["-BIO_EXPORT_FOLDER-"]
+                # if not bio_export_folder:
+                #     bio_export_folder = values["-BIO_EXPORT_FOLDER-"]
 
                 if not values["-BIO_PLATE_LAYOUT_CHECK-"]:
                     print("Bio Plate Layout Check")
@@ -911,7 +913,8 @@ def main(config):
                                                                       archive_plates_dict,
                                                                       bio_plate_report_setup,
                                                                       analyse_method, bio_sample_dict,
-                                                                      bio_export_folder, add_compound_ids)
+                                                                      bio_export_folder, add_compound_ids,
+                                                                      export_to_excel)
 
                 if values["-BIO_COMBINED_REPORT-"]:
 
@@ -921,12 +924,27 @@ def main(config):
                                     bio_sample_dict)
 
                 if values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"]:
+                    # Plate check:
+                    print(f"worked: {worked}")
+                    print(f"all_plates_data: {all_plates_data}")
+                    print(f"date: {date}")
+                    print(f"used_plates: {used_plates}")
+
                     assay_name = values["-BIO_ASSAY_NAME-"]
                     responsible = values["-BIO_RESPONSIBLE-"]
                     plate_layout = values["-BIO_PLATE_LAYOUT-"]
 
-                    bio_experiment_to_database(assay_name, all_plates_data, plate_layout, date, responsible, config,
-                                               bio_files)
+                    # First make a table with all the plates [name, z-prime, aprroved], and their z-prime - mark them red or yellow depending on Z-prime
+                    # If there is no Z-prime, skip this step.
+                    # make it possible to click a plate, and get a view of the data... and make it possible to de-select data that looks weird, and re-calculate
+                    # If there have been made changes to what data to include, mark it in the table with a note
+
+                    # if the data is dose-response... make calculations for each data row, show them on a table.
+                    # Make it possible to click the data to see the graph.
+                    # Make it possible to de-select data points that are off...
+
+                    # bio_experiment_to_database(assay_name, all_plates_data, plate_layout, date, responsible, config,
+                    #                            bio_files)
 
                 if worked:
                     sg.popup("Done")
@@ -2132,7 +2150,7 @@ def main(config):
 
             file_name = "bio_experiments.txt"
             plate_dict_name = bio_exp_table_data[values["-BIO_EXP_PLATE_TABLE-"][0]][2]
-            plate_bio_info = dict_reader(file_name)[plate_dict_name]
+            plate_bio_info = ...
 
             bio_info_plate_layout = bio_exp_table_data[values["-BIO_EXP_PLATE_TABLE-"][0]][3]
             bio_info_plate_size = archive_plates_dict[bio_info_plate_layout]["plate_type"]

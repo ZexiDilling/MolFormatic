@@ -111,10 +111,11 @@ bio_experiment_table = """ CREATE TABLE IF NOT EXISTS bio_experiment(
             z_prime	REAL,
             process_data    TEXT,
             plate_layout	TEXT NOT NULL,
+            note    TEXT,
             FOREIGN KEY("assay_name") REFERENCES "assay"("assay_name")
             ); """
 
-biological_data = """ CREATE TABLE IF NOT EXISTS biological(
+biological_compound_data = """ CREATE TABLE IF NOT EXISTS biological_compound_data(
             bio_data_id INTEGER PRIMARY KEY UNIQUE,
             compound_id INTEGER NOT NULL,
             exp_id INTEGER NOT NULL,
@@ -122,6 +123,8 @@ biological_data = """ CREATE TABLE IF NOT EXISTS biological(
             score REAL NOT NULL,
             hit TEXT NOT NULL,
             concentration   REAL NOT NULL,
+            approved TEXT NOT NULL,
+            note TEXT,
             FOREIGN KEY (compound_id) REFERENCES compound_main(compound_id),
             FOREIGN KEY (exp_id) REFERENCES exp_id(bio_experiment)
             ); """

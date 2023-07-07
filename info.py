@@ -142,8 +142,6 @@ compound_well_layout = ['A1', 'B1', 'C1', 'D1', 'E1', 'F1', 'G1', 'H1',
                         'H12', 'G12', 'F12', 'E12', 'D12', 'C12', 'B12', 'A12']
 
 
-
-
 matrix_header = ["col0", "col1", "col2", "col3", "col4", "col5", "col6", "col7", "col8", "col9", "col10",
                           "col11", "col12", "col13", "col14", "col15", "col16", "col17", "col18", "col19", "col20",
                           "col21", "col22", "col23", "col24", "col25", "col26", "col27", "col28", "col29", "col30",

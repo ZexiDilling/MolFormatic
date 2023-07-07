@@ -19,8 +19,7 @@ from file_handler import get_file_list
 from bio_data_functions import original_data_dict, well_row_col_type, txt_to_xlsx
 from bio_report_setup import bio_final_report_controller
 from bio_date_handler import BIOAnalyser
-from info import matrix_header, plate_384_row
-from json_handler import dict_writer, dict_reader
+from info import matrix_header
 from pickle_handler import df_writer
 from heatmap import Heatmap
 from config_writer import ConfigWriter
@@ -378,9 +377,11 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
 
         heatmap = Heatmap()
 
-        heatmap_dict = heatmap.dict_convert(well_data_dict, state_dict, mapping["states"])
+        # heatmap_dict = heatmap.dict_convert(well_data_dict, state_dict, mapping["states"])
 
-        colour_dict, well_percentile, max_values, min_values = heatmap.heatmap_colours(heatmap_dict, mapping["percentile"], mapping["colours"])
+        colour_dict, well_percentile, max_values, min_values = heatmap.heatmap_colours(well_data_dict["value"],
+                                                                                       mapping["percentile"],
+                                                                                       mapping["colours"])
 
     well_dict = {}
     graph.erase()
@@ -389,6 +390,10 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
         start_x = 5
         start_y = 165
     elif gui_tab == "bio_exp":
+        well_size = 20
+        start_x = 5
+        start_y = 165
+    elif gui_tab == "bio_approval_popup":
         well_size = 20
         start_x = 5
         start_y = 165
@@ -442,25 +447,28 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
                 group = counter
 
             if mapping:
+                try:
+                    well_data_dict["value"][well_id]
+                except KeyError:
+                    map_well = False
+                else:
+                    map_well = True
                 if mapping["mapping"] == "Heatmap":
-                    if state_dict[well_id]["state"] in mapping["states"]:
+                    if map_well:
                         try:
-                            fill_colour = heatmap.get_well_colour(colour_dict, well_percentile, well_data_dict, well_id)
+                            fill_colour = heatmap.get_well_colour(colour_dict, well_percentile, well_id)
                         except ZeroDivisionError:
                             fill_colour = "#FFFFFF"
                     else:
                         fill_colour = "#FFFFFF"
                 elif mapping["mapping"] == "Hit Map":
 
-                    if state_dict[well_id]["state"] in mapping["states"]:
-                        if mapping["lower_bound_start"] < well_data_dict[well_id] < mapping["lower_bound_end"]:
-                            fill_colour = mapping["low_colour"]
-                        elif mapping["middle_bound_start"] < well_data_dict[well_id] < mapping["middle_bound_end"]:
-                            fill_colour = mapping["mid_colour"]
-                        elif mapping["higher_bound_start"] < well_data_dict[well_id] < mapping["higher_bound_end"]:
-                            fill_colour = mapping["high_colour"]
-                        else:
-                            fill_colour = "#FFFFFF"
+                    if map_well:
+                        for _, params in mapping["bins"].items():
+                            if params["use"] and params["min"] <= well_data_dict["value"][well_id] <= params["max"]:
+                                fill_colour = params["colour"]
+                            else:
+                                fill_colour = "#FFFFFF"
                     else:
                         fill_colour = "#FFFFFF"
 
@@ -617,9 +625,10 @@ def bio_data(config, folder, plate_layout, archive_plates_dict, bio_plate_report
                 if not all_data:
                     return False
                 used_plates.append(barcode)
-                all_plates_data[barcode] = bioa.bio_data_controller(files, temp_plate_layout, all_data, well_row_col, well_type,
-                                                                    analysis, write_to_excel, bio_sample_dict,
-                                                                    save_location, add_compound_ids)
+                all_plates_data[barcode] = bioa.bio_data_controller(files, temp_plate_layout, all_data, well_row_col,
+                                                                    well_type, analysis, write_to_excel,
+                                                                    bio_sample_dict, save_location, add_compound_ids)
+
         else:
             print(f"{files} is not the right formate")
     return True, all_plates_data, date, used_plates
@@ -715,7 +724,9 @@ def bio_experiment_to_database(assay_name, plate_data, plate_layout, date, respo
         "date": date
     }
     temp_dict = {raw_data: plate_data}
-    dict_writer(bio_files, temp_dict)
+
+    print("MISSING_DATABASE_CONNECTION!!!!")
+
     update_database(data_dict, table, None, config)
 
 

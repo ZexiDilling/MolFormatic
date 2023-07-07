@@ -493,7 +493,7 @@ def original_data_dict(file, plate_layout):
 
             # Get the date
             if value == "Date:":
-                date = row[4]
+                date = row[1]
 
             # Get the barcode
             if value == "Barcode:" and row[1]:
@@ -512,7 +512,11 @@ def original_data_dict(file, plate_layout):
                 plate_type_1536 = True
 
     # Load the data into a pandas dataframe, skipping the rows that were specified earlier
-    df_plate = pd.read_excel(file, sheet_name=sheet, skiprows=skipped_rows, nrows=n_rows)
+    try:
+        df_plate = pd.read_excel(file, sheet_name=sheet, skiprows=skipped_rows, nrows=n_rows)
+    except UnboundLocalError:
+        print(f"Could not find the <> tag in the file: {file}")
+        return
 
     # Convert the dataframe to a dictionary
     df_plate_dict = df_plate.to_dict()
