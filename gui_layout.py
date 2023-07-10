@@ -1263,7 +1263,8 @@ class GUILayout:
         #     ])
         # ]])
 
-        purity_overview_table_headings = ["Sample", "batch", "Mass", "Major Peak %", "Ion", "Ion mass", "Peak ID", "Pur Sum"]
+        purity_overview_table_headings = ["Sample", "batch", "Mass", "Major Peak %", "Ion", "Ion mass", "Peak ID",
+                                          "Pur Sum"]
         table_tab_purity_overview = sg.Frame("Purity Overview", [[
             # sg.vbottom(
             sg.Column([

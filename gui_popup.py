@@ -1,20 +1,21 @@
 import PySimpleGUI as sg
 from copy import deepcopy, copy
 
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from info import matrix_header, plate_384_row, plate_96_row
-
+from visualization import Toolbar
 # from gui_functions import sub_settings_matrix
 # from database_controller import FetchData
 # from excel_handler import purity_sample_layout_import, purity_sample_layout_export
 # from gui_functions import sort_table
 
-# todo FIX THIS WHOLE THING!!!!!!!!
+# todo FIX THIS WHOLE THING!!!!!!!! - easy fix is to import the module that each function needs to run!!!
 from plate_formatting import plate_layout_re_formate
 
 
 def _matrix_popup_layout(calc, state=None, method=None):
-
     table_headings = matrix_header
     table_data = []
     col_matrix_tabl = sg.Column([
@@ -40,7 +41,6 @@ def _matrix_popup_layout(calc, state=None, method=None):
 
 
 def matrix_popup(data_dict, calc_values, state_values, method_values, calc, state=None, method=None):
-
     window = _matrix_popup_layout(calc, state, method)
     window["-POPUP_MATRIX_METHOD-"].update(values=method_values)
     window["-POPUP_MATRIX_STATE-"].update(values=state_values)
@@ -92,7 +92,6 @@ def matrix_popup(data_dict, calc_values, state_values, method_values, calc, stat
 
 
 def _sample_checker_layout(table_data, headings, db_data):
-
     raw_table_col = sg.Frame("Compound Samples", [[
         sg.Column([
             [sg.Table(values=table_data, headings=headings,
@@ -257,7 +256,6 @@ def sample_to_compound_name_controller(config, data_dict, db_data=True):
 
 
 def ms_raw_name_guard(raw_data_samples, excel_data_samples, db_data, config):
-
     table_data = []
     new_name = {}
     for raw_sample_index, raw_sample in enumerate(raw_data_samples):
@@ -282,7 +280,8 @@ def ms_raw_name_guard(raw_data_samples, excel_data_samples, db_data, config):
 
         if event == sg.WIN_CLOSED or event == "-WINDOW_TWO_CANCEL-" or event == "-POP_SAMPLE_CHECKER_OK-":
             for row_index, row in enumerate(table_data):
-                new_name[table_data[row_index][2]] = {"raw": table_data[row_index][0], "excel": table_data[row_index][1]}
+                new_name[table_data[row_index][2]] = {"raw": table_data[row_index][0],
+                                                      "excel": table_data[row_index][1]}
 
             return new_name
             window.close()
@@ -502,31 +501,39 @@ def plate_layout_chooser(files, default_plate_layout, all_plate_layouts):
                 window["-POP_HEADLINE_TABLE-"].update(values=table_data)
 
 
-def _bio_data_approval_table_layout(config, table_data, headings, plate_analyse_methods, plate_calculations,
-                                    analyse_methods, draw_options):
+def _bio_data_approval_table_layout(config, plate_table_data, plate_headings, compound_table_data, compound_headings,
+                                    plate_analyse_methods, plate_calculations, analyse_methods, draw_options,
+                                    well_state_overview):
     """
     The layout for the Bio Approval table that comes up when you import bio data to the database
     :param config: The config handler, with all the default information in the config file.
     :type config: configparser.ConfigParser
-    :param table_data: The data for the table
-    :type table_data: list
-    :param headings: the headings for the table
-    :type headings: list
+    :param plate_table_data: The data for the plate table
+    :type plate_table_data: list
+    :param plate_headings: the headings for the plate table
+    :type plate_headings: list
+    :param compound_table_data: The data for the compound table
+    :type compound_table_data: list
+    :param compound_headings: the headings for the compound table
+    :type compound_headings: list
     :param plate_analyse_methods: The way the plate have been calculated
     :type plate_analyse_methods: list
     :param plate_calculations: The different calculations made for each plate
     :type plate_calculations: list
     :param analyse_methods: Different ways to analyse a plate, like historgrams or gragps...
     :type analyse_methods: list
+    :param well_state_overview: The states included in the plate-map. It is used to disabling states that are not used
+    :type well_state_overview: dict
     :return: The layout for the popup
     """
     standard_size = 12
 
     raw_table_col = sg.Frame("Please approve or dimiss plates", [[
         sg.Column([
-            [sg.Table(values=table_data, headings=headings,
-                      key="-POP_HEADLINE_TABLE-", enable_events=True, enable_click_events=True,
-                      tooltip='double click to select a new headline in the "NEW headline" column ')]
+            [sg.Table(values=plate_table_data, headings=plate_headings,
+                      key="-BIO_APPROVAL_PLATE_TABLE-", enable_events=True, enable_click_events=True)],
+            [sg.Table(values=compound_table_data, headings=compound_headings,
+                      key="-BIO_APPROVAL_COMPOUND_TABLE-", enable_events=True, enable_click_events=True)]
         ])
     ]])
 
@@ -543,31 +550,38 @@ def _bio_data_approval_table_layout(config, table_data, headings, plate_analyse_
                         [sg.Text("Sample:", size=standard_size),
                          sg.T(background_color=config["plate_colouring"]["sample"], size=10,
                               key="-BIO_PLATE_LAYOUT_COLOUR_BOX_SAMPLE-", relief="groove"),
-                         sg.Checkbox("", key="-BIO_APPROVAL_TABL_SAMPLE-", default=True)],
+                         sg.Checkbox("", key="-BIO_APPROVAL_TABL_SAMPLE-", enable_events=True,
+                                     disabled=not well_state_overview["sample"]
+                                     , default=True)],
                         [sg.Text("Blank:", size=standard_size),
                          sg.T(background_color=config["plate_colouring"]["blank"], size=10,
                               key="-BIO_PLATE_LAYOUT_COLOUR_BOX_BLANK-", relief="groove"),
-                         sg.Checkbox("", key="-BIO_APPROVAL_TABL_BLANK-")],
+                         sg.Checkbox("", key="-BIO_APPROVAL_TABL_BLANK-", enable_events=True,
+                                     disabled=not well_state_overview["blank"])],
                         [sg.Text("Maximum:", size=standard_size),
                          sg.T(background_color=config["plate_colouring"]["max"], size=10,
                               key="-BIO_PLATE_LAYOUT_COLOUR_BOX_NAX-", relief="groove"),
-                         sg.Checkbox("", key="-BIO_APPROVAL_TABL_MAX-")],
+                         sg.Checkbox("", key="-BIO_APPROVAL_TABL_MAX-", enable_events=True,
+                                     disabled=not well_state_overview["max"])],
                         [sg.Text("Minimum:", size=standard_size),
                          sg.T(background_color=config["plate_colouring"]["minimum"], size=10,
                               key="-BIO_PLATE_LAYOUT_COLOUR_BOX_MINIMUM-", relief="groove"),
-                         sg.Checkbox("", key="-BIO_APPROVAL_TABL_MIN-")],
+                         sg.Checkbox("", key="-BIO_APPROVAL_TABL_MIN-", enable_events=True,
+                                     disabled=not well_state_overview["minimum"])],
                         [sg.Text("Positive Control:", size=standard_size),
                          sg.T(background_color=config["plate_colouring"]["positive"], size=10,
                               key="-BIO_PLATE_LAYOUT_COLOUR_BOX_POSITIVE-", relief="groove"),
-                         sg.Checkbox("", key="-BIO_APPROVAL_TABL_POSITIVE-")],
+                         sg.Checkbox("", key="-BIO_APPROVAL_TABL_POSITIVE-", enable_events=True,
+                                     disabled=not well_state_overview["pos"])],
                         [sg.Text("Negative Control:", size=standard_size),
                          sg.T(background_color=config["plate_colouring"]["negative"], size=10,
                               key="-BIO_PLATE_LAYOUT_COLOUR_BOX_NEGATIVE-", relief="groove"),
-                         sg.Checkbox("", key="-BIO_APPROVAL_TABL_NEGATIVE-")],
+                         sg.Checkbox("", key="-BIO_APPROVAL_TABL_NEGATIVE-", enable_events=True,
+                                     disabled=not well_state_overview["neg"])],
                         [sg.Text("Empty:", size=standard_size),
                          sg.T(background_color=config["plate_colouring"]["empty"], size=10,
                               key="-BIO_PLATE_LAYOUT_COLOUR_BOX_EMPTY-", relief="groove"),
-                         sg.Checkbox("", key="-BIO_APPROVAL_TABL_EMPTY-")]
+                         sg.Checkbox("", key="-BIO_APPROVAL_TABL_EMPTY-", disabled=not well_state_overview["empty"])]
                     ])
                 ]]),
                 sg.Tab("HeatMap", [[
@@ -643,16 +657,24 @@ def _bio_data_approval_table_layout(config, table_data, headings, plate_analyse_
                 ]])
             ]], selected_background_color=config["GUI"]["tab_colour"], key="-BIO_APPROVAL_TABLE_COLOUR_TAB-",
                 enable_events=False, expand_x=True, expand_y=True),
-        sg.Frame("", [
-            [sg.T("Calculations")],
-            [sg.T("avg", size=10), sg.T("calc", key="-BIO_APPROVAL_TABLE_CALC_AVG-", size=10)],
-            [sg.T("stdev", size=10), sg.T("calc", key="-BIO_APPROVAL_TABLE_CALC_STDEV-", size=10)],
-            [sg.T("pstdev", size=10), sg.T("calc", key="-BIO_APPROVAL_TABLE_CALC_PSTDEV-", size=10)],
-            [sg.T("pvariance", size=10), sg.T("calc", key="-BIO_APPROVAL_TABLE_CALC_PVARIANCE-", size=10)],
-            [sg.T("variance", size=10), sg.T("calc", key="-BIO_APPROVAL_TABLE_CALC_VARIANCE-", size=10)],
-            [sg.T("st_dev_%", size=10), sg.T("calc", key="-BIO_APPROVAL_TABLE_CALC_ST_DEV-", size=10)],
-        ])
-            ]),
+            sg.Column([
+                [sg.T("", key="-BIO_APPROVAL_WELL_ID-")],
+                [sg.Frame("", [
+                    [sg.T("Calculations")],
+                    [sg.HorizontalSeparator()],
+                    [sg.T("avg", size=10), sg.T("Calc", key="-BIO_APPROVAL_TABLE_CALC_AVG-", size=10)],
+                    [sg.T("stdev", size=10), sg.T("Calc", key="-BIO_APPROVAL_TABLE_CALC_STDEV-", size=10)],
+                    [sg.T("pstdev", size=10), sg.T("Calc", key="-BIO_APPROVAL_TABLE_CALC_PSTDEV-", size=10)],
+                    [sg.T("pvariance", size=10), sg.T("Calc", key="-BIO_APPROVAL_TABLE_CALC_PVARIANCE-", size=10)],
+                    [sg.T("variance", size=10), sg.T("Calc", key="-BIO_APPROVAL_TABLE_CALC_VARIANCE-", size=10)],
+                    [sg.T("st_dev_%", size=10), sg.T("Calc", key="-BIO_APPROVAL_TABLE_CALC_ST_DEV-", size=10)],
+                    [sg.T("S/B", size=10), sg.T("Calc", key="-BIO_APPROVAL_TABLE_CALC_SB-", size=10)]
+                ])],
+                [sg.Frame("Note", [
+                    [sg.Multiline(default_text="", key="-BIO_APPROVAL_PLATE_NOTE-", size=(25, 2))]
+                ])]
+            ])
+        ]),
         [sg.T("Draw style", size=14), sg.T("Data", size=14), sg.T("Calculations")],
         [sg.DropDown(values=draw_options, key="-BIO_APPROVAL_TABLE_DROPDOWN_DRAW_OPTIONS-", size=14,
                      enable_events=True, default_value=draw_options[2]),
@@ -666,24 +688,29 @@ def _bio_data_approval_table_layout(config, table_data, headings, plate_analyse_
                    tooltip="Will re-calculate with the new layout. OBS"),
          sg.Button("Apply", key="-BIO_APPROVAL_TABLE_APPLY-", size=14,
                    tooltip="Will apply the new calculations the the data. "
-                           "This will overwrite the old calculated data, but raw data is still saved")]
+                           "This will overwrite the old calculated data, but raw data is still saved"),
+         sg.Button("Add Note", key="-BIO_APPROVAL_TABLE_ADD_NOTE-", size=14,
+                   tooltip="Adds a note to the plate! Any plate not approved needs to have a note."),
+         sg.Button("Add Note to all", key="-BIO_APPROVAL_TABLE_ADD_NOTE_ALL-", size=14,
+                   tooltip="Adds the same note to all the plates.")
+         ]
 
     ])
 
     canvas_window = sg.Frame("Data", [[
         sg.Column([
-            [sg.Canvas(key="-BIO_APPROVAL_TABL_GRAPH-", background_color="Grey", size=(500, 300))],
+            [sg.Canvas(key="-BIO_APPROVAL_TABL_TOOLBAR-")],
+            [sg.Canvas(key="-BIO_APPROVAL_TABL_CANVAS-", background_color="Grey", size=(500, 300))],
             [sg.DropDown(values=analyse_methods, key="-BIO_APPROVAL_TABLE_ANALYSE_METHODS-", enable_events=True,
                          default_value=analyse_methods[0])]
         ])
     ]])
 
-
     layout = [sg.vtop([raw_table_col, graph_window, canvas_window]),
-        [sg.Button("Done", key="-BIO_DATA_APPROVED-", expand_x=True),
-         sg.Button("Cancel", key="-WINDOW_TWO_CANCEL-", expand_x=True)]
-    ]
-    return sg.Window("Samples", layout, finalize=True, resizable=True), table_data
+              [sg.Button("Done", key="-BIO_DATA_APPROVED-", expand_x=True),
+               sg.Button("Cancel", key="-WINDOW_TWO_CANCEL-", expand_x=True)]
+              ]
+    return sg.Window("Samples", layout, finalize=True, resizable=True), plate_table_data
 
 
 def _generate_well_dict(config, plate_type, plate_data, analysed_method, show_state_list):
@@ -728,7 +755,6 @@ def _generate_well_dict(config, plate_type, plate_data, analysed_method, show_st
 
 def _draw_plate_on_graph(draw_plate, config, plate_data, analysed_method, graph, plate_size, graph_placement,
                          show_state_list, draw_option):
-
     well_dict, all_states = _generate_well_dict(config, plate_size, plate_data, analysed_method, show_state_list)
     if draw_option == "heatmap":
         mapping = {
@@ -746,65 +772,122 @@ def _draw_plate_on_graph(draw_plate, config, plate_data, analysed_method, graph,
         mapping = {
             "mapping": "Hit Map",
             "bins": {"th_1": {
-                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_1_use"),
-                    "min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_1_min"),
-                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_1_max"),
-                    "colour": config["Settings_bio"]["plate_report_pora_threshold_colour_th_1"]},
-                 "th_2": {
+                "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_1_use"),
+                "min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_1_min"),
+                "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_1_max"),
+                "colour": config["Settings_bio"]["plate_report_pora_threshold_colour_th_1"]},
+                "th_2": {
                     "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_2_use"),
                     "min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_2_min"),
                     "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_2_max"),
                     "colour": config["Settings_bio"]["plate_report_pora_threshold_colour_th_2"]},
-                 "th_3": {
+                "th_3": {
                     "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_3_use"),
                     "min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_3_min"),
                     "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_3_max"),
                     "colour": config["Settings_bio"]["plate_report_pora_threshold_colour_th_3"]},
-                 "th_4": {
+                "th_4": {
                     "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_4_use"),
                     "min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_4_min"),
                     "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_4_max"),
                     "colour": config["Settings_bio"]["plate_report_pora_threshold_colour_th_4"]},
-                 "th_5": {
+                "th_5": {
                     "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_5_use"),
                     "min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_5_min"),
                     "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_5_max"),
                     "colour": config["Settings_bio"]["plate_report_pora_threshold_colour_th_5"]},
-                 "th_6": {
+                "th_6": {
                     "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_6_use"),
                     "min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_6_min"),
                     "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_6_max"),
                     "colour": config["Settings_bio"]["plate_report_pora_threshold_colour_th_6"]},
-                 "th_7": {
+                "th_7": {
                     "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_7_use"),
                     "min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_7_min"),
                     "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_7_max"),
                     "colour": config["Settings_bio"]["plate_report_pora_threshold_colour_th_7"]},
-                 "th_8": {
+                "th_8": {
                     "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_8_use"),
                     "min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_8_min"),
                     "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_8_max"),
                     "colour": config["Settings_bio"]["plate_report_pora_threshold_colour_th_8"]},
-                 "th_9": {
+                "th_9": {
                     "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_9_use"),
                     "min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_9_min"),
                     "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_9_max"),
                     "colour": config["Settings_bio"]["plate_report_pora_threshold_colour_th_9"]},
-                 "th_10": {
+                "th_10": {
                     "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_10_use"),
                     "min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_10_min"),
                     "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_10_max"),
                     "colour": config["Settings_bio"]["plate_report_pora_threshold_colour_th_10"]}
-                }
+            }
         }
     else:
         mapping = None
     draw_plate(config, graph, plate_size, well_dict, graph_placement, archive_plate=True, mapping=mapping)
 
 
-def bio_data_approval_table(draw_plate, config, all_plate_data, z_prime_threshold, plate_size):
+def __get_figure_for_drawing(canvas, figure):
+    figure_canvas_agg = FigureCanvasTkAgg(figure, canvas)
+    figure_canvas_agg.draw()
+    figure_canvas_agg.get_tk_widget().pack(side='top', fill='both', expand=1)
+    return figure_canvas_agg
+
+
+def _draw_histogram(window, data, histogram_canvas=None, toolbar=None):
+    num_bins = 100
+    canvas = window["-BIO_APPROVAL_TABL_CANVAS-"].TKCanvas
+    fig, ax = plt.subplots()
+
+    ax.hist(data, num_bins, density=True)
+
+    # Format the plots
+    plt.xlabel("Activity")
+    plt.ylabel("Amount")
+    plt.title("Histogram")
+    # plt.legend(loc='upper right')
+
+    plot_style = __get_figure_for_drawing(canvas, fig)
+
+    fig = plt.gcf()
+    plt.close(fig)
+
+    try:
+        histogram_canvas.get_tk_widget().forget()
+    except AttributeError:
+        print("Attribute Error for info canvas")
+
+        if histogram_canvas is not None:
+            if not histogram_canvas == plot_style:
+                fig = plt.gcf()
+                plt.close(fig)
+                histogram_canvas.get_tk_widget().forget()
+            else:
+                plot_style.get_tk_widget().forget()
+
+    plot_style.draw()
+
+    if toolbar:
+        toolbar.destroy()
+
+    toolbar = Toolbar(plot_style, window["-BIO_APPROVAL_TABL_TOOLBAR-"].TKCanvas)
+    toolbar.update()
+    plot_style.get_tk_widget().pack()
+
+    try:
+        window.refresh()
+    except AttributeError:
+        print("Canvas - AttributeError on window.refresh")
+
+    histogram_canvas = plot_style
+    return histogram_canvas, toolbar
+
+
+def bio_data_approval_table(draw_plate, config, all_plate_data, z_prime_threshold, plate_size, same_layout=True):
     """
     The controller for the pop-up that comes when you are importing plate-reader data to the database
+
     :param config: The config handler, with all the default information in the config file.
     :type config: configparser.ConfigParser
     :param all_plate_data: The raw and calculated data for all the plates
@@ -813,9 +896,28 @@ def bio_data_approval_table(draw_plate, config, all_plate_data, z_prime_threshol
     :type z_prime_threshold: float
     :return: The layout for the popup
     """
-    plate_analyse_methods = []
-    plate_calculations = []
-    table_data = []
+    # ToDO add the option to click colours and change them in the different mappings!
+    table_row = None  # Make sure that it does not try to calculate stuff on empty data
+    plate_analyse_methods = []  # What method are used for analysing plates
+    plate_calculations = []  # What calculations have been done for each plate
+    plate_table_data = []  # The data for all the plates
+    compound_table_data = []  # The data for all the wells in the plates
+    hist_data = {"all": []}  # The data for drawing the histogram
+    well_state_mapping = {}  # The mapping of states to a list of wells
+    well_state_overview = {  # A dict over each state if it is included in the analysis or not
+        "sample": False,
+        "blank": False,
+        "max": False,
+        "minimum": False,
+        "pos": False,
+        "neg": False,
+        "empty": False,
+    }
+
+    # Sets stuff for drawing the histogram
+    histogram_canvas = None
+    toolbar = None
+    last_plate_name = None  # Make sure to only update the histogram if a new plate is selected
 
     BLANK_BOX = '☐'
     CHECKED_BOX = '☑'
@@ -831,81 +933,224 @@ def bio_data_approval_table(draw_plate, config, all_plate_data, z_prime_threshol
 
     # Not sure if there needs to be other methods, but for now there is one
     analyse_methods = ["Histogram"]
-
+    compound_data_dict = {}
     # Grabs data for the table
-    for plate in all_plate_data:
+    for plate_index, plate in enumerate(all_plate_data):
+        compound_data_dict[plate] = {}
         for analysed_methods in all_plate_data[plate]["plates"]:
-            # Finds the way the plate have been alaysed
-            plate_analyse_methods.append(analysed_methods)
-        for calculations in all_plate_data[plate]["calculations"]:
-
-            # Finds the different calculations that have been done on the plate
-            if calculations != "other":
-                for analysed_method in all_plate_data[plate]["calculations"][calculations]:
-                    if analysed_method not in calculations:
-                        plate_calculations.append(analysed_method)
+            # Finds the way the plate have been analysed
+            if analysed_methods not in plate_analyse_methods:
+                plate_analyse_methods.append(analysed_methods)
+            compound_data_dict[plate][analysed_methods] = []
+            for status in all_plate_data[plate]["plates"][analysed_methods]:
+                if status == "wells":
+                    for well in all_plate_data[plate]["plates"][analysed_methods][status]:
+                        well_score = round(float(all_plate_data[plate]["plates"][analysed_methods]["wells"][well]), 2)
+                        temp_well_data = [plate, well, well_score]
+                        compound_data_dict[plate][analysed_methods].append(temp_well_data)
+                        compound_table_data.append(temp_well_data)
+                else:
+                    # Stop af the first plate, as all the plates should have same layout from the start .
+                    # If they are different layouts I need to re-think this :D
+                    if plate_index == 0 and same_layout:
+                        if status not in well_state_mapping:
+                            well_state_overview[status] = True
+                            if same_layout:
+                                temp_plate = "all"
+                            else:
+                                temp_plate = plate
+                            well_state_mapping[temp_plate] = {status: []}
+                            for wells in all_plate_data[plate]["plates"][analysed_methods][status]:
+                                well_state_mapping[temp_plate][status].append(wells)
+        if plate_index == 0:
+            for calc_index, calculations in enumerate(all_plate_data[plate]["calculations"]):
+                if calc_index == 0:
+                    # Finds the different calculations that have been done on the plate
+                    if calculations != "other":
+                        for temp_counter, analysed_method in enumerate(
+                                all_plate_data[plate]["calculations"][calculations]):
+                            if analysed_method not in calculations and analysed_method not in plate_calculations:
+                                if analysed_method != "other":
+                                    plate_calculations.append(analysed_method)
         temp_plate_name = plate
-        temp_z_prime = all_plate_data[plate]["calculations"]["other"]["z_prime"]
+        temp_z_prime = round(float(all_plate_data[plate]["calculations"]["other"]["z_prime"]), 2)
         if temp_z_prime > z_prime_threshold:
             temp_approval = CHECKED_BOX
         else:
             temp_approval = BLANK_BOX
         temp_row_data = [temp_plate_name, temp_z_prime, "", temp_approval]
-        table_data.append(temp_row_data)
+        plate_table_data.append(temp_row_data)
+
+    # Gets the data for each well that is marked as a sample on the last analysed method, for each and all plates
+    for plate in all_plate_data:
+        hist_data[plate] = []
+        if same_layout:
+            temp_plate = "all"
+        else:
+            temp_plate = plate
+        for well in well_state_mapping[temp_plate]["sample"]:
+            data = all_plate_data[plate]["plates"][plate_analyse_methods[-1]]["wells"][well]
+            hist_data[plate].append(data)
+            hist_data["all"].append(data)
 
     # Headlines for the table
-    table_headings = ["Plate", "Z-prime", "Notes", "Approved"]
+    plate_table_headings = ["Plate", "Z-prime", "Notes", "Approved"]
+    compound_table_headings = ["Plate", "Well", "Score"]
 
-    window, table_data = _bio_data_approval_table_layout(config, table_data, table_headings, plate_analyse_methods,
-                                                         plate_calculations, analyse_methods, draw_options)
-    window["-POP_HEADLINE_TABLE-"].bind('<Double-Button-1>', "+-double click-")
+    # Gets the layout
+    window, plate_table_data = _bio_data_approval_table_layout(config, plate_table_data, plate_table_headings,
+                                                               compound_table_data, compound_table_headings,
+                                                               plate_analyse_methods, plate_calculations,
+                                                               analyse_methods, draw_options, well_state_overview)
+
+    # Makes it possible to double-click on the table
+    window["-BIO_APPROVAL_PLATE_TABLE-"].bind('<Double-Button-1>', "+-double click-")
 
     graph = window["-BIO_APPROVAL_TABL_GRAPH-"]
     plate_archive_draw = True
     graph_placement = "bio_approval_popup"
+
+    # Draw the histogram for all the data:
+    histogram_canvas, toolbar = _draw_histogram(window, hist_data["all"], histogram_canvas, toolbar)
 
     while True:
         event, values = window.read()
 
         if event == sg.WIN_CLOSED or event == "-WINDOW_TWO_CANCEL-" or event == "-POP_SAMPLE_CHECKER_OK-":
             # Grabs all the data from the table
-            for row_index, row in enumerate(table_data):
-                print(row)
-                if type(row[1]) == list:
-                    approved_data[row[0]] = row[1][0]
-                else:
-                    approved_data[row[0]] = row[1]
+            exit_check = sg.PopupYesNo(f"You are about to close the window.\n "
+                                       f"None of the data will be saved and you have to start the import over.\n\n"
+                                       f"Do you wish to continue ?")
 
-            window.close()
-            return approved_data
+            if exit_check.casefold() == "yes":
+                window.close()
+                return "cancelled"
+
+        # ToDo make it possible to de-select wells on the plate-layout and then re-calculate everything with this layout
+        if event == "-BIO_APPROVAL_TABLE_RE_CALCULATE-":
+            sg.Popup("Does not work. missing a way to de-select data from the plate mapping or the compound table")
+
+        # Not sure what to use this button for ? Delte it ?
+        if event == "-BIO_APPROVAL_TABLE_APPLY-":
+            sg.Popup("Does not work - not sure what it suppose to do ? ")
+
+        # Sends the data to the database
+        if event == "-BIO_DATA_APPROVED-":
+            temp_plate_errors = []
+            for rows in plate_table_data:
+                if rows[3] == "☐" and rows[2] == "":
+                    temp_plate_errors.append(rows[0])
+
+            if temp_plate_errors:
+                sg.PopupError(f"The following plates are missing notes:\n\n"
+                              f"{temp_plate_errors}\n\n"
+                              f"You need to add notes to them, before they can be added to the database")
+
+            else:
+                # Grabs all the data from the table
+                for row_index, row in enumerate(plate_table_data):
+                    temp_plate = row[0]
+
+                    # Add the note field to all plates, to make it more consisten to loop through later on
+                    if row[2] == "":
+                        all_plate_data[temp_plate]["Note"] = None
+
+                    if row[3] == "☐":
+                        approved = True
+                    else:
+                        approved = False
+
+                    all_plate_data[temp_plate]["Approved"] = approved
+
+                window.close()
+
+                return all_plate_data
+
+        # Add a note to the selected plate
+        if event == "-BIO_APPROVAL_TABLE_ADD_NOTE-":
+            if table_row is None:
+                sg.PopupError("Please select a plate")
+            else:
+                selected_plate = plate_table_data[table_row][0]
+                if values["-BIO_APPROVAL_PLATE_NOTE-"]:
+                    temp_note = values["-BIO_APPROVAL_PLATE_NOTE-"]
+                else:
+                    temp_note = sg.PopupGetText("Note:")
+
+                if temp_note:
+                    plate_table_data[table_row][2] = "Note"
+                    all_plate_data[selected_plate]["Note"] = temp_note
+
+                    window["-BIO_APPROVAL_PLATE_TABLE-"].update(values=plate_table_data)
+                    window["-BIO_APPROVAL_PLATE_NOTE-"].update(value=temp_note)
+
+        # Add notes to all plates
+        if event == "-BIO_APPROVAL_TABLE_ADD_NOTE_ALL-":
+            if values["-BIO_APPROVAL_PLATE_NOTE-"]:
+                temp_note = values["-BIO_APPROVAL_PLATE_NOTE-"]
+            else:
+                temp_note = sg.PopupGetText("Note:")
+
+            if temp_note:
+
+                guard = sg.PopupYesNo(f"This will add the following to all plates:"
+                                      f"\n {temp_note}\n\n "
+                                      f"Do you wish to continue?")
+
+                if guard.casefold() == "yes":
+                    for row_index, plates in enumerate(all_plate_data):
+                        plate_table_data[row_index][2] = "Note"
+                        all_plate_data[plates]["Note"] = temp_note
+
+                    window["-BIO_APPROVAL_PLATE_TABLE-"].update(values=plate_table_data)
+                    window["-BIO_APPROVAL_PLATE_NOTE-"].update(value=temp_note)
+
+        # Upate the calculations in the window, when you change the calculation in the dropdown menu
+        if event == "-BIO_APPROVAL_TABLE_DROPDOWN_CALCULATIONS-" and table_row is not None:
+            current_plate = plate_table_data[table_row][0]
+            temp_analysed_method = values["-BIO_APPROVAL_TABLE_DROPDOWN_PLATE_ANALYSE_METHODS-"]
+
+            states = values["-BIO_APPROVAL_TABLE_DROPDOWN_CALCULATIONS-"]
+            all_calc = all_plate_data[current_plate]["calculations"][temp_analysed_method][states]
+            window["-BIO_APPROVAL_TABLE_CALC_AVG-"].update(value=all_calc["avg"])
+            window["-BIO_APPROVAL_TABLE_CALC_STDEV-"].update(value=all_calc["stdev"])
+            window["-BIO_APPROVAL_TABLE_CALC_PSTDEV-"].update(value=all_calc["pstdev"])
+            window["-BIO_APPROVAL_TABLE_CALC_PVARIANCE-"].update(value=all_calc["pvariance"])
+            window["-BIO_APPROVAL_TABLE_CALC_VARIANCE-"].update(value=all_calc["variance"])
+            window["-BIO_APPROVAL_TABLE_CALC_ST_DEV-"].update(value=all_calc["st_dev_%"])
 
         # Makes it possible to check and un-check a checkbox.
-        if event[0] == "-POP_HEADLINE_TABLE-" and event[2][1] == 3:
+        if event[0] == "-BIO_APPROVAL_PLATE_TABLE-" and event[2][1] == 3:
             row_data = event[2][0]
 
-            if table_data[row_data][3] == CHECKED_BOX:
+            if plate_table_data[row_data][3] == CHECKED_BOX:
 
-                table_data[row_data][3] = BLANK_BOX
+                plate_table_data[row_data][3] = BLANK_BOX
             else:
-                table_data[row_data][3] = CHECKED_BOX
+                plate_table_data[row_data][3] = CHECKED_BOX
             # if table_data[row + 1][0]:
             #     table_data[row + 1][0] = False
             # else:
             #
             #     table_data[row + 1][0] = True
 
-            window['-POP_HEADLINE_TABLE-'].update(values=table_data)
+            window['-BIO_APPROVAL_PLATE_TABLE-'].update(values=plate_table_data)
 
-        if event == "-POP_HEADLINE_TABLE-+-double click-":
+        # updates the window, when double-clicking the plate table, or changing what data to look at
+        if event == "-BIO_APPROVAL_PLATE_TABLE-+-double click-" or event == "-BIO_APPROVAL_TABL_SAMPLE-" or \
+                event == "-BIO_APPROVAL_TABL_BLANK-" or event == "-BIO_APPROVAL_TABL_MAX-" or \
+                event == "-BIO_APPROVAL_TABL_MIN-" or event == "-BIO_APPROVAL_TABL_POSITIVE-" or \
+                event == "-BIO_APPROVAL_TABL_NEGATIVE-" or event == "-BIO_APPROVAL_TABLE_DROPDOWN_DRAW_OPTIONS-" or \
+                event == "-BIO_APPROVAL_TABLE_DROPDOWN_PLATE_ANALYSE_METHODS-":
 
             try:
-                table_row = values["-POP_HEADLINE_TABLE-"][0]
+                table_row = values["-BIO_APPROVAL_PLATE_TABLE-"][0]
             except IndexError:
                 pass
             else:
-                # print(table_data[table_row])
+
                 # Grab data
-                temp_plate_name = table_data[table_row][0]
+                temp_plate_name = plate_table_data[table_row][0]
                 temp_analysed_method = values["-BIO_APPROVAL_TABLE_DROPDOWN_PLATE_ANALYSE_METHODS-"]
 
                 # Get calculations:
@@ -917,8 +1162,10 @@ def bio_data_approval_table(draw_plate, config, all_plate_data, z_prime_threshol
                 window["-BIO_APPROVAL_TABLE_CALC_PVARIANCE-"].update(value=all_calc["pvariance"])
                 window["-BIO_APPROVAL_TABLE_CALC_VARIANCE-"].update(value=all_calc["variance"])
                 window["-BIO_APPROVAL_TABLE_CALC_ST_DEV-"].update(value=all_calc["st_dev_%"])
-                # Draw the plate:
+                window["-BIO_APPROVAL_TABLE_CALC_SB-"]. \
+                    update(value=all_plate_data[temp_plate_name]["calculations"][temp_analysed_method]["other"]["S/B"])
 
+                # Gets what well states should be included in the mapping.
                 show_state_list = {"sample": values["-BIO_APPROVAL_TABL_SAMPLE-"],
                                    "blank": values["-BIO_APPROVAL_TABL_BLANK-"],
                                    "max": values["-BIO_APPROVAL_TABL_MAX-"],
@@ -931,11 +1178,31 @@ def bio_data_approval_table(draw_plate, config, all_plate_data, z_prime_threshol
                 if not any(show_state_list.values()):
                     sg.PopupError("Please select states to include in the graph")
                 else:
+                    # Updates the plate map with selected values
                     _draw_plate_on_graph(draw_plate, config, all_plate_data[temp_plate_name]["plates"],
                                          temp_analysed_method, graph, plate_size, graph_placement, show_state_list,
                                          draw_options)
 
+                    # Updates the compound table, with compounds corresponding to the selected
+                    # values for the plate mapping
+                    new_plate_data = []
+                    for states in show_state_list:
+                        if show_state_list[states]:
+                            for data in compound_data_dict[temp_plate_name][temp_analysed_method]:
+                                if same_layout:
+                                    temp_plate = "all"
+                                else:
+                                    temp_plate = temp_plate_name
+                                if data[1] in well_state_mapping[temp_plate][states]:
+                                    new_plate_data.append(data)
 
+                    window["-BIO_APPROVAL_COMPOUND_TABLE-"].update(values=new_plate_data)
+
+                # Draw histrogram
+                if values["-BIO_APPROVAL_TABLE_ANALYSE_METHODS-"] == "Histogram" and temp_plate_name != last_plate_name:
+                    histogram_canvas, toolbar = _draw_histogram(window, hist_data[temp_plate_name], histogram_canvas,
+                                                                toolbar)
+                    last_plate_name = temp_plate_name
 
 
 if __name__ == "__main__":
