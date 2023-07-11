@@ -4,6 +4,7 @@ from copy import deepcopy, copy
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+from database_handler import DataBaseFunctions
 from info import matrix_header, plate_384_row, plate_96_row
 from visualization import Toolbar
 # from gui_functions import sub_settings_matrix
@@ -501,6 +502,84 @@ def plate_layout_chooser(files, default_plate_layout, all_plate_layouts):
                 window["-POP_HEADLINE_TABLE-"].update(values=table_data)
 
 
+def _assay_generator_layout(plate_layout):
+    text_size = 15
+    input_size = 10
+    assay_layout = sg.Frame("New Assay", [[
+        sg.Column([
+            [sg.T("Assay Name", size=text_size),
+             sg.Input("", key="-NEW_ASSAY_NAME-", size=input_size),
+             sg.T("Plate Layout", size=text_size),
+             sg.DropDown(plate_layout, key="-NEW_ASSAY_PLATE_LAYOUT-", size=input_size)],
+            [sg.T("Z-Prime Threshold", size=text_size),
+             sg.Input("", key="-NEW_ASSAY_Z_PRIME-", size=7,
+                      tooltip="The default threshold that plates will compare it self to. Can be changed. "
+                              "Can be left empty"), sg.T("Hit Threshold", size=text_size),
+             sg.Input("", key="-NEW_ASSAY_HIT-", size=7,
+                      tooltip="The default Hit Score that samples will compare it self to. Can be changed. "
+                              "Can be left empty")],
+            [sg.HorizontalSeparator()],
+            [sg.T("SOP")],
+            [sg.Multiline(key="-NEW_ASSAY_SOP-", size=(50, 25))],
+
+        ])
+    ]])
+
+    layout = [
+        [assay_layout],
+        [sg.Button("Done", key="-NEW_ASSAY_DONE-", expand_x=text_size), sg.Push(),
+         sg.Button("Cancel", key="-WINDOW_TWO_CANCEL-", expand_x=text_size)]
+    ]
+
+    return sg.Window("New Assay", layout, finalize=True, resizable=True)
+
+
+def assay_generator(config, plate_list):
+
+    window = _assay_generator_layout(plate_list)
+
+    while True:
+        event, values = window.read()
+
+        if event == sg.WIN_CLOSED or event == "-WINDOW_TWO_CANCEL-":
+
+            window.close()
+            return False
+
+        elif event == "-NEW_ASSAY_DONE-":
+            if not values["-NEW_ASSAY_NAME-"]:
+                sg.PopupError("Please provide an assay name")
+            elif not values["-NEW_ASSAY_PLATE_LAYOUT-"]:
+                sg.PopupError("Please Select a plate-layout")
+            else:
+                dbf = DataBaseFunctions(config)
+
+                # Gets values
+                assay_table = "assay"
+                row_id = dbf.number_of_rows(assay_table)
+                assay_name = values["-NEW_ASSAY_NAME-"]
+                sop = values["-NEW_ASSAY_SOP-"]
+                assay_plate_layout = values["-NEW_ASSAY_PLATE_LAYOUT-"]
+                z_prime_threshold = values["-NEW_ASSAY_Z_PRIME-"]
+                hit_threshold = values["-NEW_ASSAY_HIT-"]
+                plate_data = dbf.find_data_single_lookup("plate_layout", assay_plate_layout, "plate_name")
+                plate_size = plate_data[0][3]
+
+                assay_data = {"row_id": row_id,
+                              "assay_name": assay_name,
+                              "SOP": sop,
+                              "plate_layout": assay_plate_layout,
+                              "plates_run": 0,
+                              "compounds_run": 0,
+                              "z_prime_threshold": z_prime_threshold,
+                              "hit_threshold": hit_threshold,
+                              "plate_size": plate_size}
+
+                dbf.add_records_controller(assay_table, assay_data)
+
+                window.close()
+                return True
+
 def _bio_data_approval_table_layout(config, plate_table_data, plate_headings, compound_table_data, compound_headings,
                                     plate_analyse_methods, plate_calculations, analyse_methods, draw_options,
                                     well_state_overview):
@@ -884,16 +963,21 @@ def _draw_histogram(window, data, histogram_canvas=None, toolbar=None):
     return histogram_canvas, toolbar
 
 
-def bio_data_approval_table(draw_plate, config, all_plate_data, z_prime_threshold, plate_size, same_layout=True):
+def bio_data_approval_table(draw_plate, config, all_plate_data, assay_data, same_layout, plate_layout):
     """
     The controller for the pop-up that comes when you are importing plate-reader data to the database
-
+    :param draw_plate: A function for drawing plates
+    :type draw_plate: function
     :param config: The config handler, with all the default information in the config file.
     :type config: configparser.ConfigParser
     :param all_plate_data: The raw and calculated data for all the plates
     :type all_plate_data: dict
-    :param z_prime_threshold: The threshold for auto approved plates by the software. Should be set in the assay
-    :type z_prime_threshold: float
+    :param assay_data: A dict over the assay, including name and thresholds
+    :type assay_data: dict
+    :param same_layout: If all the plates uses the same layout or not
+    :type same_layout: bool
+    :param plate_layout: A dict over plate_layout for each plate
+    :type plate_layout: dict or str
     :return: The layout for the popup
     """
     # ToDO add the option to click colours and change them in the different mappings!
@@ -919,8 +1003,12 @@ def bio_data_approval_table(draw_plate, config, all_plate_data, z_prime_threshol
     toolbar = None
     last_plate_name = None  # Make sure to only update the histogram if a new plate is selected
 
-    BLANK_BOX = '☐'
-    CHECKED_BOX = '☑'
+    BLANK_BOX = "☐"
+    CHECKED_BOX = "☑"
+
+    # Get z_prime_threshold:
+    z_prime_threshold = assay_data["z_prime_threshold"]
+    plate_size = assay_data["plate_size"]
 
     draw_options = ["state_mapping", "heatmap", "hit_map"]
 
@@ -978,7 +1066,11 @@ def bio_data_approval_table(draw_plate, config, all_plate_data, z_prime_threshol
             temp_approval = CHECKED_BOX
         else:
             temp_approval = BLANK_BOX
-        temp_row_data = [temp_plate_name, temp_z_prime, "", temp_approval]
+        if type(plate_layout) == str:
+            temp_layout = plate_layout
+        else:
+            temp_layout = plate_layout[temp_plate_name]
+        temp_row_data = [temp_plate_name, temp_z_prime, temp_layout, "", temp_approval]
         plate_table_data.append(temp_row_data)
 
     # Gets the data for each well that is marked as a sample on the last analysed method, for each and all plates
@@ -994,7 +1086,7 @@ def bio_data_approval_table(draw_plate, config, all_plate_data, z_prime_threshol
             hist_data["all"].append(data)
 
     # Headlines for the table
-    plate_table_headings = ["Plate", "Z-prime", "Notes", "Approved"]
+    plate_table_headings = ["Plate", "Z-prime", "Layout", "Notes", "Approved"]
     compound_table_headings = ["Plate", "Well", "Score"]
 
     # Gets the layout
@@ -1024,9 +1116,9 @@ def bio_data_approval_table(draw_plate, config, all_plate_data, z_prime_threshol
 
             if exit_check.casefold() == "yes":
                 window.close()
-                return "cancelled"
+                return "cancelled", plate_analyse_methods
 
-        # ToDo make it possible to de-select wells on the plate-layout and then re-calculate everything with this layout
+        # ToDo make it possible to de-select wells on the plate-layout and then re-calculate everything with this layout - Make sure that the layout for the "plate-data" and the plate_layout are both changed for the specific plates
         if event == "-BIO_APPROVAL_TABLE_RE_CALCULATE-":
             sg.Popup("Does not work. missing a way to de-select data from the plate mapping or the compound table")
 
@@ -1038,7 +1130,7 @@ def bio_data_approval_table(draw_plate, config, all_plate_data, z_prime_threshol
         if event == "-BIO_DATA_APPROVED-":
             temp_plate_errors = []
             for rows in plate_table_data:
-                if rows[3] == "☐" and rows[2] == "":
+                if rows[4] == "☐" and rows[3] == "":
                     temp_plate_errors.append(rows[0])
 
             if temp_plate_errors:
@@ -1048,23 +1140,26 @@ def bio_data_approval_table(draw_plate, config, all_plate_data, z_prime_threshol
 
             else:
                 # Grabs all the data from the table
+                plate_layout = {}
                 for row_index, row in enumerate(plate_table_data):
                     temp_plate = row[0]
 
                     # Add the note field to all plates, to make it more consisten to loop through later on
-                    if row[2] == "":
-                        all_plate_data[temp_plate]["Note"] = None
+                    if row[3] == "":
+                        all_plate_data[temp_plate]["note"] = None
 
-                    if row[3] == "☐":
+                    if row[4] == "☑":
                         approved = True
                     else:
                         approved = False
 
-                    all_plate_data[temp_plate]["Approved"] = approved
+                    plate_layout[temp_plate] = row[2]
+
+                    all_plate_data[temp_plate]["approved"] = approved
 
                 window.close()
 
-                return all_plate_data
+                return all_plate_data, plate_analyse_methods, plate_layout
 
         # Add a note to the selected plate
         if event == "-BIO_APPROVAL_TABLE_ADD_NOTE-":
@@ -1079,7 +1174,7 @@ def bio_data_approval_table(draw_plate, config, all_plate_data, z_prime_threshol
 
                 if temp_note:
                     plate_table_data[table_row][2] = "Note"
-                    all_plate_data[selected_plate]["Note"] = temp_note
+                    all_plate_data[selected_plate]["note"] = temp_note
 
                     window["-BIO_APPROVAL_PLATE_TABLE-"].update(values=plate_table_data)
                     window["-BIO_APPROVAL_PLATE_NOTE-"].update(value=temp_note)
@@ -1099,8 +1194,8 @@ def bio_data_approval_table(draw_plate, config, all_plate_data, z_prime_threshol
 
                 if guard.casefold() == "yes":
                     for row_index, plates in enumerate(all_plate_data):
-                        plate_table_data[row_index][2] = "Note"
-                        all_plate_data[plates]["Note"] = temp_note
+                        plate_table_data[row_index][3] = "Note"
+                        all_plate_data[plates]["note"] = temp_note
 
                     window["-BIO_APPROVAL_PLATE_TABLE-"].update(values=plate_table_data)
                     window["-BIO_APPROVAL_PLATE_NOTE-"].update(value=temp_note)
@@ -1120,14 +1215,14 @@ def bio_data_approval_table(draw_plate, config, all_plate_data, z_prime_threshol
             window["-BIO_APPROVAL_TABLE_CALC_ST_DEV-"].update(value=all_calc["st_dev_%"])
 
         # Makes it possible to check and un-check a checkbox.
-        if event[0] == "-BIO_APPROVAL_PLATE_TABLE-" and event[2][1] == 3:
+        if event[0] == "-BIO_APPROVAL_PLATE_TABLE-" and event[2][1] == 4:
             row_data = event[2][0]
 
-            if plate_table_data[row_data][3] == CHECKED_BOX:
+            if plate_table_data[row_data][4] == CHECKED_BOX:
 
-                plate_table_data[row_data][3] = BLANK_BOX
+                plate_table_data[row_data][4] = BLANK_BOX
             else:
-                plate_table_data[row_data][3] = CHECKED_BOX
+                plate_table_data[row_data][4] = CHECKED_BOX
             # if table_data[row + 1][0]:
             #     table_data[row + 1][0] = False
             # else:

@@ -8,13 +8,15 @@ import PySimpleGUI
 import matplotlib.lines as lines
 from natsort import natsorted
 
+from bio_report_setup import _fetch_smiles_data
 from gui_layout import GUILayout
 from gui_settings_control import GUISettingsController
 from gui_functions import *
 from gui_guards import *
 from bio_data_functions import org, norm, pora, pora_internal
 from plate_formatting import plate_layout_re_formate
-from gui_popup import matrix_popup, sample_to_compound_name_controller, ms_raw_name_guard
+from gui_popup import matrix_popup, sample_to_compound_name_controller, ms_raw_name_guard, bio_data_approval_table, \
+    assay_generator
 from gui_help_info_controller import help_info_controller
 from config_writer import ConfigWriter
 from database_startup import DatabaseSetUp
@@ -39,7 +41,6 @@ def main(config):
             db_active = False
     except KeyError:
         db_active = False
-
 
     # The archive could be removed from here, but then there would be a call to the DB everytime a layout is used...
     # Grabs the updated data from the database
@@ -72,6 +73,11 @@ def main(config):
     #   WINDOW 1 - BIO  #
     graph_bio = window["-BIO_CANVAS-"]
     bio_export_folder = None
+    assay_table_data = grab_table_data(config, "assay")
+    assay_list = []
+    for row in assay_table_data[0]:
+        assay_list.append(row[1])
+    window["-BIO_ASSAY_NAME-"].update(values=assay_list)
     bio_final_report_setup = {
         "methods": {"original": config["Settings_bio"].getboolean("final_report_methods_original"),
                     "normalised": config["Settings_bio"].getboolean("final_report_methods_normalised"),
@@ -815,8 +821,6 @@ def main(config):
             archive = True
             gui_tab = "bio"
             sample_type = values["-BIO_SAMPLE_TYPE-"]
-            print(archive_plates_dict[values["-BIO_PLATE_LAYOUT-"]]["well_layout"])
-            print(well_dict)
             draw_plate(config, graph_bio, plate_size, well_dict, gui_tab, archive, sample_layout=sample_type)
 
         if event == "-BIO_SAMPLE_TYPE-":
@@ -839,11 +843,36 @@ def main(config):
         if event == "-BIO_COMPOUND_DATA-" and not values["-BIO_COMPOUND_DATA-"]:
             window["-BIO_REPORT_ADD_COMPOUND_IDS-"].update(value=False)
 
+        if event == "-BIO_EXPERIMENT_ADD_TO_DATABASE-" and values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"]:
+            window["-BIO_COMPOUND_DATA-"].update(value=True)
+
         if event == "-BIO_EXPERIMENT_ADD_TO_DATABASE-" and not values["-BIO_ASSAY_NAME-"]:
             if values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"]:
-                sg.popup_error("Make a list to chose name from")
+                sg.popup_error("ERROR!!!!!!! no assayMake a list to chose name from")
                 # if assay_name:
                 #     window["-BIO_ASSAY_NAME-"].update(value=assay_name)
+
+        # Add a new assay to the database
+        if event == "-BIO_NEW_ASSAY-":
+            assay_check = assay_generator(config, plate_list)
+
+            if assay_check:
+                assay_table_data = grab_table_data(config, "assay")
+                assay_list = []
+                for row in assay_table_data[0]:
+                    assay_list.append(row[1])
+
+                window["-BIO_ASSAY_NAME-"].update(values=assay_list)
+
+        if event == "-BIO_ASSAY_NAME-":
+            temp_assay_data = grab_table_data(config, "assay", single_row=True, data_value=values["-BIO_ASSAY_NAME-"],
+                                              headline="assay_name")
+            window["-BIO_PLATE_LAYOUT-"].update(value=temp_assay_data[0][4])
+
+        if event == "-BIO_FINAL_REPORT_CONCENTRATION_MULTIPLE-":
+            sg.PopupError("Dose not work atm")
+        if event == "-BIO_FINAL_REPORT_CONCENTRATION_MULTIPLE-":
+            sg.PopupError("MISSING A WAY GET MULTIPLE CONCENTRATIONS!!! ")
 
         if event == "-BIO_CALCULATE-":
             if not values["-BIO_PLATE_LAYOUT-"]:
@@ -860,6 +889,8 @@ def main(config):
                 sg.popup_error("Please choose an Assay name")
             elif values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"] and not values["-BIO_RESPONSIBLE-"]:
                 sg.popup_error("Please choose an Responsible ")
+            elif values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"] and not values["-BIO_FINAL_REPORT_CONCENTRATION_NUMBER-"]:
+                sg.popup_error("Please write a concentration for the run")
             elif values["-BIO_FINAL_REPORT_INCLUDE_HITS-"] and not values["-BIO_FINAL_REPORT_HIT_AMOUNT-"] \
                     and values["-BIO_FINAL_REPORT_INCLUDE_HITS-"] and not values["-BIO_FINAL_REPORT_THRESHOLD-"]:
                 sg.popup_error("Please either select amount of hits or the threshold for the score, if "
@@ -879,19 +910,19 @@ def main(config):
                 include_smiles = values["-BIO_FINAL_REPORT_INCLUDE_SMILES-"]
                 final_report_name = values["-FINAL_BIO_NAME-"]
                 export_to_excel = values["-BIO_EXPORT_TO_EXCEL-"]
+                same_layout = values["-BIO_PLATE_LAYOUT_CHECK-"]
 
-                # if not bio_export_folder:
-                #     bio_export_folder = values["-BIO_EXPORT_FOLDER-"]
+                if not bio_export_folder:
+                    bio_export_folder = values["-BIO_EXPORT_FOLDER-"]
 
-                if not values["-BIO_PLATE_LAYOUT_CHECK-"]:
-                    print("Bio Plate Layout Check")
+                if not same_layout:
                     # If there are difference between what layout each plate is using, or if you know some data needs
                     # to be dismissed, you can choose different plate layout for each plate.
                     plate_layout_dict = plate_layout_setup(bio_import_folder, values["-BIO_PLATE_LAYOUT-"], plate_list)
                 else:
                     # If all plate uses the same plate layout
                     plate_layout_dict = default_plate_layout
-                print(f"default_plate_layout: {default_plate_layout}")
+
                 # If this is checked, it will ask for worklist, that can be converted to a sample dict, that can be used
                 # for finding sample info in the database.
                 if values["-BIO_COMPOUND_DATA-"]:
@@ -900,6 +931,13 @@ def main(config):
                     bio_sample_dict = bio_compound_info_from_worklist(config, sg, bio_sample_list)
                 else:
                     bio_sample_dict = None
+
+                try:
+                    float(values["-BIO_FINAL_REPORT_CONCENTRATION_NUMBER-"])
+                except ValueError:
+                    temp_concentration = float(sg.popup_get_text("Please provide a concentration - numbers only"))
+                else:
+                    temp_concentration = float(values["-BIO_FINAL_REPORT_CONCENTRATION_NUMBER-"])
 
                 # gets get all the data from the different files and the results from the platereader.
                 # the plate reader data can either be in excel formate or in txt formate.
@@ -916,38 +954,48 @@ def main(config):
                                                                       bio_export_folder, add_compound_ids,
                                                                       export_to_excel)
 
+                # Check if there should be produced a combined report over all the data
                 if values["-BIO_COMBINED_REPORT-"]:
-
                     bio_full_report(config, analyse_method, all_plates_data, used_plates, bio_final_report_setup,
                                     bio_export_folder,
                                     final_report_name, include_hits, threshold, hit_amount, include_smiles,
                                     bio_sample_dict)
 
+                # Check if the data should be added to the database
                 if values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"]:
-                    # Plate check:
-                    print(f"worked: {worked}")
-                    print(f"all_plates_data: {all_plates_data}")
-                    print(f"date: {date}")
-                    print(f"used_plates: {used_plates}")
+                    # Set up values for the database.
 
                     assay_name = values["-BIO_ASSAY_NAME-"]
                     responsible = values["-BIO_RESPONSIBLE-"]
-                    plate_layout = values["-BIO_PLATE_LAYOUT-"]
+                    concentration = f"{temp_concentration}" \
+                                    f"{values['-BIO_FINAL_REPORT_CONCENTRATION_UNIT-']}"
 
-                    # First make a table with all the plates [name, z-prime, aprroved], and their z-prime - mark them red or yellow depending on Z-prime
-                    # If there is no Z-prime, skip this step.
-                    # make it possible to click a plate, and get a view of the data... and make it possible to de-select data that looks weird, and re-calculate
-                    # If there have been made changes to what data to include, mark it in the table with a note
+                    # # Grabs the value for the assay from the database
+                    assay_data_row = grab_table_data(config, table_name="assay", single_row=True, data_value=assay_name,
+                                                     headline="assay_name")
 
-                    # if the data is dose-response... make calculations for each data row, show them on a table.
-                    # Make it possible to click the data to see the graph.
-                    # Make it possible to de-select data points that are off...
+                    assay_data = {"assay_name": assay_data_row[0][2],
+                                  "plate_layout": assay_data_row[0][4],
+                                  "z_prime_threshold": assay_data_row[0][7],
+                                  "hit_threshold": assay_data_row[0][8],
+                                  "plate_size": assay_data_row[0][9]}
 
-                    # bio_experiment_to_database(assay_name, all_plates_data, plate_layout, date, responsible, config,
-                    #                            bio_files)
+                    # Open a popup window where data can be checked before being added to the database.
+                    all_plates_data, plate_analyse_methods, new_plate_layout_dict = \
+                        bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, same_layout,
+                                                plate_layout_dict)
+
+                    if type(all_plates_data) != str:
+                        # Adds the approved data to the database
+                        bio_experiment_to_database(config, assay_data, all_plates_data, plate_analyse_methods,
+                                                   new_plate_layout_dict,
+                                                   date, responsible, bio_sample_dict, concentration)
+
+                    else:
+                        worked = "Cancel the import"
 
                 if worked:
-                    sg.popup("Done")
+                    sg.popup(f"{worked}")
 
         if event == "-BIO_COMBINED_REPORT-" and not values["-FINAL_BIO_NAME-"] and \
                 values["-BIO_COMBINED_REPORT-"] is True:
@@ -1320,7 +1368,6 @@ def main(config):
             else:
                 temp_dict_name = sg.PopupGetText("Name plate layout")
                 if temp_dict_name:
-
                     # Updates the database with new values
                     table = "plate_layout"
                     headline = "plate_name"
@@ -1481,7 +1528,7 @@ def main(config):
             if not values["-UPDATE_FOLDER-"]:
                 sg.popup_error("Please select a folder containing compound data")
             else:
-                update_database(config, "compound_main",  values["-UPDATE_FOLDER-"])
+                update_database(config, "compound_main", values["-UPDATE_FOLDER-"])
                 config_update(config)
                 window.close()
                 window = gl.full_layout()

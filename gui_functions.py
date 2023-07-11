@@ -34,6 +34,11 @@ from lcms_ms_search import mass_search
 from chem_operators import ChemOperators
 
 
+def get_number_of_rows(config, table):
+    dbf = DataBaseFunctions(config)
+    return dbf.number_of_rows(table)
+
+
 def config_update(config):
     fd = FetchData(config)
     cw = ConfigWriter(config)
@@ -634,8 +639,8 @@ def bio_data(config, folder, plate_layout, archive_plates_dict, bio_plate_report
     return True, all_plates_data, date, used_plates
 
 
-def bio_full_report(config, analyse_method, all_plate_data, used_plates, final_report_setup, output_folder, final_report_name,
-                    include_hits, threshold, hit_amount, include_smiles, bio_sample_dict):
+def bio_full_report(config, analyse_method, all_plate_data, used_plates, final_report_setup, output_folder,
+                    final_report_name, include_hits, threshold, hit_amount, include_smiles, bio_sample_dict):
     """
     Writes the final report for the bio data
     :param config: The config handler, with all the default information in the config file.
@@ -670,6 +675,150 @@ def bio_full_report(config, analyse_method, all_plate_data, used_plates, final_r
     output_file = f"{output_folder}/{final_report_name}.xlsx"
     bio_final_report_controller(config, analyse_method, all_plate_data, used_plates, output_file, final_report_setup,
                                 include_hits, threshold, hit_amount, include_smiles, bio_sample_dict)
+
+
+def bio_experiment_to_database(config, assay_data, plate_data, plate_analyse_methods, plate_layout, date, responsible,
+                               bio_sample_dict, concentration):
+    """
+    Controls adding Biological data, to two different databases: Biological_plate_data and Biological_compound_data
+
+    :param config: The config handler, with all the default information in the config file.
+    :type config: configparser.ConfigParser
+    :param assay_name: The Name of the assay
+    :type assay_name: str
+    :param plate_data: The data for all the plates
+    :type plate_data: dict
+    :param plate_analyse_methods: The method that have been used to analyse the data
+    :type plate_analyse_methods: list
+    :param plate_layout: The layout for all the plates
+    :type plate_layout: dict
+    :param date: The data for the data
+    :type date: dict or str
+    :param responsible: The responsible person for the run
+    :type responsible: dict or str
+    :param bio_sample_dict: All the data for the compounds
+    :type bio_sample_dict: dict
+    :param concentration: Either a single value if the analys type is "single". It should be a dict for Dose-Reponse
+    :type concentration: str or dict
+    :return:
+    """
+
+    # set-up for the import:
+    plate_table = "biological_plate_data"
+    compound_table = "biological_compound_data"
+    # Set-up plate counter to update the assay table
+    compound_counter = 0
+    plate_counter = 0
+
+    # connects with the database to be able to check data up against it, to make sure that data is not duplicated
+    dbf = DataBaseFunctions(config)
+
+    # Add plates to the database
+    for plates in plate_data:
+
+        # A guard to check if the plate is already in the database. If this is the case it skips to the next plate
+        guard = dbf.find_data_single_lookup(plate_table, plates, "plate_name")
+        if guard:
+            print("skipping plate")
+            continue
+
+        # Set up for the import of each plate:
+        exp_id = get_number_of_rows(config, plate_table) + 1
+
+        plate_raw_data = f"{plate_data[plates]['plates'][plate_analyse_methods[0]]['wells']}"
+        process_data = f"{plate_data[plates]['plates'][plate_analyse_methods[-1]]['wells']}"
+        z_prime = float(plate_data[plates]["calculations"]["other"]["z_prime"])
+        plate_approval = f"{plate_data[plates]['approved']}"
+        plate_note = f"{plate_data[plates]['note']}"
+
+        temp_plate_data = {
+            "exp_id": exp_id,
+            "assay_name": assay_data["assay_name"],
+            "plate_name": plates,
+            "raw_data": plate_raw_data,
+            "process_data": process_data,
+            "z_prime": z_prime,
+            "responsible": responsible,
+            "approval": plate_approval,
+            "note": plate_note,
+            "plate_layout": assay_data["plate_layout"],
+            "date": date
+        }
+
+        # Adds the plate to the database
+        dbf.add_records_controller(plate_table, temp_plate_data)
+
+        plate_counter += 1
+
+        # Loops through the wells on each plate.
+        for wells in bio_sample_dict[plates]:
+
+            if wells in plate_data[plates]["plates"][plate_analyse_methods[-1]]['sample']:
+                # Gets the bio_data_id
+                bio_data_id = get_number_of_rows(config, compound_table) + 1
+
+                compound_id = bio_sample_dict[plates][wells]["compound_id"]
+                if not compound_id:
+                    table = "compound_mp"
+                    well_headline = "mp_well"
+                    temp_well_data = bio_sample_dict[plates][wells]["source_well"]
+                    plate_headline = "mp_barcode"
+                    temp_plate_data = bio_sample_dict[plates][wells]["source_plate"]
+                    temp_row_data = dbf.find_data_double_lookup(table, temp_well_data, temp_plate_data, well_headline,
+                                                                plate_headline)
+
+                    compound_id = temp_row_data[0][3]
+
+                score = plate_data[plates]["plates"][plate_analyse_methods[-1]]["wells"][wells]
+
+                if score <= assay_data["hit_threshold"]:
+                    hit = True
+                else:
+                    hit = False
+
+                # The raw data is the initial value before any calculations have been done.
+                compound_raw_data = plate_data[plates]["plates"][plate_analyse_methods[0]]["wells"][wells]
+
+                # gets the concentration
+                if type(concentration) == str:
+                    temp_concentration = concentration
+                else:
+                    temp_concentration = concentration[wells]
+
+                # Checks if the plate is approved, then check if the well for the selected sample is still in the sample
+                # list for the plate. The well could have been removed doing the plate_check
+                if plate_approval:
+                    if wells in plate_data[plates]["plates"][plate_analyse_methods[-1]]["sample"]:
+                        compound_approval = True
+                    else:
+                        compound_approval = False
+                else:
+                    compound_approval = False
+
+                # Not sure if this is needed...
+                compound_note = ""
+
+                temp_compound_data = {
+                    "bio_data_id": bio_data_id,
+                    "compound_id": compound_id,
+                    "assay_plate": plates,
+                    "score": score,
+                    "hit": hit,
+                    "concentration": temp_concentration,
+                    "raw_data": compound_raw_data,
+                    "approval": compound_approval,
+                    "note": compound_note
+                }
+
+                dbf.add_records_controller(compound_table, temp_compound_data)
+
+                compound_counter += 1
+
+        # Updates the Assay table with amount of compounds and plates that have been run.
+        table_row = f"UPDATE assay SET plates_run = plates_run + {plate_counter} WHERE assay_name = '{assay_data['assay_name']}' "
+        dbf.submit_update(table_row)
+        table_row = f"UPDATE assay SET compounds_run = compounds_run + {compound_counter} WHERE assay_name = '{assay_data['assay_name']}' "
+        dbf.submit_update(table_row)
 
 
 def mp_production_2d_to_pb_simulate(folder_output, barcodes_2d, mp_name, trans_vol):
@@ -707,47 +856,43 @@ def compound_freezer_to_2d_simulate(tube_file, output_folder):
     csv_w.compound_freezer_to_2d_csv_simulate(tube_dict, output_folder)
 
 
-def bio_experiment_to_database(assay_name, plate_data, plate_layout, date, responsible, config, bio_files):
+def grab_table_data(config, table_name, search_limiter=None, single_row=None, data_value=None, headline=None):
+    """
+    Grabs data from tables
+    :param config: The config handler, with all the default information in the config file.
+    :type config: configparser.ConfigParser
+    :param table_name: What table are the plates in
+    :type table_name: str
+    :param search_limiter: A dict to limit the search
+    :type search_limiter: dict or None
+    :param data_value: The value of the thing you are looking for
+    :type data_value: any or None
+    :param headline: Headline for the column where  the data is, in the table
+    :type headline: str or None
+    :return:
+    """
 
-    #
+    if single_row:
+        dbf = DataBaseFunctions(config)
+        row_data = dbf.find_data_single_lookup(table_name, data_value, headline)
+        return row_data
+    else:
+        fd = FetchData(config)
 
-    table = "bio_experiment"
+        rows = fd.data_search(table_name, search_limiter)
 
-    raw_data = f"{assay_name}_{date}"
-    exp_id = get_number_of_rows(config, table) + 1
+        all_table_data = []
+        headlines = []
 
-    data_dict = {
-        "exp_id": exp_id,
-        "assay_name": assay_name,
-        "raw_data": raw_data,
-        "plate_layout": plate_layout,
-        "responsible": responsible,
-        "date": date
-    }
-    temp_dict = {raw_data: plate_data}
+        for row in rows:
+            temp_data = []
+            for data in rows[row]:
+                headlines.append(data)
+                temp_data.append(rows[row][data])
 
-    print("MISSING_DATABASE_CONNECTION!!!!")
+            all_table_data.append(temp_data)
 
-    update_database(data_dict, table, None, config)
-
-
-def grab_table_data(config, table_name, search_limiter=None):
-    fd = FetchData(config)
-
-    rows = fd.data_search(table_name, search_limiter)
-
-    all_table_data = []
-    headlines = []
-
-    for row in rows:
-        temp_data = []
-        for data in rows[row]:
-            headlines.append(data)
-            temp_data.append(rows[row][data])
-
-        all_table_data.append(temp_data)
-
-    return all_table_data, headlines
+        return all_table_data, headlines
 
 
 def update_bio_info_values(values, window, plate_bio_info):
@@ -1189,11 +1334,6 @@ def purity_data_to_db(config, purity_data):
     return batch_dict
 
 
-def get_number_of_rows(config, table):
-    dbf = DataBaseFunctions(config)
-    return dbf.number_of_rows(table)
-
-
 def purity_data_compounds_to_db(config, table_data):
 
     table = "purity"
@@ -1292,6 +1432,12 @@ def _purity_mass(purity_data, uv_peak_information, mass_hit):
 
 
 def _purity_overview_table_data_creation(purity_data, sample_data):
+    """
+
+    :param purity_data:
+    :param sample_data:
+    :return:
+    """
     purity_overview_table_data = []
     no_hits = False
     purity_peak_list_table_data = {}
@@ -1336,6 +1482,11 @@ def _purity_overview_table_data_creation(purity_data, sample_data):
 
 
 def _get_sample_data(sample_data_file):
+    """
+    Gets data from either CSV file or xslx file
+    :param sample_data_file:
+    :return:
+    """
     if sample_data_file.endswith(".csv"):
         sample_data = CSVReader.compound_plates(sample_data_file)
     elif sample_data_file.endswith(".xslx"):
@@ -1347,6 +1498,12 @@ def _get_sample_data(sample_data_file):
 
 
 def add_start_end_time(purity_peak_list_table_data, sample_peak_dict):
+    """
+    Adds the start and end time to the peak data
+    :param purity_peak_list_table_data:
+    :param sample_peak_dict:
+    :return:
+    """
     for samples in purity_peak_list_table_data:
         for index, peak_data in enumerate(purity_peak_list_table_data[samples]):
             purity_peak_list_table_data[samples][index].append(sample_peak_dict[samples][peak_data[0]]["start"])
@@ -1577,35 +1734,6 @@ def _get_free_wells(mps_layout, motherplate_dict):
     return free_wells
 
 
-# def _from_plate_layout_to_destination_dict(plate_layout, destination_name, plate_amount, initial_plate):
-#     """
-#     Makes a dict out of plate_layout, amount of plates and naming scheme
-#     :param plate_amount: Number of plates to produce
-#     :type plate_amount: int
-#     :param plate_layout: The layout for the plate with values for each well, what state they are in
-#     :type plate_layout: dict
-#     :param destination_name: the name of the assay, and the name used for the destination plate in the workinglist
-#     :type destination_name: str
-#     :param initial_plate: the starting number of the plates
-#     :type initial_plate: int
-#     :return: A dict, with destination plates as the key, and desination wells, as a list:
-#     :rtype: dict
-#     """
-#     destination_dict = {}
-#
-#     plate_range = plate_amount - initial_plate
-#
-#     for plate in range(plate_range):
-#         destination_plate = f"{destination_name}_{plate + initial_plate + 1}"
-#         destination_dict[destination_plate] = []
-#         for wells in plate_layout:
-#             if plate_layout[wells]["state"] == "sample":
-#                 destination_well = plate_layout[wells]["well_id"]
-#                 destination_dict[destination_plate].append(destination_well)
-#
-#     return destination_dict
-
-
 def generate_worklist(config, plate_amount, mps, plate_layout, used_plate_well_dict, assay_name, initial_plate, volume,
                       worklist_analyse_method, sample_direction, control_layout, control_samples, bonus_compound):
     """
@@ -1751,11 +1879,13 @@ def get_plate_layout(config):
 def delete_records_from_database(config, table, headline, data_value):
     """
     Deletes a record from the database
+    :param config: The config handler, with all the default information in the config file.
+    :type config: configparser.ConfigParser
     :param table: What table are the plates in
     :type table: str
     :param data_value: The value of the thing you are looking for
     :type data_value: str
-    :param headline: Headline for the coloumn where  the data is, in the table
+    :param headline: Headline for the column where  the data is, in the table
     :type headline: str
     :return:
     """
@@ -1766,21 +1896,23 @@ def delete_records_from_database(config, table, headline, data_value):
 def rename_record_in_the_database(config, table, headline, old_value, new_value):
     """
     Deletes a record from the database
+    :param config: The config handler, with all the default information in the config file.
+    :type config: configparser.ConfigParser
     :param table: What table are the plates in
     :type table: str
-    :param data_value: The value of the thing you are looking for
-    :type data_value: str
     :param headline: Headline for the coloumn where  the data is, in the table
     :type headline: str
+    :param old_value: The value that needs to be changed
+    :type old_value: any
+    :param new_value: What the value should be changed to
+    :type new_value: any
     :return:
     """
     dbf = DataBaseFunctions(config)
     dbf.rename_record_value(table, headline, old_value, new_value)
 
-if __name__ == "__main__":
 
-    sg = "hej"
-    csv_file = "C:/Users/phch/Desktop/more_data_files/50sets_picklist_updated_worklists_new.txt"
-    bio_sample_list = [csv_file]
-    sample_dict = bio_compound_info_from_worklist(sg, bio_sample_list)
-    print(sample_dict)
+if __name__ == "__main__":
+    ...
+
+

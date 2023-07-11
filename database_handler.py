@@ -73,10 +73,10 @@ class DataBaseFunctions:
         :type data: list
         :return: Data added to a table
         """
-        try:
-            self.cursor.execute(layout, data)
-        except sqlite3.IntegrityError:
-            print(f"Data is properly in the database: {data}")
+        # try:
+        self.cursor.execute(layout, data)
+        # except sqlite3.IntegrityError:
+        #     print(f"Data is properly in the database: {data}")
             #print("ERROR") # NEEDS TO WRITE REPORT OVER ERRORS TO SEE WHY DATA WAS NOT ADDED!!!
             # EITHER DUE TO DUPLICATES OR MISSING REFERENCE(FOREIGN KEY)
         self.conn.commit()
@@ -120,8 +120,8 @@ class DataBaseFunctions:
         :type row_id: str
         :return: An updated database
         """
-        table = f"UPDATE {source_table} SET volume = volume - {vol} WHERE {row_id} = {barcode_source} "
-        self.submit_update(table)
+        table_row = f"UPDATE {source_table} SET volume = volume - {vol} WHERE {row_id} = {barcode_source} "
+        self.submit_update(table_row)
 
     def rename_record_value(self, table, headline, old_value, new_value):
         """
@@ -139,24 +139,24 @@ class DataBaseFunctions:
         table_update = f"UPDATE {table} SET {headline} = '{new_value}' WHERE {headline} = '{old_value}'"
         self.submit_update(table_update)
 
-    def find_data_double_lookup(self, table, barcode, id_number, barcode_name, id_name):
+    def find_data_double_lookup(self, table, data_1_value, data_2_value, data_1_headline, data_2_headline):
         """
         Finds data in the database depending on two lookup values
 
         :param table: What table the data should be in
         :type table: str
-        :param barcode: Barcode of the plate
-        :type barcode: str
-        :param id_number: Compound ID
-        :type id_number: int
-        :param barcode_name: Headline of the plate-column in the table
-        :type barcode_name: str
-        :param id_name: Headline for the compound id in the table
-        :type id_name: str
+        :param data_1_value: Barcode of the plate
+        :type data_1_value: str
+        :param data_2_value: Compound ID
+        :type data_2_value: int
+        :param data_1_headline: Headline of the plate-column in the table
+        :type data_1_headline: str
+        :param data_2_headline: Headline for the compound id in the table
+        :type data_2_headline: str
         :return: Data from the database
         :rtype: dict
         """
-        find = f"SELECT rowid, * FROM '{table}' WHERE {barcode_name} = '{barcode}' AND {id_name} = '{id_number}'"
+        find = f"SELECT rowid, * FROM '{table}' WHERE {data_1_headline} = '{data_1_value}' AND {data_2_headline} = '{data_2_value}'"
         return self.fetch(find)
 
     def find_data_single_lookup(self, table, data_value, headline):
@@ -248,17 +248,18 @@ class DataBaseFunctions:
         self.cursor.close()
         return records
 
-    def submit_update(self, data):
+    def submit_update(self, table_row):
         """
         Connect to the database, Updates the database and closes the connection
 
-        :param data: Data that needs  to be updated
-        :type data: str
+        :param table_row: Data that needs  to be updated
+        :type table_row: str
         :return: commits updates to the database
         """
+
         self.create_connection()
         try:
-            self.cursor.execute(data)
+            self.cursor.execute(table_row)
         except sqlite3.IntegrityError:
             pass
         self.conn.commit()

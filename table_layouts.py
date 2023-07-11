@@ -100,7 +100,7 @@ location_table = """ CREATE TABLE IF NOT EXISTS locations(
             spot TEXT NOT NULL
             ); """
 
-bio_experiment_table = """ CREATE TABLE IF NOT EXISTS bio_experiment(
+bio_experiment_table = """ CREATE TABLE IF NOT EXISTS biological_plate_data(
             exp_id INTEGER PRIMARY KEY AUTOINCREMENT,
             assay_name TEXT NOT NULL,
             raw_data TEXT NOT NULL,
@@ -108,7 +108,7 @@ bio_experiment_table = """ CREATE TABLE IF NOT EXISTS bio_experiment(
             date REAL NOT NULL,
             plate_name	TEXT NOT NULL UNIQUE,
             approval	TEXT NOT NULL,
-            z_prime	REAL,
+            z_prime	    REAL,
             process_data    TEXT,
             plate_layout	TEXT NOT NULL,
             note    TEXT,
@@ -118,7 +118,7 @@ bio_experiment_table = """ CREATE TABLE IF NOT EXISTS bio_experiment(
 biological_compound_data = """ CREATE TABLE IF NOT EXISTS biological_compound_data(
             bio_data_id INTEGER PRIMARY KEY UNIQUE,
             compound_id INTEGER NOT NULL,
-            exp_id INTEGER NOT NULL,
+            assay_plate TEXT NOT NULL,
             raw_data REAL NOT NULL,
             score REAL NOT NULL,
             hit TEXT NOT NULL,
@@ -126,7 +126,7 @@ biological_compound_data = """ CREATE TABLE IF NOT EXISTS biological_compound_da
             approved TEXT NOT NULL,
             note TEXT,
             FOREIGN KEY (compound_id) REFERENCES compound_main(compound_id),
-            FOREIGN KEY (exp_id) REFERENCES exp_id(bio_experiment)
+            FOREIGN KEY (assay_plate) REFERENCES biological_plate_data(plate_name)
             ); """
 
 lc_experiment_table = """ CREATE TABLE IF NOT EXISTS lc_experiment(

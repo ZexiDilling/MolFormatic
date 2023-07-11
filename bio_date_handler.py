@@ -425,11 +425,14 @@ class BIOAnalyser:
                                     sample_id = "Missing plate data"
                                 else:
                                     source_well = bio_sample_dict[plate_name][well]["source_well"]
-                                    sample_row = dbf.find_data_double_lookup(table_name, barcode, source_well, barcode_name, id_name)
+                                    sample_row = dbf.find_data_double_lookup(table_name, barcode, source_well,
+                                                                             barcode_name, id_name)
                                     try:
                                         sample_id = sample_row[0][3]
+                                        bio_sample_dict[plate_name][well]["compound_id"] = sample_id
                                     except IndexError:
                                         sample_id = "Not found"
+
                                 ws.cell(column=indent_col + 3, row=row_counter,
                                         value=sample_id)
                                 bio_sample_dict[plate_name][well]["compound_id"] = sample_id

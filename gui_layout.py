@@ -3,6 +3,7 @@ from info import matrix_header
 
 #ToDo add tooltips to everything!!!!!!!!! ARG!!!!!!
 
+
 class GUILayout:
     def __init__(self, config, plate_list):
         self.config = config
@@ -171,7 +172,7 @@ class GUILayout:
 
         # maybe make it a config file. and update the config file when new method are added ?
         responsible = [keys for keys in list(self.config["Responsible"].keys())]
-
+        concentration_list = ["mM", "nM", "uM"]
         # Colours for the heatmap, if added back in
         # colours = [keys for keys in list(self.config["colours to hex"].keys())]
 
@@ -232,7 +233,7 @@ class GUILayout:
                 [sg.Checkbox("Add Compound ID", key="-BIO_REPORT_ADD_COMPOUND_IDS-", enable_events=True,
                              tooltip="Will add ID's to each report")],
                 [sg.T("Assay:", size=12),
-                 sg.DropDown(values=[], key="-BIO_ASSAY_NAME-", size=14,
+                 sg.DropDown(values=[], key="-BIO_ASSAY_NAME-", size=14, enable_events=True,
                              tooltip="If you want to add new data to an assay that have been run before"),
                  sg.Button("New Assay", size=12, key="-BIO_NEW_ASSAY-",
                            tooltip="Will give a pop-up where you can fill in the data needed for an assay")],
@@ -263,6 +264,13 @@ class GUILayout:
                                       "lower than the threshold will be included in the report"),
                  sg.InputText(key="-BIO_FINAL_REPORT_HIT_AMOUNT-", size=14, disabled=True,
                               tooltip="The Amount of sample to list. Will be sorted after lowest score")],
+                [sg.T("Concentration:", size=12),
+                 sg.Input("conc", key="-BIO_FINAL_REPORT_CONCENTRATION_NUMBER-", size=7,
+                          tooltip="The concentration of the samples, only takes numbers"),
+                 sg.DropDown(values=concentration_list, key="-BIO_FINAL_REPORT_CONCENTRATION_UNIT-", size=7,
+                             tooltip="The unit for the concentration", default_value=concentration_list[0]),
+                 sg.Button("Dose-Response", key="-BIO_FINAL_REPORT_CONCENTRATION_MULTIPLE-", size=12,
+                           tooltip="If there are different concentration for the plate-layout")]
                 # [sg.Button("Select Worklist", key="-BIO_SELECT_WORKLIST-",
                 #            tooltip="Use Control til select multiple files")],
                 # [sg.T(key="-BIO_SAMPLE_LIST_TARGET-")]
