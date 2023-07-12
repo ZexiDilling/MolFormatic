@@ -355,7 +355,7 @@ def _new_headlines_layout(table_data, headings):
     return sg.Window("Samples", layout, finalize=True, resizable=True), table_data
 
 
-def new_headlines_popup(right_headlines, wrong_headlines):
+def new_headlines_popup(sort_table, right_headlines, wrong_headlines):
     search_reverse = {}
     table_data = []
     new_headlines = {}
@@ -456,7 +456,7 @@ def _plate_layout_chooser_layout(table_data, headings):
 
 def plate_layout_chooser(files, default_plate_layout, all_plate_layouts):
     table_data = []
-    plate_to_layouy = {}
+    plate_to_layout = {}
     # Add the options to skip files.
     all_plate_layouts.append("skip")
 
@@ -476,12 +476,12 @@ def plate_layout_chooser(files, default_plate_layout, all_plate_layouts):
             # Grabs all the data from the table
             for row_index, row in enumerate(table_data):
                 if type(row[1]) == list:
-                    plate_to_layouy[row[0]] = row[1][0]
+                    plate_to_layout[row[0]] = row[1][0]
                 else:
-                    plate_to_layouy[row[0]] = row[1]
+                    plate_to_layout[row[0]] = row[1]
 
             window.close()
-            return plate_to_layouy
+            return plate_to_layout
 
         if event == "-POP_HEADLINE_TABLE-+-double click-":
             try:
@@ -963,7 +963,8 @@ def _draw_histogram(window, data, histogram_canvas=None, toolbar=None):
     return histogram_canvas, toolbar
 
 
-def bio_data_approval_table(draw_plate, config, all_plate_data, assay_data, same_layout, plate_layout):
+def bio_data_approval_table(draw_plate, config, all_plate_data, assay_data, same_layout,
+                            plate_to_layout, archive_plates_dict):
     """
     The controller for the pop-up that comes when you are importing plate-reader data to the database
     :param draw_plate: A function for drawing plates
@@ -976,8 +977,10 @@ def bio_data_approval_table(draw_plate, config, all_plate_data, assay_data, same
     :type assay_data: dict
     :param same_layout: If all the plates uses the same layout or not
     :type same_layout: bool
-    :param plate_layout: A dict over plate_layout for each plate
-    :type plate_layout: dict or str
+    :param plate_to_layout: a dicts for the plate_layout
+    :type plate_to_layout: dict
+    :param archive_plates_dict: the dict over the layouys
+    :type archive_plates_dict: dict
     :return: The layout for the popup
     """
     # ToDO add the option to click colours and change them in the different mappings!
@@ -987,7 +990,6 @@ def bio_data_approval_table(draw_plate, config, all_plate_data, assay_data, same
     plate_table_data = []  # The data for all the plates
     compound_table_data = []  # The data for all the wells in the plates
     hist_data = {"all": []}  # The data for drawing the histogram
-    well_state_mapping = {}  # The mapping of states to a list of wells
     well_state_overview = {  # A dict over each state if it is included in the analysis or not
         "sample": False,
         "blank": False,
@@ -1037,19 +1039,7 @@ def bio_data_approval_table(draw_plate, config, all_plate_data, assay_data, same
                         temp_well_data = [plate, well, well_score]
                         compound_data_dict[plate][analysed_methods].append(temp_well_data)
                         compound_table_data.append(temp_well_data)
-                else:
-                    # Stop af the first plate, as all the plates should have same layout from the start .
-                    # If they are different layouts I need to re-think this :D
-                    if plate_index == 0 and same_layout:
-                        if status not in well_state_mapping:
-                            well_state_overview[status] = True
-                            if same_layout:
-                                temp_plate = "all"
-                            else:
-                                temp_plate = plate
-                            well_state_mapping[temp_plate] = {status: []}
-                            for wells in all_plate_data[plate]["plates"][analysed_methods][status]:
-                                well_state_mapping[temp_plate][status].append(wells)
+
         if plate_index == 0:
             for calc_index, calculations in enumerate(all_plate_data[plate]["calculations"]):
                 if calc_index == 0:
@@ -1066,10 +1056,8 @@ def bio_data_approval_table(draw_plate, config, all_plate_data, assay_data, same
             temp_approval = CHECKED_BOX
         else:
             temp_approval = BLANK_BOX
-        if type(plate_layout) == str:
-            temp_layout = plate_layout
-        else:
-            temp_layout = plate_layout[temp_plate_name]
+
+        temp_layout = plate_to_layout[temp_plate_name]
         temp_row_data = [temp_plate_name, temp_z_prime, temp_layout, "", temp_approval]
         plate_table_data.append(temp_row_data)
 
@@ -1080,7 +1068,7 @@ def bio_data_approval_table(draw_plate, config, all_plate_data, assay_data, same
             temp_plate = "all"
         else:
             temp_plate = plate
-        for well in well_state_mapping[temp_plate]["sample"]:
+        for well in archive_plates_dict[plate_to_layout[temp_plate]]["sample"]:
             data = all_plate_data[plate]["plates"][plate_analyse_methods[-1]]["wells"][well]
             hist_data[plate].append(data)
             hist_data["all"].append(data)
@@ -1140,7 +1128,6 @@ def bio_data_approval_table(draw_plate, config, all_plate_data, assay_data, same
 
             else:
                 # Grabs all the data from the table
-                plate_layout = {}
                 for row_index, row in enumerate(plate_table_data):
                     temp_plate = row[0]
 
@@ -1153,13 +1140,11 @@ def bio_data_approval_table(draw_plate, config, all_plate_data, assay_data, same
                     else:
                         approved = False
 
-                    plate_layout[temp_plate] = row[2]
-
                     all_plate_data[temp_plate]["approved"] = approved
 
                 window.close()
 
-                return all_plate_data, plate_analyse_methods, plate_layout
+                return all_plate_data, plate_analyse_methods
 
         # Add a note to the selected plate
         if event == "-BIO_APPROVAL_TABLE_ADD_NOTE-":
@@ -1288,7 +1273,7 @@ def bio_data_approval_table(draw_plate, config, all_plate_data, assay_data, same
                                     temp_plate = "all"
                                 else:
                                     temp_plate = temp_plate_name
-                                if data[1] in well_state_mapping[temp_plate][states]:
+                                if data[1] in archive_plates_dict[plate_to_layout[temp_plate]][states]:
                                     new_plate_data.append(data)
 
                     window["-BIO_APPROVAL_COMPOUND_TABLE-"].update(values=new_plate_data)
@@ -1301,6 +1286,4 @@ def bio_data_approval_table(draw_plate, config, all_plate_data, assay_data, same
 
 
 if __name__ == "__main__":
-    right_headlines = ["source_plates", "destination_plates", "source_well", "destination_well"]
-    wrong_headlines = ["source_plates", "destination_plates", "source_well", "destination_well"]
-    new_headlines_popup(right_headlines, wrong_headlines)
+    ...

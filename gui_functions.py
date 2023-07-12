@@ -532,8 +532,7 @@ def bio_compound_info_from_worklist(config, sg, bio_sample_list):
         # if the file uses wrong names for the headlines, this will give a popup with the "wrong headlines" and an
         # option to change them.
         if msg == "Wrong headlines":
-            print(files)
-            new_headline = new_headlines_popup(right_headlines, file_headlines)
+            new_headline = new_headlines_popup(sort_table, right_headlines, file_headlines)
             msg, file_headlines, sample_dict = CSVReader.echo_worklist_to_dict(config, config_headline, files, right_headlines, new_headline,
                                                                                sample_dict)
         elif msg == "Not a CSV file":
@@ -580,7 +579,7 @@ def plate_layout_setup(folder, default_plate_layout, plate_layout_list):
     return all_plate_layouts
 
 
-def bio_data(config, folder, plate_layout, archive_plates_dict, bio_plate_report_setup, analysis, bio_sample_dict,
+def bio_data(config, folder, plate_to_layout, archive_plates_dict, bio_plate_report_setup, analysis, bio_sample_dict,
              save_location, add_compound_ids, write_to_excel=True):
 
     """
@@ -590,9 +589,9 @@ def bio_data(config, folder, plate_layout, archive_plates_dict, bio_plate_report
     :type config: configparser.ConfigParser
     :param folder: The folder where the raw data is located
     :type folder: str
-    :param plate_layout: Either the name of the default plate_layout that all plates are using or a dict over each
+    :param plate_to_layout: Either the name of the default plate_layout that all plates are using or a dict over each
         plate and the layout for that place
-    :type plate_layout: str or dict
+    :type plate_to_layout: str or dict
     :param archive_plates_dict: The layout for the plate with values for each well, what state they are in
     :type archive_plates_dict: dict
     :param bio_plate_report_setup: The setup for what is included in the report
@@ -613,15 +612,20 @@ def bio_data(config, folder, plate_layout, archive_plates_dict, bio_plate_report
     file_list = get_file_list(folder)
     all_plates_data = {}
     used_plates = []
-    for files in file_list:
+
+    plate_layout_dict = {}
+    file_amount = len(file_list)
+    for file_index, files in enumerate(file_list):
         if isfile(files) and files.endswith(".txt"):
             files = txt_to_xlsx(files)
         if isfile(files) and files.endswith(".xlsx"):
-            if type(plate_layout) is dict:
-                temp_barcode = files.split("/")[-1].split(".")[0]
-                temp_plate_layout_name = plate_layout[temp_barcode]
+            temp_barcode = files.split("/")[-1].split(".")[0]
+            if type(plate_to_layout) is dict:
+                plate_layout_dict = plate_to_layout
+                temp_plate_layout_name = plate_to_layout[temp_barcode]
             else:
-                temp_plate_layout_name = plate_layout
+                plate_layout_dict[temp_barcode] = plate_to_layout
+                temp_plate_layout_name = plate_to_layout
             if temp_plate_layout_name == "skip":
                 continue
             else:
@@ -636,11 +640,13 @@ def bio_data(config, folder, plate_layout, archive_plates_dict, bio_plate_report
 
         else:
             print(f"{files} is not the right formate")
-    return True, all_plates_data, date, used_plates
+        print(f"file: {file_index + 1} / {file_amount}")
+    return True, all_plates_data, date, used_plates, plate_layout_dict
 
 
 def bio_full_report(config, analyse_method, all_plate_data, used_plates, final_report_setup, output_folder,
-                    final_report_name, include_hits, threshold, hit_amount, include_smiles, bio_sample_dict):
+                    final_report_name, include_hits, threshold, hit_amount, include_smiles, bio_sample_dict,
+                    plate_to_layout, archive_plates_dict):
     """
     Writes the final report for the bio data
     :param config: The config handler, with all the default information in the config file.
@@ -669,29 +675,32 @@ def bio_full_report(config, analyse_method, all_plate_data, used_plates, final_r
     :type include_smiles: bool
     :param bio_sample_dict: A dict for ID's and smiles for each well on each plate
     :type bio_sample_dict: dict or None
+    :param plate_to_layout: a dicts for the plate_layout
+    :type plate_to_layout: dict
+    :param archive_plates_dict: the dict over the layouys
+    :type archive_plates_dict: dict
     :return: A excel report file with all the data
     """
 
     output_file = f"{output_folder}/{final_report_name}.xlsx"
     bio_final_report_controller(config, analyse_method, all_plate_data, used_plates, output_file, final_report_setup,
-                                include_hits, threshold, hit_amount, include_smiles, bio_sample_dict)
+                                include_hits, threshold, hit_amount, include_smiles, bio_sample_dict, plate_to_layout,
+                                archive_plates_dict)
 
 
-def bio_experiment_to_database(config, assay_data, plate_data, plate_analyse_methods, plate_layout, date, responsible,
-                               bio_sample_dict, concentration):
+def bio_experiment_to_database(config, assay_data, plate_data, plate_analyse_methods,
+                               date, responsible, bio_sample_dict, concentration):
     """
     Controls adding Biological data, to two different databases: Biological_plate_data and Biological_compound_data
 
     :param config: The config handler, with all the default information in the config file.
     :type config: configparser.ConfigParser
-    :param assay_name: The Name of the assay
-    :type assay_name: str
+    :param assay_data: Data for the assay
+    :type assay_data: dict
     :param plate_data: The data for all the plates
     :type plate_data: dict
     :param plate_analyse_methods: The method that have been used to analyse the data
     :type plate_analyse_methods: list
-    :param plate_layout: The layout for all the plates
-    :type plate_layout: dict
     :param date: The data for the data
     :type date: dict or str
     :param responsible: The responsible person for the run
@@ -714,7 +723,9 @@ def bio_experiment_to_database(config, assay_data, plate_data, plate_analyse_met
     dbf = DataBaseFunctions(config)
 
     # Add plates to the database
-    for plates in plate_data:
+    total_plate_amount = len(plate_data)
+
+    for plate_index, plates in enumerate(plate_data):
 
         # A guard to check if the plate is already in the database. If this is the case it skips to the next plate
         guard = dbf.find_data_single_lookup(plate_table, plates, "plate_name")
@@ -758,6 +769,7 @@ def bio_experiment_to_database(config, assay_data, plate_data, plate_analyse_met
                 bio_data_id = get_number_of_rows(config, compound_table) + 1
 
                 compound_id = bio_sample_dict[plates][wells]["compound_id"]
+
                 if not compound_id:
                     table = "compound_mp"
                     well_headline = "mp_well"
@@ -767,7 +779,14 @@ def bio_experiment_to_database(config, assay_data, plate_data, plate_analyse_met
                     temp_row_data = dbf.find_data_double_lookup(table, temp_well_data, temp_plate_data, well_headline,
                                                                 plate_headline)
 
-                    compound_id = temp_row_data[0][3]
+                    try:
+                        temp_row_data[0][3]
+                    except IndexError:
+                        print(f"Missing data for MP: {temp_plate_data} well: {temp_well_data}")
+                        print(bio_sample_dict[plates][wells])
+                    else:
+                        compound_id = temp_row_data[0][3]
+                        bio_sample_dict[plates][wells]["compound_id"] = compound_id
 
                 score = plate_data[plates]["plates"][plate_analyse_methods[-1]]["wells"][wells]
 
@@ -814,11 +833,14 @@ def bio_experiment_to_database(config, assay_data, plate_data, plate_analyse_met
 
                 compound_counter += 1
 
+        print(f"{plate_index + 1} / {total_plate_amount} have been uploaded to the database - last plate was: {plates}")
+
         # Updates the Assay table with amount of compounds and plates that have been run.
         table_row = f"UPDATE assay SET plates_run = plates_run + {plate_counter} WHERE assay_name = '{assay_data['assay_name']}' "
         dbf.submit_update(table_row)
         table_row = f"UPDATE assay SET compounds_run = compounds_run + {compound_counter} WHERE assay_name = '{assay_data['assay_name']}' "
         dbf.submit_update(table_row)
+
 
 
 def mp_production_2d_to_pb_simulate(folder_output, barcodes_2d, mp_name, trans_vol):
@@ -1849,7 +1871,33 @@ def _get_plate_archive(dbf, table, column_headline, plate_names):
 
         # Generates the dict
         archive_plates_dict[plate_name] = {"well_layout": eval(well_layout),
-                                           "plate_type": plate_type}
+                                           "plate_type": plate_type,
+                                           "sample": [],
+                                           "blank": [],
+                                           "max": [],
+                                           "minimum": [],
+                                           "positive": [],
+                                           "negative": [],
+                                           "empty": []}
+        # Makes list of the different well-types and adds them
+        temp_well_dict = eval(well_layout)
+        for counter in temp_well_dict:
+            well_id = temp_well_dict[counter]["well_id"]
+            if temp_well_dict[counter]["state"] == "sample":
+                archive_plates_dict[plate_name]["sample"].append(well_id)
+            elif temp_well_dict[counter]["state"] == "blank":
+                archive_plates_dict[plate_name]["blank"].append(well_id)
+            elif temp_well_dict[counter]["state"] == "max":
+                archive_plates_dict[plate_name]["max"].append(well_id)
+            elif temp_well_dict[counter]["state"] == "minimum":
+                archive_plates_dict[plate_name]["minimum"].append(well_id)
+            elif temp_well_dict[counter]["state"] == "positive":
+                archive_plates_dict[plate_name]["positive"].append(well_id)
+            elif temp_well_dict[counter]["state"] == "negative":
+                archive_plates_dict[plate_name]["negative"].append(well_id)
+            elif temp_well_dict[counter]["state"] == "empty":
+                archive_plates_dict[plate_name]["empty"].append(well_id)
+
     return archive_plates_dict
 
 

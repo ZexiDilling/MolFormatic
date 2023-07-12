@@ -875,6 +875,7 @@ def main(config):
             sg.PopupError("MISSING A WAY GET MULTIPLE CONCENTRATIONS!!! ")
 
         if event == "-BIO_CALCULATE-":
+            bio_breaker = False
             if not values["-BIO_PLATE_LAYOUT-"]:
                 sg.popup_error("Please choose a plate layout")
             elif not values["-BIO_IMPORT_FOLDER-"]:
@@ -905,8 +906,14 @@ def main(config):
                 # default_plate_layout = archive_plates_dict[values["-BIO_PLATE_LAYOUT-"]]
                 default_plate_layout = values["-BIO_PLATE_LAYOUT-"]
                 include_hits = values["-BIO_FINAL_REPORT_INCLUDE_HITS-"]
-                threshold = values["-BIO_FINAL_REPORT_THRESHOLD-"]
-                hit_amount = values["-BIO_FINAL_REPORT_HIT_AMOUNT-"]
+                try:
+                    threshold = float(values["-BIO_FINAL_REPORT_THRESHOLD-"])
+                except ValueError:
+                    threshold = values["-BIO_FINAL_REPORT_THRESHOLD-"]
+                try:
+                    hit_amount = int(values["-BIO_FINAL_REPORT_HIT_AMOUNT-"])
+                except ValueError:
+                    hit_amount = values["-BIO_FINAL_REPORT_HIT_AMOUNT-"]
                 include_smiles = values["-BIO_FINAL_REPORT_INCLUDE_SMILES-"]
                 final_report_name = values["-FINAL_BIO_NAME-"]
                 export_to_excel = values["-BIO_EXPORT_TO_EXCEL-"]
@@ -918,84 +925,87 @@ def main(config):
                 if not same_layout:
                     # If there are difference between what layout each plate is using, or if you know some data needs
                     # to be dismissed, you can choose different plate layout for each plate.
-                    plate_layout_dict = plate_layout_setup(bio_import_folder, values["-BIO_PLATE_LAYOUT-"], plate_list)
+                    plate_to_layout = plate_layout_setup(bio_import_folder, values["-BIO_PLATE_LAYOUT-"], plate_list)
+                    if plate_to_layout is None:
+                        bio_breaker = True
                 else:
                     # If all plate uses the same plate layout
-                    plate_layout_dict = default_plate_layout
-
-                # If this is checked, it will ask for worklist, that can be converted to a sample dict, that can be used
-                # for finding sample info in the database.
-                if values["-BIO_COMPOUND_DATA-"]:
-                    bio_sample_list = sg.popup_get_file("Please select worklist files", multiple_files=True)
-                    bio_sample_list = bio_sample_list.split(";")
-                    bio_sample_dict = bio_compound_info_from_worklist(config, sg, bio_sample_list)
-                else:
-                    bio_sample_dict = None
-
-                try:
-                    float(values["-BIO_FINAL_REPORT_CONCENTRATION_NUMBER-"])
-                except ValueError:
-                    temp_concentration = float(sg.popup_get_text("Please provide a concentration - numbers only"))
-                else:
-                    temp_concentration = float(values["-BIO_FINAL_REPORT_CONCENTRATION_NUMBER-"])
-
-                # gets get all the data from the different files and the results from the platereader.
-                # the plate reader data can either be in excel formate or in txt formate.
-                # If the raw data is txt, it re-writes it to excel. then it analyses the data and writes it in the
-                # excel file.
-                # analyse_method = values["-BIO_ANALYSE_TYPE-"]     # not used atm...
-                analyse_method = "single point"
-                add_compound_ids = values["-BIO_REPORT_ADD_COMPOUND_IDS-"]
-
-                worked, all_plates_data, date, used_plates = bio_data(config, bio_import_folder, plate_layout_dict,
-                                                                      archive_plates_dict,
-                                                                      bio_plate_report_setup,
-                                                                      analyse_method, bio_sample_dict,
-                                                                      bio_export_folder, add_compound_ids,
-                                                                      export_to_excel)
-
-                # Check if there should be produced a combined report over all the data
-                if values["-BIO_COMBINED_REPORT-"]:
-                    bio_full_report(config, analyse_method, all_plates_data, used_plates, bio_final_report_setup,
-                                    bio_export_folder,
-                                    final_report_name, include_hits, threshold, hit_amount, include_smiles,
-                                    bio_sample_dict)
-
-                # Check if the data should be added to the database
-                if values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"]:
-                    # Set up values for the database.
-
-                    assay_name = values["-BIO_ASSAY_NAME-"]
-                    responsible = values["-BIO_RESPONSIBLE-"]
-                    concentration = f"{temp_concentration}" \
-                                    f"{values['-BIO_FINAL_REPORT_CONCENTRATION_UNIT-']}"
-
-                    # # Grabs the value for the assay from the database
-                    assay_data_row = grab_table_data(config, table_name="assay", single_row=True, data_value=assay_name,
-                                                     headline="assay_name")
-
-                    assay_data = {"assay_name": assay_data_row[0][2],
-                                  "plate_layout": assay_data_row[0][4],
-                                  "z_prime_threshold": assay_data_row[0][7],
-                                  "hit_threshold": assay_data_row[0][8],
-                                  "plate_size": assay_data_row[0][9]}
-
-                    # Open a popup window where data can be checked before being added to the database.
-                    all_plates_data, plate_analyse_methods, new_plate_layout_dict = \
-                        bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, same_layout,
-                                                plate_layout_dict)
-
-                    if type(all_plates_data) != str:
-                        # Adds the approved data to the database
-                        bio_experiment_to_database(config, assay_data, all_plates_data, plate_analyse_methods,
-                                                   new_plate_layout_dict,
-                                                   date, responsible, bio_sample_dict, concentration)
-
+                    plate_to_layout = default_plate_layout
+                if not bio_breaker:
+                    # If this is checked, it will ask for worklist, that can be converted to a sample dict,
+                    # that can be used for finding sample info in the database.
+                    if values["-BIO_COMPOUND_DATA-"]:
+                        bio_sample_list = sg.popup_get_file("Please select worklist files", multiple_files=True)
+                        if bio_sample_list is not None:
+                            bio_sample_list = bio_sample_list.split(";")
+                            bio_sample_dict = bio_compound_info_from_worklist(config, sg, bio_sample_list)
+                        else:
+                            bio_breaker = True
                     else:
-                        worked = "Cancel the import"
+                        bio_sample_dict = None
+                    if not bio_breaker:
+                        try:
+                            float(values["-BIO_FINAL_REPORT_CONCENTRATION_NUMBER-"])
+                        except ValueError:
+                            temp_concentration = float(sg.popup_get_text("Please provide a concentration"
+                                                                         "\n numbers only"))
+                        else:
+                            temp_concentration = float(values["-BIO_FINAL_REPORT_CONCENTRATION_NUMBER-"])
 
-                if worked:
-                    sg.popup(f"{worked}")
+                        # gets get all the data from the different files and the results from the platereader.
+                        # the plate reader data can either be in excel formate or in txt formate.
+                        # If the raw data is txt, it re-writes it to excel. then it analyses the data and writes it in the
+                        # excel file.
+                        # analyse_method = values["-BIO_ANALYSE_TYPE-"]     # not used atm...
+                        analyse_method = "single point"
+                        add_compound_ids = values["-BIO_REPORT_ADD_COMPOUND_IDS-"]
+
+                        worked, all_plates_data, date, used_plates, plate_to_layout = \
+                            bio_data(config, bio_import_folder, plate_to_layout, archive_plates_dict,
+                                     bio_plate_report_setup, analyse_method, bio_sample_dict, bio_export_folder,
+                                     add_compound_ids, export_to_excel)
+
+                        # Check if there should be produced a combined report over all the data
+                        if values["-BIO_COMBINED_REPORT-"]:
+                            bio_full_report(config, analyse_method, all_plates_data, used_plates,
+                                            bio_final_report_setup, bio_export_folder, final_report_name, include_hits,
+                                            threshold, hit_amount, include_smiles, bio_sample_dict, plate_to_layout,
+                                            archive_plates_dict)
+
+                        # Check if the data should be added to the database
+                        if values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"]:
+                            # Set up values for the database.
+
+                            assay_name = values["-BIO_ASSAY_NAME-"]
+                            responsible = values["-BIO_RESPONSIBLE-"]
+                            concentration = f"{temp_concentration}" \
+                                            f"{values['-BIO_FINAL_REPORT_CONCENTRATION_UNIT-']}"
+
+                            # # Grabs the value for the assay from the database
+                            assay_data_row = grab_table_data(config, table_name="assay", single_row=True,
+                                                             data_value=assay_name, headline="assay_name")
+
+                            assay_data = {"assay_name": assay_data_row[0][2],
+                                          "plate_layout": assay_data_row[0][4],
+                                          "z_prime_threshold": assay_data_row[0][7],
+                                          "hit_threshold": assay_data_row[0][8],
+                                          "plate_size": assay_data_row[0][9]}
+
+                            # Open a popup window where data can be checked before being added to the database.
+                            all_plates_data, plate_analyse_methods = \
+                                bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, same_layout,
+                                                        plate_to_layout, archive_plates_dict)
+
+                            if type(all_plates_data) != str:
+                                # Adds the approved data to the database
+                                bio_experiment_to_database(config, assay_data, all_plates_data, plate_analyse_methods,
+                                                           date, responsible, bio_sample_dict, concentration)
+
+                            else:
+                                worked = "Cancel the import"
+
+                        if worked:
+                            sg.popup(f"{worked}")
 
         if event == "-BIO_COMBINED_REPORT-" and not values["-FINAL_BIO_NAME-"] and \
                 values["-BIO_COMBINED_REPORT-"] is True:
