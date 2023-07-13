@@ -455,10 +455,12 @@ def _plate_layout_chooser_layout(table_data, headings):
 
 
 def plate_layout_chooser(files, default_plate_layout, all_plate_layouts):
+    # ToDo Make it possible to choose multiple file to change layout for at the same time
     table_data = []
     plate_to_layout = {}
     # Add the options to skip files.
     all_plate_layouts.append("skip")
+
 
     for file in files:
         temp_data = [file, default_plate_layout]

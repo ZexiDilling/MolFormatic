@@ -1,8 +1,15 @@
+import tempfile
+
 from openpyxl import Workbook
 import numpy as np
 from openpyxl.styles import Font
+from rdkit import Chem
+from rdkit.Chem import Draw
+from openpyxl.drawing.image import Image as XLImage
+import tempfile
 
 from database_handler import DataBaseFunctions
+from excel_handler import insert_structure
 from openpyxl_fix_functions import *
 from bio_data_functions import bar_chart, frequency_writer
 
@@ -551,7 +558,8 @@ def _fetch_smiles_data(config, sample_id):
     return smiles
 
 
-def _write_hits(config, ws, hit_data, threshold, hit_amount, include_smiles, bio_sample_dict):
+def _write_hits(config, ws, hit_data, threshold, hit_amount, include_hit, include_smiles, include_structure,
+                bio_sample_dict):
     """
     Writes the hits into a worksheet in the workbook, based either on a threshold or amount of hits
     :param config: The config handler, with all the default information in the config file.
@@ -573,12 +581,22 @@ def _write_hits(config, ws, hit_data, threshold, hit_amount, include_smiles, bio
     :return:
     """
     # headlines for the sheet
-    if include_smiles:
-        headlines = ["id", "hit", "smiles", "plate", "well"]
-        smiles_spacer = 1
-    else:
-        smiles_spacer = 0
-        headlines = ["id", "hit", "plate", "well"]
+
+    headline_dict = {
+        "ID": {"use": include_hit, "clm_index": 0},
+        "Score": {"use": True, "clm_index": 0},
+        "Smiles": {"use": include_smiles, "clm_index": 0},
+        "Plate": {"use": True, "clm_index": 0},
+        "Well": {"use": True, "clm_index": 0},
+        "Structure": {"use": include_structure, "clm_index": 0},
+    }
+    headlines = []
+    headline_counter = 0
+    for headline in headline_dict:
+        if headline[headline]["use"]:
+            headline_counter += 1
+            headline.append(headline)
+            headline[headline]["clm_index"] = headline_counter
 
     # Sorting the hit data:
     sorted_hits = sorted(hit_data.items(), key=lambda x: x[1])
@@ -624,21 +642,61 @@ def _write_hits(config, ws, hit_data, threshold, hit_amount, include_smiles, bio
     row += 1
 
     # Writes the data
-    error_counter = 0
-    for compound_id in hit_list:
 
-        ws.cell(column=col, row=row, value=compound_id)
-        ws.cell(column=col + 1, row=row, value=hit_data_dict[compound_id]["score"])
+    for row_index, compound_id in enumerate(hit_list):
+
+        if include_hit:
+            ws.cell(column=headline_dict["place_holder"]["clm_index"], row=row + row_index,
+                    value=compound_id)
+
+        ws.cell(column=headline_dict["place_holder"]["clm_index"], row=row + row_index,
+                value=hit_data_dict[compound_id]["score"])
+
         if include_smiles:
-            ws.cell(column=col + 2, row=row, value=hit_data_dict[compound_id]["smiles"])
-        ws.cell(column=col + 2 + smiles_spacer, row=row, value=hit_data_dict[compound_id]["plate"])
-        ws.cell(column=col + 3 + smiles_spacer, row=row, value=hit_data_dict[compound_id]["well"])
-        row += 1
+            ws.cell(column=headline_dict["place_holder"]["clm_index"], row=row + row_index,
+                    value=hit_data_dict[compound_id]["smiles"])
+
+        ws.cell(column=headline_dict["place_holder"]["clm_index"], row=row + row_index,
+                value=hit_data_dict[compound_id]["plate"])
+        ws.cell(column=headline_dict["place_holder"]["clm_index"], row=row + row_index,
+                value=hit_data_dict[compound_id]["well"])
+
+        if include_structure:
+            # Grabs the smiles from the table
+            smiles = hit_data_dict[compound_id]["smiles"]
+
+            mol = Chem.MolFromSmiles(smiles)
+            temp_image = Draw.MolToImage(mol)
+
+            # Save the PIL image as a temporary file
+            temp_filename = tempfile.NamedTemporaryFile(suffix=".png", delete=False).name
+            temp_image.save(temp_filename)
+
+            # Create an Image object from the temporary file
+            img = XLImage(temp_filename)
+
+            # Calculate the image height
+            image_height = img.height
+
+            # Get the cell coordinate for the picture placement
+            cell = ws.cell(row=row + row_index, column=headline_dict["Structure"]["clm_index"])
+
+            # Add the image to the worksheet
+            ws.add_image(img, cell.coordinate)
+
+            # Calculate the required row height to fit the image
+            required_row_height = int(image_height)
+
+            # Set the row height
+            ws.row_dimensions[row + row_index].height = required_row_height
+
+            # Clean up the temporary file
+            temp_image.close()
 
 
-def bio_final_report_controller(config, analyse_method, all_plate_data, used_plates, output_file, final_report_setup,
+def bio_final_report_controller(config, analyse_method, all_plate_data, output_file, final_report_setup,
                                 include_hits, threshold, hit_amount, include_smiles, bio_sample_dict, plate_to_layout,
-                                archive_plates_dict):
+                                archive_plates_dict, include_structure):
     """
     The controller for the flow of data, that writes the final report in an excel file.
     :param config: The config handler, with all the default information in the config file.
@@ -647,8 +705,6 @@ def bio_final_report_controller(config, analyse_method, all_plate_data, used_pla
     :type analyse_method: str
     :param all_plate_data: All the data for all the plates, including calculations and well states
     :type all_plate_data: dict
-    :param used_plates: A list of plates that are used
-    :type used_plates: list
     :param output_file: The name and path for the final report
     :type output_file: str
     :param final_report_setup: The settings for the final report.
@@ -669,6 +725,8 @@ def bio_final_report_controller(config, analyse_method, all_plate_data, used_pla
     :type plate_to_layout: dict
     :param archive_plates_dict: the dict over the layouys
     :type archive_plates_dict: dict
+    :param include_structure: boolen to determen if the file report should include png of the structure
+    :type include_structure: bool
     :return: An excel file ready to be presented... or something..
     """
     wb = Workbook()
@@ -751,10 +809,15 @@ def bio_final_report_controller(config, analyse_method, all_plate_data, used_pla
             bar_row += 15
 
     # writes hits based on treshedhold, either amount or score.
-    if include_hits:
+    if include_hits or include_smiles:
         print("write hits")
         ws_hits = wb.create_sheet("Hit List")
-        _write_hits(config, ws_hits, hit_data, threshold, hit_amount, include_smiles, bio_sample_dict)
+        _write_hits(config, ws_hits, hit_data, threshold, hit_amount, include_smiles, include_structure,
+                    bio_sample_dict)
+
+    if include_smiles:
+        print("inserting png's")
+        insert_structure(ws_hits)
 
     print(f"The final report is done, here is the output file: {output_file}")
     wb.save(output_file)

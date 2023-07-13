@@ -765,6 +765,7 @@ def main(config):
         #     WINDOW 1 - BIO DATA         ###
         if event == "-BIO_COMBINED_REPORT-" and values["-BIO_COMBINED_REPORT-"] is True:
             window["-BIO_FINAL_REPORT_INCLUDE_HITS-"].update(disabled=False)
+            window["-BIO_FINAL_REPORT_INCLUDE_SMILES-"].update(disabled=False)
 
         if event == "-BIO_COMBINED_REPORT-" and values["-BIO_COMBINED_REPORT-"] is False:
             window["-BIO_FINAL_REPORT_INCLUDE_HITS-"].update(disabled=True)
@@ -777,21 +778,24 @@ def main(config):
             window["-BIO_FINAL_REPORT_HIT_AMOUNT-"].update(disabled=True)
 
         if event == "-BIO_FINAL_REPORT_INCLUDE_HITS-" and values["-BIO_FINAL_REPORT_INCLUDE_HITS-"] is True:
-            window["-BIO_FINAL_REPORT_INCLUDE_SMILES-"].update(disabled=False)
-            window["-BIO_FINAL_REPORT_INCLUDE_SMILES-"].update(value=False)
             window["-BIO_FINAL_REPORT_USE_THRESHOLD-"].update(disabled=False)
             window["-BIO_FINAL_REPORT_USE_THRESHOLD-"].update(value=False)
             window["-BIO_FINAL_REPORT_USE_AMOUNT-"].update(disabled=False)
             window["-BIO_FINAL_REPORT_USE_AMOUNT-"].update(value=False)
 
         if event == "-BIO_FINAL_REPORT_INCLUDE_HITS-" and values["-BIO_FINAL_REPORT_INCLUDE_HITS-"] is False:
-            window["-BIO_FINAL_REPORT_INCLUDE_SMILES-"].update(disabled=True)
             window["-BIO_FINAL_REPORT_USE_THRESHOLD-"].update(disabled=True)
             window["-BIO_FINAL_REPORT_USE_AMOUNT-"].update(disabled=True)
             window["-BIO_FINAL_REPORT_THRESHOLD-"].update(value="")
             window["-BIO_FINAL_REPORT_THRESHOLD-"].update(disabled=True)
             window["-BIO_FINAL_REPORT_HIT_AMOUNT-"].update(value="")
             window["-BIO_FINAL_REPORT_HIT_AMOUNT-"].update(disabled=True)
+
+        if event == "-BIO_FINAL_REPORT_INCLUDE_SMILES-" and values["-BIO_FINAL_REPORT_INCLUDE_SMILES-"] is True:
+            window["-BIO_FINAL_REPORT_INCLUDE_STRUCTURE-"].update(disabled=True)
+
+        if event == "-BIO_FINAL_REPORT_INCLUDE_SMILES-" and values["-BIO_FINAL_REPORT_INCLUDE_SMILES-"] is False:
+            window["-BIO_FINAL_REPORT_INCLUDE_STRUCTURE-"].update(disabled=False)
 
         if event == "-BIO_FINAL_REPORT_USE_THRESHOLD-" and values["-BIO_FINAL_REPORT_USE_THRESHOLD-"] is True:
             window["-BIO_FINAL_REPORT_USE_AMOUNT-"].update(value=False)
@@ -918,6 +922,7 @@ def main(config):
                 final_report_name = values["-FINAL_BIO_NAME-"]
                 export_to_excel = values["-BIO_EXPORT_TO_EXCEL-"]
                 same_layout = values["-BIO_PLATE_LAYOUT_CHECK-"]
+                include_structure = values["-BIO_FINAL_REPORT_INCLUDE_STRUCTURE-"]
 
                 if not bio_export_folder:
                     bio_export_folder = values["-BIO_EXPORT_FOLDER-"]
@@ -967,10 +972,10 @@ def main(config):
 
                         # Check if there should be produced a combined report over all the data
                         if values["-BIO_COMBINED_REPORT-"]:
-                            bio_full_report(config, analyse_method, all_plates_data, used_plates,
+                            bio_full_report(config, analyse_method, all_plates_data,
                                             bio_final_report_setup, bio_export_folder, final_report_name, include_hits,
                                             threshold, hit_amount, include_smiles, bio_sample_dict, plate_to_layout,
-                                            archive_plates_dict)
+                                            archive_plates_dict, include_structure)
 
                         # Check if the data should be added to the database
                         if values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"]:

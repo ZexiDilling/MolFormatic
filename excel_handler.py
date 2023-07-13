@@ -2,6 +2,10 @@ from openpyxl.styles import PatternFill, Font
 from openpyxl import Workbook, load_workbook
 from math import ceil
 import pandas as pd
+from rdkit import Chem
+from rdkit.Chem import Draw
+from openpyxl.drawing.image import Image as XLImage
+import tempfile
 
 from info import plate_384_row, plate_384_column
 
@@ -287,6 +291,54 @@ def well_compound_list(file):
                         compound_data[temp_compound_type]["well_vol"][temp_well] = temp_volume
 
     return compound_data
+
+def insert_structure_NOT_USED_ATM(worksheet):
+    """
+    Inserts a structure for each row in the excel sheet. The smiles needs to be in the sheet, with the headline "smiles"
+    :param worksheet: The worksheet where the picture should be insertet
+    :return:
+    """
+    ws = worksheet
+    for row_index, row in enumerate(ws.iter_rows(values_only=True)):
+        if row_index == 0:
+            # Sets the first free column, for where to place the image
+            col_index = len(row) + 1
+
+            # Finds the headline for the smiles code, and set the smiles index to it.
+            for headline_index, headline in enumerate(row):
+                if headline.casefold() == "smiles":
+                    smiles_index = headline_index
+
+        # Grabs the smiles from the table
+        smiles = row[smiles_index]
+
+        mol = Chem.MolFromSmiles(smiles)
+        temp_image = Draw.MolToImage(mol)
+
+        # Save the PIL image as a temporary file
+        temp_filename = tempfile.NamedTemporaryFile(suffix=".png", delete=False).name
+        temp_image.save(temp_filename)
+
+        # Create an Image object from the temporary file
+        img = XLImage(temp_filename)
+
+        # Calculate the image height
+        image_height = img.height
+
+        # Get the cell coordinate for the picture placement
+        cell = ws.cell(row=row_index, column=col_index)
+
+        # Add the image to the worksheet
+        ws.add_image(img, cell.coordinate)
+
+        # Calculate the required row height to fit the image
+        required_row_height = int(image_height)
+
+        # Set the row height
+        ws.row_dimensions[row_index].height = required_row_height
+
+        # Clean up the temporary file
+        temp_image.close()
 
 
 if __name__ == "__main__":

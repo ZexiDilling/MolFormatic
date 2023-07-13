@@ -14,7 +14,6 @@ import time
 from extra_functions import row_col_to_cell
 
 
-
 def org(all_data, well):
     """
     Original reading data from the platereader, for bio data
@@ -414,6 +413,7 @@ def bar_chart(ws, title, free_col, initial_row, data_location, category_location
     chart.set_categories(category_set)
     chart_cell = row_col_to_cell(initial_row, col_placement)
     ws.add_chart(chart, chart_cell)
+
 
 def well_row_col_type(plate_layout):
     """

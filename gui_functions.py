@@ -532,6 +532,7 @@ def bio_compound_info_from_worklist(config, sg, bio_sample_list):
         # if the file uses wrong names for the headlines, this will give a popup with the "wrong headlines" and an
         # option to change them.
         if msg == "Wrong headlines":
+            print(f"{files} have the wrong format")
             new_headline = new_headlines_popup(sort_table, right_headlines, file_headlines)
             msg, file_headlines, sample_dict = CSVReader.echo_worklist_to_dict(config, config_headline, files, right_headlines, new_headline,
                                                                                sample_dict)
@@ -644,9 +645,9 @@ def bio_data(config, folder, plate_to_layout, archive_plates_dict, bio_plate_rep
     return True, all_plates_data, date, used_plates, plate_layout_dict
 
 
-def bio_full_report(config, analyse_method, all_plate_data, used_plates, final_report_setup, output_folder,
+def bio_full_report(config, analyse_method, all_plate_data, final_report_setup, output_folder,
                     final_report_name, include_hits, threshold, hit_amount, include_smiles, bio_sample_dict,
-                    plate_to_layout, archive_plates_dict):
+                    plate_to_layout, archive_plates_dict, include_structure):
     """
     Writes the final report for the bio data
     :param config: The config handler, with all the default information in the config file.
@@ -655,8 +656,6 @@ def bio_full_report(config, analyse_method, all_plate_data, used_plates, final_r
     :type analyse_method: str
     :param all_plate_data: All the data for all the plates, raw and calculations
     :type all_plate_data: dict
-    :param used_plates: A list of plates that are used
-    :type used_plates: list
     :param final_report_setup: The settings for the report
     :type final_report_name: dict
     :param output_folder: The output folder, where the final report ends up
@@ -679,13 +678,15 @@ def bio_full_report(config, analyse_method, all_plate_data, used_plates, final_r
     :type plate_to_layout: dict
     :param archive_plates_dict: the dict over the layouys
     :type archive_plates_dict: dict
+    :param include_structure: boolen to determen if the file report should include png of the structure
+    :type include_structure: bool
     :return: A excel report file with all the data
     """
 
     output_file = f"{output_folder}/{final_report_name}.xlsx"
-    bio_final_report_controller(config, analyse_method, all_plate_data, used_plates, output_file, final_report_setup,
+    bio_final_report_controller(config, analyse_method, all_plate_data, output_file, final_report_setup,
                                 include_hits, threshold, hit_amount, include_smiles, bio_sample_dict, plate_to_layout,
-                                archive_plates_dict)
+                                archive_plates_dict, include_structure)
 
 
 def bio_experiment_to_database(config, assay_data, plate_data, plate_analyse_methods,
