@@ -1392,21 +1392,31 @@ class GUILayout:
         responsible = [keys for keys in list(self.config["Responsible"].keys())]
 
         compound_table_data = []
-        compound_table_headings = ["Compound ID", "well", "Raw Data", "Concentration", "Score", "Approved"]
+        compound_table_headings = ["Compound ID", "score", "hit", "Concentration", "Approved", "well", "Raw Data"]
         col_compound_table = sg.Frame("Experimental Data", [[
             sg.Column([
                 [sg.Table(values=compound_table_data, headings=compound_table_headings, key="-BIO_EXP_COMPOUND_TABLE-",
                           auto_size_columns=False, col_widths=[10, 10, 10], enable_events=True,
                           enable_click_events=True)],
                 [sg.T("Amount of Compounds: "), sg.T("0", key="-BIO_EXP_COMPOUND_COUNTER-")],
-                [sg.T("Set Threshold:", size=12), sg.Input(key="-BIO_EXP_SET_THRESHOLD-", size=12)],
-                [sg.T("Set Compound Amount:", size=12), sg.Input(key="-BIO_EXP_SET_COMPOUND_AMOUNT-", size=12)],
-                [sg.Button("Export Compound List", key="-BIO_EXP_EXPORT_COMPOUNDS-")]
+                [
+                    sg.Column([
+                        [sg.T("Threshold:", size=8),
+                         sg.Input(key="-BIO_EXP_SET_THRESHOLD-", size=5)],
+                        [sg.T("Amount:", size=8),
+                         sg.Input(key="-BIO_EXP_SET_COMPOUND_AMOUNT-", size=5)],
+                        [sg.Button("Export Compound List", key="-BIO_EXP_EXPORT_COMPOUNDS-"),
+                         sg.Button("Init", key="-INIT_BIO_TABLE-")]
+                    ]),
+                    sg.Column([
+                        [sg.Checkbox("Only approved", key="-BIO_EXP_APPROVED_COMPOUNDS_ONLY-", default=True)]
+                    ])
+                ]
             ])
         ]])
 
         plate_table_data = []
-        plate_table_headings = ["Plate Name", "Z-Prime", "Approved", "Layout", "responsible", "date"]
+        plate_table_headings = ["Plate Name", "Z-Prime", "Approved", "note", "Layout", "responsible", "date"]
 
         col_plate_table = sg.Frame("Plates", [[
             sg.Column([

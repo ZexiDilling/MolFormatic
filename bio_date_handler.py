@@ -31,6 +31,7 @@ class BIOAnalyser:
         self.z_prime_calc = bio_plate_report_setup["z_prime_calc"]
         self.heatmap_colours = bio_plate_report_setup["heatmap_colours"]
         self.pora_threshold = bio_plate_report_setup["pora_threshold"]
+        self.plate = None
 
     def __str__(self):
         """
@@ -58,7 +59,7 @@ class BIOAnalyser:
 
         return pw_dict
 
-    def _data_converter(self, all_data, well_type):
+    def data_converter(self, all_data, well_type):
         """
         convert raw data in the analysed data
 
@@ -75,7 +76,10 @@ class BIOAnalyser:
         """
 
         # Create a dictionary mapping well IDs to their states
-        pw_dict = self._plate_well_dict()
+        if self.plate is not None:
+            pw_dict = self._plate_well_dict()
+        else:
+            pw_dict = None
 
         # Iterate through each plate analysis method
         for methode in self.plate_analysis:
@@ -141,7 +145,7 @@ class BIOAnalyser:
                             all_data["calculations"][methode][state]["avg"],
                             all_data["calculations"][methode][state]["stdev"]
                         )
-                    except (ValueError, ZeroDivisionError):
+                    except (ValueError, ZeroDivisionError, TypeError):
                         all_data["calculations"][methode][state][calc] = None
 
         # calc S/B
@@ -560,7 +564,7 @@ class BIOAnalyser:
 
         self.ex_file = ex_file
         self.plate = plate_layout
-        all_data, pw_dict = self._data_converter(all_data, well_type)
+        all_data, pw_dict = self.data_converter(all_data, well_type)
         if write_to_excel:
             self._excel_controller(all_data, well_row_col, pw_dict, bio_sample_dict, save_location, add_compound_ids)
 

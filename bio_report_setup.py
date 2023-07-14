@@ -9,7 +9,6 @@ from openpyxl.drawing.image import Image as XLImage
 import tempfile
 
 from database_handler import DataBaseFunctions
-from excel_handler import insert_structure
 from openpyxl_fix_functions import *
 from bio_data_functions import bar_chart, frequency_writer
 

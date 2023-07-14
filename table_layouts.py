@@ -119,6 +119,7 @@ biological_compound_data = """ CREATE TABLE IF NOT EXISTS biological_compound_da
             bio_data_id INTEGER PRIMARY KEY UNIQUE,
             compound_id INTEGER NOT NULL,
             assay_plate TEXT NOT NULL,
+            assay_well TEXT NOT NULL,
             raw_data REAL NOT NULL,
             score REAL NOT NULL,
             hit TEXT NOT NULL,

@@ -809,6 +809,8 @@ def bio_experiment_to_database(config, assay_data, plate_data, plate_analyse_met
                 # list for the plate. The well could have been removed doing the plate_check
                 if plate_approval:
                     if wells in plate_data[plates]["plates"][plate_analyse_methods[-1]]["sample"]:
+                        print(plate_analyse_methods[-1])
+                        print(plate_data[plates]["plates"][plate_analyse_methods[-1]]["sample"])
                         compound_approval = True
                     else:
                         compound_approval = False
@@ -822,6 +824,7 @@ def bio_experiment_to_database(config, assay_data, plate_data, plate_analyse_met
                     "bio_data_id": bio_data_id,
                     "compound_id": compound_id,
                     "assay_plate": plates,
+                    "assay_well": wells,
                     "score": score,
                     "hit": hit,
                     "concentration": temp_concentration,

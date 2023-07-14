@@ -856,6 +856,31 @@ def main(config):
                 # if assay_name:
                 #     window["-BIO_ASSAY_NAME-"].update(value=assay_name)
 
+        if event == "-BIO_COMBINED_REPORT-" and not values["-FINAL_BIO_NAME-"] and \
+                values["-BIO_COMBINED_REPORT-"] is True:
+            final_report_name = sg.popup_get_text("Final Report Name?")
+            if final_report_name:
+                window["-FINAL_BIO_NAME-"].update(value=final_report_name)
+            else:
+                window["-BIO_COMBINED_REPORT-"].update(value=False)
+                window["-BIO_FINAL_REPORT_INCLUDE_HITS-"].update(disabled=True)
+                window["-BIO_FINAL_REPORT_INCLUDE_SMILES-"].update(disabled=True)
+                window["-BIO_FINAL_REPORT_USE_THRESHOLD-"].update(disabled=True)
+                window["-BIO_FINAL_REPORT_USE_AMOUNT-"].update(disabled=True)
+                window["-BIO_FINAL_REPORT_THRESHOLD-"].update(value="")
+                window["-BIO_FINAL_REPORT_THRESHOLD-"].update(disabled=True)
+                window["-BIO_FINAL_REPORT_HIT_AMOUNT-"].update(value="")
+                window["-BIO_FINAL_REPORT_HIT_AMOUNT-"].update(disabled=True)
+
+        if event == "-BIO_REPORT_SETTINGS-" or event == "-PURITY_ADVANCED_SETTINGS-":
+            reports = gsc.main_settings_controller(bio_final_report_setup, bio_plate_report_setup, ms_settings)
+            if reports:
+                bio_final_report_setup, bio_plate_report_setup, ms_settings, simple_settings = reports
+                set_colours(window, reports)
+
+        if event == "-BIO_ANALYSE_TYPE-":
+            sg.popup("This functions does nothing ATM ")
+
         # Add a new assay to the database
         if event == "-BIO_NEW_ASSAY-":
             assay_check = assay_generator(config, plate_list)
@@ -999,7 +1024,8 @@ def main(config):
                             # Open a popup window where data can be checked before being added to the database.
                             all_plates_data, plate_analyse_methods = \
                                 bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, same_layout,
-                                                        plate_to_layout, archive_plates_dict)
+                                                        plate_to_layout, archive_plates_dict, color_select,
+                                                        bio_plate_report_setup)
 
                             if type(all_plates_data) != str:
                                 # Adds the approved data to the database
@@ -1012,138 +1038,118 @@ def main(config):
                         if worked:
                             sg.popup(f"{worked}")
 
-        if event == "-BIO_COMBINED_REPORT-" and not values["-FINAL_BIO_NAME-"] and \
-                values["-BIO_COMBINED_REPORT-"] is True:
-            final_report_name = sg.popup_get_text("Final Report Name?")
-            if final_report_name:
-                window["-FINAL_BIO_NAME-"].update(value=final_report_name)
-            else:
-                window["-BIO_COMBINED_REPORT-"].update(value=False)
-                window["-BIO_FINAL_REPORT_INCLUDE_HITS-"].update(disabled=True)
-                window["-BIO_FINAL_REPORT_INCLUDE_SMILES-"].update(disabled=True)
-                window["-BIO_FINAL_REPORT_USE_THRESHOLD-"].update(disabled=True)
-                window["-BIO_FINAL_REPORT_USE_AMOUNT-"].update(disabled=True)
-                window["-BIO_FINAL_REPORT_THRESHOLD-"].update(value="")
-                window["-BIO_FINAL_REPORT_THRESHOLD-"].update(disabled=True)
-                window["-BIO_FINAL_REPORT_HIT_AMOUNT-"].update(value="")
-                window["-BIO_FINAL_REPORT_HIT_AMOUNT-"].update(disabled=True)
 
-        if event == "-BIO_REPORT_SETTINGS-" or event == "-PURITY_ADVANCED_SETTINGS-":
-            reports = gsc.main_settings_controller(bio_final_report_setup, bio_plate_report_setup, ms_settings)
-            if reports:
-                bio_final_report_setup, bio_plate_report_setup, ms_settings, simple_settings = reports
-                set_colours(window, reports)
 
-        if event == "-BIO_ANALYSE_TYPE-":
-            sg.popup("This functions does nothing ATM ")
+        # if event == "-BIO_SEND_TO_INFO-":
+            # ToDO this needs to be updated to fit with the new formate of bio data!
+            #
+            # if not values["-BIO_PLATE_LAYOUT-"]:
+            #     sg.popup_error("Please choose a plate layout")
+            # elif not values["-BIO_IMPORT_FOLDER-"]:
+            #     sg.popup_error("Please choose an import folder")
+            #
+            # else:
+            #     bio_import_folder = values["-BIO_IMPORT_FOLDER-"]
+            #     plate_layout = archive_plates_dict[values["-BIO_PLATE_LAYOUT-"]]
+            #     analyse_method = values["-BIO_ANALYSE_TYPE-"]
+            #     write_to_excel = False
+            #     _, all_plates_data, date = bio_data(config, bio_import_folder, plate_layout,
+            #                                         bio_plate_report_setup,
+            #                                         analyse_method, write_to_excel)
+            #
+            #     gui_tab = "bio_exp"
+            #     archive = True
+            #
+            #     file_name = "bio_experiments.txt"
+            #     # plate_dict_name = bio_exp_table_data[values["-BIO_EXP_PLATE_TABLE-"][0]][2]
+            #     plate_bio_info = all_plates_data
+            #
+            #     bio_info_plate_layout = plate_layout
+            #     bio_info_plate_size = plate_layout["plate_type"]
+            #     bio_info_state_dict = copy.deepcopy(plate_layout["well_layout"])
+            #     bio_info_state_dict = plate_layout_re_formate(bio_info_state_dict)
+            #
+            #     well_dict_bio_info, bio_info_min_x, bio_info_min_y, bio_info_max_x, bio_info_max_y \
+            #         = draw_plate(config, graph_bio_exp, bio_info_plate_size, bio_info_state_dict, gui_tab, archive)
+            #
+            #     bio_info_plates = []
+            #     bio_info_states = []
+            #     bio_info_analyse_method = []
+            #     bio_info_calc = []
+            #     for plates in plate_bio_info:
+            #         bio_info_plates.append(plates)
+            #         for method in plate_bio_info[plates]["calculations"]:
+            #             if method != "other":
+            #                 if method not in bio_info_analyse_method:
+            #                     bio_info_analyse_method.append(method)
+            #                 for state in plate_bio_info[plates]["calculations"][method]:
+            #                     if state not in bio_info_states:
+            #                         bio_info_states.append(state)
+            #                     for calc in plate_bio_info[plates]["calculations"][method][state]:
+            #                         if calc not in bio_info_calc:
+            #                             bio_info_calc.append(calc)
+            #             if method == "other":
+            #                 for calc_other in plate_bio_info[plates]["calculations"][method]:
+            #                     if calc_other not in bio_info_calc:
+            #                         bio_info_calc.append(calc_other)
+            #
+            #     # Main settings info
+            #     window["-BIO_INFO_ANALYSE_METHOD-"].Update(value="original")
+            #     window["-BIO_INFO_MAPPING-"].Update(value="state mapping")
+            #     window["-BIO_INFO_ANALYSE_METHOD-"].update(values=bio_info_analyse_method,
+            #                                                value=bio_info_analyse_method[0])
+            #     window["-BIO_INFO_PLATES-"].update(values=bio_info_plates, value=bio_info_plates[0])
+            #     window["-BIO_INFO_STATES-"].update(values=bio_info_states)
+            #
+            #     # Map settings
+            #     list_box_index = None
+            #     for index_state, values in enumerate(bio_info_states):
+            #         if values == "sample":
+            #             list_box_index = index_state
+            #         if not list_box_index:
+            #             list_box_index = 0
+            #
+            #     window["-BIO_INFO_STATE_LIST_BOX-"].update(values=bio_info_states, set_to_index=list_box_index)
+            #
+            #     # Matrix Settings
+            #     window["-BIO_INFO_MATRIX_METHOD-"].update(values=bio_info_analyse_method)
+            #     window["-BIO_INFO_MATRIX_STATE-"].update(values=bio_info_states)
+            #     window["-BIO_INFO_MATRIX_CALC-"].update(values=bio_info_calc)
+            #
+            #     # # List settings
+            #     # window["-BIO_INFO_LIST_METHOD-"].update(values=bio_info_analyse_method, value=bio_info_analyse_method[0])
+            #     # window["-BIO_INFO_LIST_STATE-"].update(values=bio_info_states, value=bio_info_states[0])
+            #     # window["-BIO_INFO_LIST_CALC-"].update(values=bio_info_calc, value=bio_info_calc[0])
+            #
+            #     # Overview settings
+            #     window["-BIO_INFO_PLATE_OVERVIEW_METHOD_LIST-"].update(values=bio_info_analyse_method,
+            #                                                            set_to_index=len(bio_info_analyse_method) - 1)
+            #     window["-BIO_INFO_PLATE_OVERVIEW_STATE_LIST-"].update(values=bio_info_states,
+            #                                                           set_to_index=len(bio_info_states) - 1)
+            #     window["-BIO_INFO_PLATE_OVERVIEW_PLATE-"].update(values=bio_info_plates, value=bio_info_plates[0])
+            #     window["-BIO_INFO_OVERVIEW_METHOD-"].update(values=bio_info_analyse_method,
+            #                                                 value=bio_info_analyse_method[0])
+            #     window["-BIO_INFO_OVERVIEW_STATE-"].update(values=bio_info_states, value=bio_info_states[0])
+            #
+            #     # HIT List settings
+            #     window["-BIO_INFO_HIT_LIST_PLATES-"].update(values=bio_info_plates, value=bio_info_plates[0])
+            #     window["-BIO_INFO_HIT_LIST_METHOD-"].update(values=bio_info_analyse_method,
+            #                                                 value=bio_info_analyse_method[-1])
+            #     window["-BIO_INFO_HIT_LIST_STATE-"].update(values=bio_info_states, value="sample")
+            #
+            #     # Popup Matrix
+            #     method_values = bio_info_analyse_method
+            #     state_values = bio_info_states
+            #     calc_values = bio_info_calc
+            #
+            #     # bio_info_sub_setting_tab_mapping_calc = True
+            #     # bio_info_sub_setting_tab_matrix_calc = True
+            #     # bio_info_sub_setting_tab_list_calc = True
+            #     bio_info_sub_setting_tab_overview_calc = True
+            #     bio_info_sub_setting_tab_plate_overview_calc = True
+            #     bio_info_sub_setting_tab_z_prime_calc = True
+            #     bio_info_sub_setting_tab_hit_list_calc = True
 
-        if event == "-BIO_SEND_TO_INFO-":
-            if not values["-BIO_PLATE_LAYOUT-"]:
-                sg.popup_error("Please choose a plate layout")
-            elif not values["-BIO_IMPORT_FOLDER-"]:
-                sg.popup_error("Please choose an import folder")
-
-            else:
-                bio_import_folder = values["-BIO_IMPORT_FOLDER-"]
-                plate_layout = archive_plates_dict[values["-BIO_PLATE_LAYOUT-"]]
-                analyse_method = values["-BIO_ANALYSE_TYPE-"]
-                write_to_excel = False
-                _, all_plates_data, date = bio_data(config, bio_import_folder, plate_layout,
-                                                    bio_plate_report_setup,
-                                                    analyse_method, write_to_excel)
-
-                gui_tab = "bio_exp"
-                archive = True
-
-                file_name = "bio_experiments.txt"
-                # plate_dict_name = bio_exp_table_data[values["-BIO_EXP_PLATE_TABLE-"][0]][2]
-                plate_bio_info = all_plates_data
-
-                bio_info_plate_layout = plate_layout
-                bio_info_plate_size = plate_layout["plate_type"]
-                bio_info_state_dict = copy.deepcopy(plate_layout["well_layout"])
-                bio_info_state_dict = plate_layout_re_formate(bio_info_state_dict)
-
-                well_dict_bio_info, bio_info_min_x, bio_info_min_y, bio_info_max_x, bio_info_max_y \
-                    = draw_plate(config, graph_bio_exp, bio_info_plate_size, bio_info_state_dict, gui_tab, archive)
-
-                bio_info_plates = []
-                bio_info_states = []
-                bio_info_analyse_method = []
-                bio_info_calc = []
-                for plates in plate_bio_info:
-                    bio_info_plates.append(plates)
-                    for method in plate_bio_info[plates]["calculations"]:
-                        if method != "other":
-                            if method not in bio_info_analyse_method:
-                                bio_info_analyse_method.append(method)
-                            for state in plate_bio_info[plates]["calculations"][method]:
-                                if state not in bio_info_states:
-                                    bio_info_states.append(state)
-                                for calc in plate_bio_info[plates]["calculations"][method][state]:
-                                    if calc not in bio_info_calc:
-                                        bio_info_calc.append(calc)
-                        if method == "other":
-                            for calc_other in plate_bio_info[plates]["calculations"][method]:
-                                if calc_other not in bio_info_calc:
-                                    bio_info_calc.append(calc_other)
-
-                # Main settings info
-                window["-BIO_INFO_ANALYSE_METHOD-"].Update(value="original")
-                window["-BIO_INFO_MAPPING-"].Update(value="state mapping")
-                window["-BIO_INFO_ANALYSE_METHOD-"].update(values=bio_info_analyse_method,
-                                                           value=bio_info_analyse_method[0])
-                window["-BIO_INFO_PLATES-"].update(values=bio_info_plates, value=bio_info_plates[0])
-                window["-BIO_INFO_STATES-"].update(values=bio_info_states)
-
-                # Map settings
-                list_box_index = None
-                for index_state, values in enumerate(bio_info_states):
-                    if values == "sample":
-                        list_box_index = index_state
-                    if not list_box_index:
-                        list_box_index = 0
-
-                window["-BIO_INFO_STATE_LIST_BOX-"].update(values=bio_info_states, set_to_index=list_box_index)
-
-                # Matrix Settings
-                window["-BIO_INFO_MATRIX_METHOD-"].update(values=bio_info_analyse_method)
-                window["-BIO_INFO_MATRIX_STATE-"].update(values=bio_info_states)
-                window["-BIO_INFO_MATRIX_CALC-"].update(values=bio_info_calc)
-
-                # # List settings
-                # window["-BIO_INFO_LIST_METHOD-"].update(values=bio_info_analyse_method, value=bio_info_analyse_method[0])
-                # window["-BIO_INFO_LIST_STATE-"].update(values=bio_info_states, value=bio_info_states[0])
-                # window["-BIO_INFO_LIST_CALC-"].update(values=bio_info_calc, value=bio_info_calc[0])
-
-                # Overview settings
-                window["-BIO_INFO_PLATE_OVERVIEW_METHOD_LIST-"].update(values=bio_info_analyse_method,
-                                                                       set_to_index=len(bio_info_analyse_method) - 1)
-                window["-BIO_INFO_PLATE_OVERVIEW_STATE_LIST-"].update(values=bio_info_states,
-                                                                      set_to_index=len(bio_info_states) - 1)
-                window["-BIO_INFO_PLATE_OVERVIEW_PLATE-"].update(values=bio_info_plates, value=bio_info_plates[0])
-                window["-BIO_INFO_OVERVIEW_METHOD-"].update(values=bio_info_analyse_method,
-                                                            value=bio_info_analyse_method[0])
-                window["-BIO_INFO_OVERVIEW_STATE-"].update(values=bio_info_states, value=bio_info_states[0])
-
-                # HIT List settings
-                window["-BIO_INFO_HIT_LIST_PLATES-"].update(values=bio_info_plates, value=bio_info_plates[0])
-                window["-BIO_INFO_HIT_LIST_METHOD-"].update(values=bio_info_analyse_method,
-                                                            value=bio_info_analyse_method[-1])
-                window["-BIO_INFO_HIT_LIST_STATE-"].update(values=bio_info_states, value="sample")
-
-                # Popup Matrix
-                method_values = bio_info_analyse_method
-                state_values = bio_info_states
-                calc_values = bio_info_calc
-
-                # bio_info_sub_setting_tab_mapping_calc = True
-                # bio_info_sub_setting_tab_matrix_calc = True
-                # bio_info_sub_setting_tab_list_calc = True
-                bio_info_sub_setting_tab_overview_calc = True
-                bio_info_sub_setting_tab_plate_overview_calc = True
-                bio_info_sub_setting_tab_z_prime_calc = True
-                bio_info_sub_setting_tab_hit_list_calc = True
 
         #   WINDOW 1 - Purity           ###
         if event == "-PURITY_DATA_IMPORT-":
@@ -1448,22 +1454,23 @@ def main(config):
 
             # Choosing which tool to pain the plate with.
             if None not in (start_point, end_point):
+                # ToDo clean up the code
                 if values["-RECT_SAMPLES-"]:
-                    temp_tool = "sample"
+                    temp_draw_tool = "sample"
                 elif values["-RECT_BLANK-"]:
-                    temp_tool = "blank"
+                    temp_draw_tool = "blank"
                 elif values["-RECT_MAX-"]:
-                    temp_tool = "max"
+                    temp_draw_tool = "max"
                 if values["-RECT_MIN-"]:
-                    temp_tool = "minimum"
+                    temp_draw_tool = "minimum"
                 elif values["-RECT_NEG-"]:
-                    temp_tool = "negative"
+                    temp_draw_tool = "negative"
                 elif values["-RECT_POS-"]:
-                    temp_tool = "positive"
+                    temp_draw_tool = "positive"
                 elif values["-RECT_EMPTY-"]:
-                    temp_tool = "empty"
+                    temp_draw_tool = "empty"
                 elif values["-COLOUR-"]:
-                    temp_tool = "paint"
+                    temp_draw_tool = "paint"
                 temp_selector = True
                 prior_rect = graph_plate.draw_rectangle(start_point, end_point, fill_color="",
                                                         line_color="white")
@@ -1517,8 +1524,8 @@ def main(config):
 
                     # colours the wells in different colour, depending on if they are samples or blanks
                     for wells in graphs_list:
-                        color = color_select[temp_tool]
-                        well_state = temp_tool
+                        color = color_select[temp_draw_tool]
+                        well_state = temp_draw_tool
                         if color == "paint":
                             color = values["-PLATE_LAYOUT_COLOUR_CHOSE_TARGET-"]
                         graph_plate.Widget.itemconfig(wells, fill=color)
@@ -1534,7 +1541,7 @@ def main(config):
                 dragging = False
                 prior_rect = None
                 temp_selector = False
-                temp_tool = None
+                temp_draw_tool = None
         except AttributeError:
             pass
 
@@ -2330,11 +2337,7 @@ def main(config):
             window["-BIO_EXP_PLATE_TABLE-"].update(values=all_table_data["-BIO_EXP_PLATE_TABLE-"])
 
         if event == "-TABLE_TAB_GRP-" and values["-TABLE_TAB_GRP-"] == "Bio Experiment table":
-            temp_bio_exp_data, headlines = grab_table_data(config, "bio_experiment")
             bio_exp_data = []
-            for rows in temp_bio_exp_data:
-                bio_exp_data.append([temp_bio_exp_data[rows]["assay_name"], temp_bio_exp_data[rows]["date"]])
-
             window["-BIO_EXP_TABLE_ASSAY_LIST_BOX-"].update(values=bio_exp_data)
 
         #   WINDOW TABLE - LC EXPERIMENT    ###
