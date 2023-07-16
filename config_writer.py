@@ -1,9 +1,6 @@
 import configparser
 import types
 
-from bio_data_functions import *
-
-
 class ConfigWriter:
     def __init__(self, config, configfile="config.ini"):
         self.config = config

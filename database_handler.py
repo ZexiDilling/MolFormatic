@@ -439,17 +439,22 @@ class DataBaseFunctions:
         """
         rows = {}
         self.create_connection()
-        self.cursor.execute(data)
-        records = self.cursor.fetchall()
-        headers = self.cursor.description
-        for data in records:
+        try:
+            self.cursor.execute(data)
+        except:
+            return [[]]
+        else:
 
-            rows[data[0]] = {}
-            for index, header in enumerate(headers):
-                rows[data[0]][header[0]] = data[index]
+            records = self.cursor.fetchall()
+            headers = self.cursor.description
+            for data in records:
 
-        self.cursor.close()
-        return rows
+                rows[data[0]] = {}
+                for index, header in enumerate(headers):
+                    rows[data[0]][header[0]] = data[index]
+
+            self.cursor.close()
+            return rows
 
 
 if __name__ == "__main__":

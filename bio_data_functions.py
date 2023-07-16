@@ -9,7 +9,6 @@ from openpyxl_fix_functions import ex_cell
 import datetime
 from numpy import histogram, arange
 from openpyxl.chart import BarChart, Reference
-import time
 
 from extra_functions import row_col_to_cell
 

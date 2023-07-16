@@ -1,14 +1,11 @@
 import copy
 import os.path
 import configparser
-from time import sleep
-from pathlib import Path
 
-import PySimpleGUI
-import matplotlib.lines as lines
-from natsort import natsorted
+from rdkit.Chem import MolToSmiles
+import multiprocessing as mp
+from multiprocessing import Queue
 
-from bio_report_setup import _fetch_smiles_data
 from gui_layout import GUILayout
 from gui_settings_control import GUISettingsController
 from gui_functions import *
@@ -22,7 +19,7 @@ from config_writer import ConfigWriter
 from database_startup import DatabaseSetUp
 
 
-def main(config):
+def main(config, queue_gui, queue_mol):
     """
     The main control modul for the GUI.
 
@@ -44,7 +41,10 @@ def main(config):
 
     # The archive could be removed from here, but then there would be a call to the DB everytime a layout is used...
     # Grabs the updated data from the database
-    plate_list, archive_plates_dict = get_plate_layout(config)
+    if db_active:
+        plate_list, archive_plates_dict = get_plate_layout(config)
+    else:
+        plate_list = []
 
     gl = GUILayout(config, plate_list)
 
@@ -73,10 +73,13 @@ def main(config):
     #   WINDOW 1 - BIO  #
     graph_bio = window["-BIO_CANVAS-"]
     bio_export_folder = None
-    assay_table_data = grab_table_data(config, "assay")
-    assay_list = []
-    for row in assay_table_data[0]:
-        assay_list.append(row[1])
+    if db_active:
+        assay_table_data = grab_table_data(config, "assay")
+        assay_list = []
+        for row in assay_table_data[0]:
+            assay_list.append(row[1])
+    else:
+        assay_list = []
     window["-BIO_ASSAY_NAME-"].update(values=assay_list)
     bio_final_report_setup = {
         "methods": {"original": config["Settings_bio"].getboolean("final_report_methods_original"),
@@ -619,24 +622,7 @@ def main(config):
     window.Element("-BIO_INFO_MATRIX_TABLE-").Widget.configure(displaycolumns=[])
     window.Element("-PLATE_TABLE_TABLE-").Widget.configure(displaycolumns=plate_table_table_heading_mp)
     search_reverse = {}
-    # all_table_data = {"-COMPOUND_INFO_PLATE_TABLE-": "",
-    #                   "-BIO_INFO_OVERVIEW_TABLE-": "",
-    #                   "-BIO_INFO_OVERVIEW_AVG_TABLE-": "",
-    #                   "-BIO_INFO_OVERVIEW_STDEV_TABLE-": "",
-    #                   "-BIO_INFO_OVERVIEW_Z_PRIME_TABLE-": "",
-    #                   "-BIO_INFO_Z_PRIME_LIST_TABLE-": "",
-    #                   "-BIO_INFO_HIT_LIST_LOW_TABLE-": "",
-    #                   "-BIO_INFO_HIT_LIST_MID_TABLE-": "",
-    #                   "-BIO_INFO_HIT_LIST_HIGH_TABLE-": "",
-    #                   "-BIO_INFO_MATRIX_TABLE-": "",
-    #                   "-PURITY_INFO_OVERVIEW_TABLE-": "",
-    #                   "-PURITY_INFO_PURITY_OVERVIEW_TABLE-": "",
-    #                   "-PURITY_INFO_PEAK_TABLE-": "",
-    #                   "-PURITY_INFO_PURITY_PEAK_LIST_TABLE-": "",
-    #                   "-BIO_EXP_PLATE_TABLE-": "",
-    #                   "-LC_MS_SAMPLE_TABLE-": "",
-    #                   "-PLATE_TABLE_TABLE-": "",
-    #                   }
+
     # Makes a dict over all tables in the software. Is used for updating the tables with data
     all_table_data = {"-COMPOUND_INFO_PLATE_TABLE-": None,
                       "-BIO_INFO_OVERVIEW_TABLE-": None,
@@ -670,9 +656,22 @@ def main(config):
                       }
 
     while True:
-        event, values = window.read()
+        event, values = window.read(timeout=100)
         if event == sg.WIN_CLOSED or event == "Exit":
+            queue_mol.put(("close", None))
             break
+
+        while not queue_gui.empty():
+            msg_type, data = queue_gui.get()
+            if msg_type == 'smiles':
+                mol = data
+                smiles = MolToSmiles(mol)
+                window["-SUB_SEARCH_SMILES-"].update(smiles)
+
+        # if event == "-SUB_SEARCH_DRAW_MOL-":
+        #     smiles = values["-SUB_SEARCH_SMILES-"]
+        #     queue_mol.put(("start_draw_tool", smiles))
+
 
         if event == "-START_UP_DB-":
             if db_active:
@@ -760,7 +759,8 @@ def main(config):
             window["-SEARCH_PLATE_LAYOUT_SAMPLE_AMOUNT-"].update(value=len(temp_counter))
 
         if event == "-SUB_SEARCH_DRAW_MOL-":
-            sg.popup("This does not work yet, sorry. Use Chemdraw and copy the smiles code in, instead")
+            smiles = values["-SUB_SEARCH_SMILES-"]
+            queue_mol.put(("start_draw_tool", smiles))
 
         #     WINDOW 1 - BIO DATA         ###
         if event == "-BIO_COMBINED_REPORT-" and values["-BIO_COMBINED_REPORT-"] is True:
@@ -1805,7 +1805,10 @@ def main(config):
             if values["-EXTRA_SUB_DATABASE_TABS-"] == "Responsible" and not responsible_data:
                 table = "responsible"
                 headings = config["Extra_tab_database_headings"]["responsible"].split(",")
-                responsible_data = database_to_table(config, table, headings)
+                if db_active:
+                    responsible_data = database_to_table(config, table, headings)
+                else:
+                    responsible_data = []
                 window["-EXTRA_DATABASE_RESPONSIBLE_TABLE-"].update(values=[responsible_data])
                 print(f"responsible_data: {responsible_data}")
             elif values["-EXTRA_SUB_DATABASE_TABS-"] == "Customers" and not customers_data:
@@ -3025,8 +3028,26 @@ def main(config):
 
 
 if __name__ == "__main__":
+    from draw_tool_handler import launch_draw_tool
+
     config = configparser.ConfigParser()
     config.read("config.ini")
-    main(config)
+    queue_gui = Queue()
+    queue_mol = Queue()
+    process_gui = mp.Process(target=main, args=(config, queue_gui, queue_mol))
+    process_gui.start()
 
-    # sg.main_get_debug_data()
+    while True:
+        msg, smiles = queue_mol.get()
+        print(smiles)
+        if msg is None:
+            break
+        elif msg == "start_draw_tool":
+            # Start the PySide6 process
+            process_side6 = mp.Process(target=launch_draw_tool, args=(queue_gui, queue_mol, smiles))
+            process_side6.start()
+            process_side6.join()
+        elif msg == "close":
+            break
+
+
