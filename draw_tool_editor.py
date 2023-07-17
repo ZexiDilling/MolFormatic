@@ -2,6 +2,7 @@ from math import sqrt
 import PySide6
 import numpy as np
 from PySide6 import QtCore, QtGui
+from PySide6.QtGui import QPainter, QPen, Qt, QPixmap, QKeyEvent
 from rdkit import Chem
 from rdkit.Chem import rdDepictor
 from rdkit.Geometry import Point2D, Point3D
@@ -21,6 +22,8 @@ class MoleculeEditor(MoleculeViewer):
         # If it is the case, mark it with a circle...
         # ToDo
         self.setMouseTracking(True)
+        self.setAcceptDrops(True)
+        self.setFocusPolicy(Qt.StrongFocus)
         self.closest_object = None
         self.start_coordinates = None
         self.end_coordinates = None
@@ -164,18 +167,7 @@ class MoleculeEditor(MoleculeViewer):
         x_svg = float(x)/size.width() * view_box.width() + view_box.left()
         y_svg = float(y)/size.height() * view_box.height() + view_box.top()
 
-        # Check distant to the nearest object (atom or bond)
-        atom_index, atom_distance = self.get_nearest_atom(x_svg, y_svg)
-        bond_index, bond_distance = self.get_nearest_bond(x_svg, y_svg)
-
-        if min([atom_distance, bond_distance]) < self.distance_check:
-            # Check what is closer, the atom or the bond
-            if atom_distance < bond_distance:
-                self.closest_object = atom_index
-            else:
-                self.closest_object = bond_index
-        else:
-            self.closest_object = None
+        self.closest_object = self.get_mol_object(event)
 
         if self.drag_atom is not None:
             dragged_atom = self.get_mol_object(event)
@@ -226,6 +218,31 @@ class MoleculeEditor(MoleculeViewer):
 
         self.drag_atom = None
         self.dragged_atom = None
+
+    def keyPressEvent(self, event: PySide6.QtGui.QKeyEvent) -> None:
+        if event.key() == Qt.Key_Delete:
+            if type(self.closest_object) == Chem.rdchem.Atom:
+                self.remove_atom(self.closest_object)
+            elif type(self.closest_object) == Chem.rdchem.Bond:
+                self.remove_bond(self.closest_object)
+
+        elif event.key() == Qt.Key_H and type(self.closest_object) == Chem.rdchem.Atom:
+            self.replace_atom(self.closest_object, 1)
+
+        elif event.key() == Qt.Key_C and type(self.closest_object) == Chem.rdchem.Atom:
+            self.replace_atom(self.closest_object, 6)
+
+        elif event.key() == Qt.Key_N and type(self.closest_object) == Chem.rdchem.Atom:
+            self.replace_atom(self.closest_object, 7)
+
+        elif event.key() == Qt.Key_O and type(self.closest_object) == Chem.rdchem.Atom:
+            self.replace_atom(self.closest_object, 8)
+
+        elif event.key() == Qt.Key_F and type(self.closest_object) == Chem.rdchem.Atom:
+            self.replace_atom(self.closest_object, 9)
+
+
+        super().keyPressEvent(event)
 
     def canvas_click(self, point):
 
@@ -591,7 +608,7 @@ class MoleculeEditor(MoleculeViewer):
         atom.SetFormalCharge(atom.GetFormalCharge()-1)
         self.signal_molecule_changed.emit()
 
-    def replace_atom(self, atom):
+    def replace_atom(self, atom, new_atom=None):
         """
         Replace the specified atom with a new atom of the selected type.
 
@@ -599,7 +616,10 @@ class MoleculeEditor(MoleculeViewer):
         :type atom: Chem.rdchem.Atom
         """
         rwmol = Chem.rdchem.RWMol(self.mol)
-        newatom = Chem.rdchem.Atom(self.atom_type)
+        if new_atom is None:
+            newatom = Chem.rdchem.Atom(self.atom_type)
+        else:
+            newatom = Chem.rdchem.Atom(new_atom)
         rwmol.ReplaceAtom(atom.GetIdx(), newatom)
         self.mol = rwmol
 
