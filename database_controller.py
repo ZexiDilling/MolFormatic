@@ -176,7 +176,7 @@ class FetchData:
         rows = self.co.structure_search(methode, threshold, rows, smiles)
         return rows
 
-    def data_search(self, table, search_limiter):
+    def data_search(self, table, search_limiter, search_list_clm=None, specific_rows=None):
         """
         Gets a list of all compounds in the database
 
@@ -191,7 +191,12 @@ class FetchData:
         if table == "join_main_mp":
             rows = self.dbf.join_table_controller(search_limiter)
         else:
-            rows = self.dbf.return_table_data(table, search_limiter)
+            if type(search_limiter) == list:
+
+                rows = self.dbf.return_table_data_from_list(table, search_limiter, search_list_clm, specific_rows)
+
+            else:
+                rows = self.dbf.return_table_data(table, search_limiter)
 
         return rows
 

@@ -993,7 +993,8 @@ def compound_freezer_to_2d_simulate(tube_file, output_folder):
     csv_w.compound_freezer_to_2d_csv_simulate(tube_dict, output_folder)
 
 
-def grab_table_data(config, table_name, search_limiter=None, single_row=None, data_value=None, headline=None):
+def grab_table_data(config, table_name, search_limiter=None, single_row=None, data_value=None, headline=None,
+                    search_list_clm=None, specific_rows=None):
     """
     Grabs data from tables
     :param config: The config handler, with all the default information in the config file.
@@ -1001,7 +1002,9 @@ def grab_table_data(config, table_name, search_limiter=None, single_row=None, da
     :param table_name: What table are the plates in
     :type table_name: str
     :param search_limiter: A dict to limit the search
-    :type search_limiter: dict or None
+    :type search_limiter: dict or list or None
+    :param single_row: bool statement if it is a sling row look up
+    :type single_row: bool
     :param data_value: The value of the thing you are looking for
     :type data_value: any or None
     :param headline: Headline for the column where  the data is, in the table
@@ -1015,21 +1018,29 @@ def grab_table_data(config, table_name, search_limiter=None, single_row=None, da
         return row_data
     else:
         fd = FetchData(config)
-
-        rows = fd.data_search(table_name, search_limiter)
-
+        rows = fd.data_search(table_name, search_limiter, search_list_clm, specific_rows)
         all_table_data = []
         headlines = []
+        if rows:
+            for row in rows:
+                temp_data = []
+                try:
+                    rows[row]
+                except TypeError:
+                    print(f"table_name: {table_name}")
+                    print(f"search_limiter: {search_limiter}")
+                    print(f"search_list_clm: {search_list_clm}")
+                    print(f"specific_rows: {specific_rows}")
+                else:
+                    for data in rows[row]:
+                        headlines.append(data)
+                        temp_data.append(rows[row][data])
 
-        for row in rows:
-            temp_data = []
-            for data in rows[row]:
-                headlines.append(data)
-                temp_data.append(rows[row][data])
+                all_table_data.append(temp_data)
 
-            all_table_data.append(temp_data)
-
-        return all_table_data, headlines
+            return all_table_data, headlines
+        else:
+            return None, None
 
 
 def update_bio_info_values(values, window, plate_bio_info):
@@ -1217,37 +1228,6 @@ def dp_creator(config, plate_layout, sample_amount, mp_data, transferee_volume, 
 
     # Generate list over mp needed
     csv_w.plate_list_writer(mp_data, output_folder)
-
-
-def update_plate_table(compound_id, config):
-    plate_tables = {"compound_mp": "MP", "compound_dp": "DP"}
-
-    search_limiter_plates = {"compound_id": {"value": compound_id,
-                                             "operator": "=",
-                                             "target_column": "compound_id",
-                                             "use": True}}
-    plate_data = []
-    for tables in plate_tables:
-        temp_data = []
-        all_data_plate, _ = grab_table_data(config, tables, search_limiter_plates)
-        if all_data_plate:
-            all_data_plate = all_data_plate[0]
-            if tables == "compound_mp":
-                temp_data.append(all_data_plate[1])
-                temp_data.append(plate_tables[tables])
-                temp_data.append(all_data_plate[2])
-                temp_data.append(all_data_plate[3])
-                temp_data.append(all_data_plate[4])
-            elif tables == "compound_dp":
-                temp_data.append(all_data_plate[3])
-                temp_data.append(plate_tables[tables])
-                temp_data.append(all_data_plate[4])
-                temp_data.append(all_data_plate[5])
-                temp_data.append(all_data_plate[6])
-
-        plate_data.append(temp_data)
-
-    return plate_data
 
 
 def set_colours(window, reports):

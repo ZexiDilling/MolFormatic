@@ -1392,7 +1392,7 @@ class GUILayout:
         responsible = [keys for keys in list(self.config["Responsible"].keys())]
 
         compound_table_data = []
-        compound_table_headings = ["Compound ID", "score", "hit", "Concentration", "Approved", "well", "Raw Data"]
+        compound_table_headings = ["Compound ID", "score", "hit", "Concentration", "Approved", "Well", "Note"]
         col_compound_table = sg.Frame("Experimental Data", [[
             sg.Column([
                 [sg.Table(values=compound_table_data, headings=compound_table_headings, key="-BIO_EXP_COMPOUND_TABLE-",
@@ -1416,10 +1416,16 @@ class GUILayout:
         ]])
 
         plate_table_data = []
-        plate_table_headings = ["Plate Name", "Z-Prime", "Approved", "note", "Layout", "responsible", "date"]
-
+        plate_table_headings = ["Plate", "Z-prime", "Approval", "Note", "Method", "Run"]
+        assay_run_headings = ["Run", "Batch", "Date", "Note"]
         col_plate_table = sg.Frame("Plates", [[
             sg.Column([
+                [sg.Table(values=[], headings=assay_run_headings, key="-BIO_EXP_ASSAY_RUN_TABLE-",
+                          auto_size_columns=False, col_widths=[10, 10, 10], enable_events=True,
+                          enable_click_events=True),
+                 sg.Listbox("", key="-BIO_EXP_TABLE_ASSAY_LIST_BOX-", enable_events=True, size=(10, 10),
+                            select_mode=sg.LISTBOX_SELECT_MODE_MULTIPLE)
+                 ],
                 [sg.Table(values=plate_table_data, headings=plate_table_headings, key="-BIO_EXP_PLATE_TABLE-",
                           auto_size_columns=False, col_widths=[10, 10, 10],
                           enable_events=True, enable_click_events=True)],
@@ -1429,10 +1435,9 @@ class GUILayout:
             ])
         ]])
 
-        col_search = sg.Frame("Search Criteria", [[
+        col_search = sg.Frame("Assays", [[
             sg.Column([
-                [sg.Listbox("", key="-BIO_EXP_TABLE_ASSAY_LIST_BOX-", enable_events=True, size=(18, 10),
-                            select_mode=sg.LISTBOX_SELECT_MODE_MULTIPLE)],
+                [],
                 [sg.T("Assay Name", size=10), sg.Input(key="-BIO_EXP_ASSAY_NAME_SEARCH-", size=10)],
                 [sg.CalendarButton("Start date", key="-BIO_EXP_TABLE_DATE_START-", format="%Y-%m-%d", enable_events=True
                                    , target="-BIO_EXP_TABLE_DATE_START_TARGET-", size=(10, 1)),
@@ -1445,7 +1450,7 @@ class GUILayout:
             ])
         ]])
 
-        layout = [sg.vtop([col_compound_table, col_plate_table, col_search])]
+        layout = [sg.vtop([col_compound_table, col_plate_table])]
         return layout
 
     @staticmethod

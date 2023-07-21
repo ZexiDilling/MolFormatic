@@ -428,6 +428,23 @@ class DataBaseFunctions:
 
         return final_text
 
+
+    def return_table_data_from_list(self, table, search_list, search_list_clm, specific_clm):
+        # Convert the list of selected assay names into a comma-separated string for the SQL query
+        selected_assays_str = ", ".join([f"'{assay_name}'" for assay_name in search_list])
+
+        from_string = ""
+        if specific_clm is not None:
+            for clm_names in specific_clm:
+                from_string += f"{clm_names}, "
+            from_string = from_string.removesuffix(", ")
+        else:
+            from_string = "*"
+        # SQL query to select data from the "assay_runs" table where the "assay_name" is in the selected_assays list
+        temp_table = f"SELECT {from_string} FROM {table} WHERE {search_list_clm} IN ({selected_assays_str})"
+
+        return self._row_creator(temp_table)
+
     def return_table_data(self, table, search_limiter):
         """
         Gets all information from a table, there is over "min_volume" left
