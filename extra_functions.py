@@ -40,5 +40,14 @@ def row_col_to_cell(row, col):
         cell_name = f"{col_names[stacking_letter]}{col_names[temp_col]}{row}"
     return cell_name
 
+
+def increment_text_string(txt):
+    head = txt.rstrip('0123456789')
+    tail = txt[len(head):]
+    tail = int(tail) + 1
+    incremented_text = f"{head}{tail}"
+    return incremented_text
+
+
 if __name__ == "__main__":
     print(row_col_to_cell(3, 53))

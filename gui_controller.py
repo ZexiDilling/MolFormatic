@@ -6,6 +6,7 @@ from rdkit.Chem import MolToSmiles
 import multiprocessing as mp
 from multiprocessing import Queue
 
+from excel_handler import purity_sample_layout_import, purity_sample_layout_export
 from gui_layout import GUILayout
 from gui_settings_control import GUISettingsController
 from gui_functions import *
@@ -13,7 +14,7 @@ from gui_guards import *
 from bio_data_functions import org, norm, pora, pora_internal
 from plate_formatting import plate_layout_re_formate
 from gui_popup import matrix_popup, sample_to_compound_name_controller, ms_raw_name_guard, bio_data_approval_table, \
-    assay_generator
+    assay_generator, assay_run_naming
 from gui_help_info_controller import help_info_controller
 from config_writer import ConfigWriter
 from database_startup import DatabaseSetUp
@@ -836,7 +837,11 @@ def main(config, queue_gui, queue_mol):
                 archive = True
                 gui_tab = "bio"
                 sample_type = values["-BIO_SAMPLE_TYPE-"]
-                draw_plate(config, graph_bio, plate_size, well_dict, gui_tab, archive, sample_layout=sample_type)
+                if sample_type != "Custom":
+                    try:
+                        draw_plate(config, graph_bio, plate_size, well_dict, gui_tab, archive, sample_layout=sample_type)
+                    except KeyError:
+                        print(f"There is no place layout for {sample_type}")
 
         if event == "-BIO_COMPOUND_DATA-" and values["-BIO_COMPOUND_DATA-"]:
             window["-BIO_EXPERIMENT_ADD_TO_DATABASE-"].update(value=True)
@@ -849,12 +854,6 @@ def main(config, queue_gui, queue_mol):
 
         if event == "-BIO_EXPERIMENT_ADD_TO_DATABASE-" and values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"]:
             window["-BIO_COMPOUND_DATA-"].update(value=True)
-
-        if event == "-BIO_EXPERIMENT_ADD_TO_DATABASE-" and not values["-BIO_ASSAY_NAME-"]:
-            if values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"]:
-                sg.popup_error("ERROR!!!!!!! no assayMake a list to chose name from")
-                # if assay_name:
-                #     window["-BIO_ASSAY_NAME-"].update(value=assay_name)
 
         if event == "-BIO_COMBINED_REPORT-" and not values["-FINAL_BIO_NAME-"] and \
                 values["-BIO_COMBINED_REPORT-"] is True:
@@ -968,10 +967,14 @@ def main(config, queue_gui, queue_mol):
                         bio_sample_list = sg.popup_get_file("Please select worklist files", multiple_files=True)
                         if bio_sample_list is not None:
                             bio_sample_list = bio_sample_list.split(";")
-                            bio_sample_dict = bio_compound_info_from_worklist(config, sg, bio_sample_list)
+                            bio_sample_dict, all_destination_plates = bio_compound_info_from_worklist(config, sg,
+                                                                                                      bio_sample_list)
                         else:
+                            bio_sample_dict = None
                             bio_breaker = True
+                            all_destination_plates = []
                     else:
+                        all_destination_plates = None
                         bio_sample_dict = None
                     if not bio_breaker:
                         try:
@@ -982,65 +985,23 @@ def main(config, queue_gui, queue_mol):
                         else:
                             temp_concentration = float(values["-BIO_FINAL_REPORT_CONCENTRATION_NUMBER-"])
 
-                        # gets get all the data from the different files and the results from the platereader.
-                        # the plate reader data can either be in excel formate or in txt formate.
-                        # If the raw data is txt, it re-writes it to excel. then it analyses the data and writes it in the
-                        # excel file.
-                        # analyse_method = values["-BIO_ANALYSE_TYPE-"]     # not used atm...
-                        analyse_method = "single point"
+                        analyse_method = values["-BIO_ANALYSE_TYPE-"]     # not used atm...
                         add_compound_ids = values["-BIO_REPORT_ADD_COMPOUND_IDS-"]
+                        combined_report_check = values["-BIO_COMBINED_REPORT-"]
+                        import_to_database_check = values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"]
+                        responsible = values["-BIO_RESPONSIBLE-"]
+                        assay_name = values["-BIO_ASSAY_NAME-"]
 
-                        worked, all_plates_data, date, used_plates, plate_to_layout = \
-                            bio_data(config, bio_import_folder, plate_to_layout, archive_plates_dict,
-                                     bio_plate_report_setup, analyse_method, bio_sample_dict, bio_export_folder,
-                                     add_compound_ids, export_to_excel)
+                        bio_import_report_handler(config, bio_import_folder, plate_to_layout, archive_plates_dict,
+                                                  bio_plate_report_setup, analyse_method, bio_sample_dict,
+                                                  bio_export_folder, add_compound_ids, export_to_excel,
+                                                  all_destination_plates, combined_report_check,
+                                                  import_to_database_check, bio_final_report_setup, final_report_name,
+                                                  include_hits, threshold, hit_amount, include_smiles,
+                                                  include_structure, assay_name, responsible, temp_concentration)
 
-                        # Check if there should be produced a combined report over all the data
-                        if values["-BIO_COMBINED_REPORT-"]:
-                            bio_full_report(config, analyse_method, all_plates_data,
-                                            bio_final_report_setup, bio_export_folder, final_report_name, include_hits,
-                                            threshold, hit_amount, include_smiles, bio_sample_dict, plate_to_layout,
-                                            archive_plates_dict, include_structure)
-
-                        # Check if the data should be added to the database
-                        if values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"]:
-                            # Set up values for the database.
-
-                            assay_name = values["-BIO_ASSAY_NAME-"]
-                            responsible = values["-BIO_RESPONSIBLE-"]
-                            concentration = f"{temp_concentration}" \
-                                            f"{values['-BIO_FINAL_REPORT_CONCENTRATION_UNIT-']}"
-
-                            # # Grabs the value for the assay from the database
-                            assay_data_row = grab_table_data(config, table_name="assay", single_row=True,
-                                                             data_value=assay_name, headline="assay_name")
-
-                            assay_data = {"assay_name": assay_data_row[0][2],
-                                          "plate_layout": assay_data_row[0][4],
-                                          "z_prime_threshold": assay_data_row[0][7],
-                                          "hit_threshold": assay_data_row[0][8],
-                                          "plate_size": assay_data_row[0][9]}
-
-                            # Open a popup window where data can be checked before being added to the database.
-                            all_plates_data, plate_analyse_methods = \
-                                bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, same_layout,
-                                                        plate_to_layout, archive_plates_dict, color_select,
-                                                        bio_plate_report_setup)
-
-                            if type(all_plates_data) != str:
-                                # Adds the approved data to the database
-                                bio_experiment_to_database(config, assay_data, all_plates_data, plate_analyse_methods,
-                                                           date, responsible, bio_sample_dict, concentration)
-
-                            else:
-                                worked = "Cancel the import"
-
-                        if worked:
-                            sg.popup(f"{worked}")
-
-
-
-        # if event == "-BIO_SEND_TO_INFO-":
+        if event == "-BIO_SEND_TO_INFO-":
+            sg.popup_error("Needs to be updated to do something else")
             # ToDO this needs to be updated to fit with the new formate of bio data!
             #
             # if not values["-BIO_PLATE_LAYOUT-"]:
@@ -1214,8 +1175,12 @@ def main(config, queue_gui, queue_mol):
 
                             # Make sure that the names are correct for the compound data. Will change the name in purity-data
                             if compound_data:
-                                new_names = sample_to_compound_name_controller(config,
-                                                                               purity_data)  # ToDo duplicate code later on, for checking data that is not compound data
+                                fd = FetchData(config)
+                                # ToDo duplicate code later on, for checking data that is not compound data
+                                new_names = sample_to_compound_name_controller(config, purity_data, fd,
+                                                                               purity_sample_layout_import,
+                                                                               purity_sample_layout_export, sort_table)
+
                                 if new_names:
                                     for sample in new_names:
                                         if new_names[sample] == "Delete":
@@ -1346,13 +1311,21 @@ def main(config, queue_gui, queue_mol):
                     # saves the layout to the Database
                     # setting up the data for importing the new plate_layout to the database
                     temp_table = "plate_layout"
+                    # ToDo add plate model ??
                     temp_plate_layout_data = {
                         "plate_name": temp_dict_name,
-                        "well_layout": f"{temp_well_dict}",
-                        "plate_type": values["-PLATE-"]
+                        "plate_type": values["-PLATE-"],
+                        "plate_model": "placeholder"
                     }
 
                     update_database(config, temp_table, temp_plate_layout_data)
+
+                    temp_sub_plate_layout_data = {
+                        "plate_sub": temp_dict_name,
+                        "plate_main": temp_dict_name,
+                        "plate_layout": f"{temp_well_dict}"
+                    }
+                    update_database(config, "plate_layout_sub", temp_sub_plate_layout_data)
 
                     # Updates the plate_list and archive_plates_dict with the new plate
                     plate_list, archive_plates_dict = get_plate_layout(config)
@@ -1834,7 +1807,11 @@ def main(config, queue_gui, queue_mol):
                 headings = config["Extra_tab_database_headings"]["plate_type"].split(",")
                 plate_types_data = database_to_table(config, table, headings)
                 window["-EXTRA_PLATE_TYPE_LISTBOX-"].update(values=[plate_types_data])
+
+                vendors = database_to_table(config, "vendors", "name")
+                window["-EXTRA_PLATE_TYPE_VENDOR-"].update(values=vendors)
                 print(f"plate_types_data: {plate_types_data}")
+
             elif values["-EXTRA_SUB_DATABASE_TABS-"] == "Location" and not location_data:
                 table = "locations"
                 headings = config["Extra_tab_database_headings"]["locations"].split(",")
@@ -1923,26 +1900,46 @@ def main(config, queue_gui, queue_mol):
                 sg.popup_error("Please fill in product number")
             else:
                 table = "plate_type"
-                data = {"row_id": "",
-                        "plate_type": values["-EXTRA_PLATE_TYPE_NAME-"],
-                        "vendor": values["-EXTRA_PLATE_TYPE_VENDOR-"],
-                        "product_number": values["-EXTRA_PLATE_TYPE_PRODUCT_NUMBER-"],
-                        "sterile": values["-EXTRA_PLATE_TYPE_STERILE-"],
-                        "info": values[""],
-                        "size": int(values["-EXTRA_PLATE_TYPE_SIZE-"]),
-                        "well_offset_x": float(values["-EXTRA_PLATE_TYPE_WELL_OFFSET_X-"]),
-                        "well_offset_y": float(values["-EXTRA_PLATE_TYPE_WELL_OFFSET_Y-"]),
-                        "well_spacing_x": float(values["-EXTRA_PLATE_TYPE_WELL_SPACING_X-"]),
-                        "well_spacing_y": float(values["-EXTRA_PLATE_TYPE_WELL_SPACING_Y-"]),
-                        "plate_height": float(values["-EXTRA_PLATE_TYPE_PLATE_HEIGHT-"]),
-                        "plate_height_lid": float(values["EXTRA_PLATE_TYPE_PLATE_HEIGHT_LID-"]),
-                        "flang_height": float(values["-EXTRA_PLATE_TYPE_FLANGE_HEIGHT-"]),
-                        "well_depth": (float(values["-EXTRA_PLATE_TYPE_PLATE_HEIGHT-"]) -
-                                       float(values["-EXTRA_PLATE_TYPE_FLANGE_HEIGHT-"])),
-                        "well_width": float(values["-EXTRA_PLATE_TYPE_WELL_WIDTH-"]),
-                        "max_volume": float(values["-EXTRA_PLATE_TYPE_MAX_VOL-"]),
-                        "working_volume": float(values["-EXTRA_PLATE_TYPE_WORKING_VOL-"]),
-                        "dead_volume": float(values["-EXTRA_PLATE_TYPE_WELL_DEAD_VOL-"])}
+                try:
+                    data = {"row_id": "",
+                            "plate_type": values["-EXTRA_PLATE_TYPE_NAME-"],
+                            "vendor": values["-EXTRA_PLATE_TYPE_VENDOR-"][0],
+                            "product_number": values["-EXTRA_PLATE_TYPE_PRODUCT_NUMBER-"],
+                            "sterile": values["-EXTRA_PLATE_TYPE_STERILE-"],
+                            "info": values["-EXTRA_PLATE_TYPE_INFO-"],
+                            "size": int(values["-EXTRA_PLATE_TYPE_SIZE-"]),
+                            "well_offset_x": float(values["-EXTRA_PLATE_TYPE_WELL_OFFSET_X-"]),
+                            "well_offset_y": float(values["-EXTRA_PLATE_TYPE_WELL_OFFSET_Y-"]),
+                            "well_spacing_x": float(values["-EXTRA_PLATE_TYPE_WELL_SPACING_X-"]),
+                            "well_spacing_y": float(values["-EXTRA_PLATE_TYPE_WELL_SPACING_Y-"]),
+                            "plate_height": float(values["-EXTRA_PLATE_TYPE_PLATE_HEIGHT-"]),
+                            "plate_height_lid": float(values["EXTRA_PLATE_TYPE_PLATE_HEIGHT_LID-"]),
+                            "flang_height": float(values["-EXTRA_PLATE_TYPE_FLANGE_HEIGHT-"]),
+                            "well_depth": (float(values["-EXTRA_PLATE_TYPE_PLATE_HEIGHT-"]) -
+                                           float(values["-EXTRA_PLATE_TYPE_FLANGE_HEIGHT-"])),
+                            "well_width": float(values["-EXTRA_PLATE_TYPE_WELL_WIDTH-"]),
+                            "max_volume": float(values["-EXTRA_PLATE_TYPE_MAX_VOL-"]),
+                            "working_volume": float(values["-EXTRA_PLATE_TYPE_WORKING_VOL-"]),
+                            "dead_volume": float(values["-EXTRA_PLATE_TYPE_WELL_DEAD_VOL-"])}
+                except ValueError:
+                    data = {"row_id": 0,
+                            "plate_type": values["-EXTRA_PLATE_TYPE_NAME-"],
+                            "vendor": values["-EXTRA_PLATE_TYPE_VENDOR-"][0],
+                            "product_number": values["-EXTRA_PLATE_TYPE_PRODUCT_NUMBER-"],
+                            "sterile": values["-EXTRA_PLATE_TYPE_STERILE-"],
+                            "info": values["-EXTRA_PLATE_TYPE_INFO-"],
+                            "well_offset_x": 0,
+                            "well_offset_y": 0,
+                            "well_spacing_x": 0,
+                            "well_spacing_y": 0,
+                            "plate_height": 0,
+                            "plate_height_lid": 0,
+                            "flang_height": 0,
+                            "well_depth": 0,
+                            "well_width": 0,
+                            "max_volume": 0,
+                            "working_volume": 0,
+                            "dead_volume": 0}
                 update_database(config, table, data)
 
         if event == "-EXTRA_DATABASE_LOCATION_IMPORT_DB-":
@@ -2739,10 +2736,11 @@ def main(config, queue_gui, queue_mol):
             state = values["-BIO_INFO_MATRIX_STATE-"]
             calc = values["-BIO_INFO_MATRIX_CALC-"]
 
-            matrix_popup(plate_bio_info, calc_values, state_values, method_values, calc, state, method)
+            matrix_popup(plate_bio_info, calc_values, state_values, method_values, calc, sub_settings_matrix, state,
+                         method)
 
         if event == "-BIO_INFO_Z_PRIME_MATRIX_BUTTON-" and plate_bio_info:
-            matrix_popup(plate_bio_info, calc_values, state_values, method_values, "z_prime")
+            matrix_popup(plate_bio_info, calc_values, state_values, method_values, "z_prime", sub_settings_matrix)
 
         if event == "-BIO_INFO_MATRIX_BUTTON-" and plate_bio_info:
             data_dict = plate_bio_info

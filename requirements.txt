@@ -9,3 +9,7 @@ rdkit==2022.9.4
 rdkit_pypi==2022.3.2.1
 scipy==1.8.1
 seaborn==0.11.2
+
+configparser~=5.2.0
+DateTime~=4.5
+PySide6~=6.5.1.1

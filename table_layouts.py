@@ -76,6 +76,13 @@ plate_type = """ CREATE TABLE IF NOT EXISTS plate_type(
             FOREIGN KEY("vendor") REFERENCES "vendors"("name")
             """
 
+plate_layout = """ CREATE TABLE IF NOT EXISTS plate_layout(  
+            plate_name TEXT NOT NULL UNIQUE,
+            plate_type TEXT,
+            plate_model TEXT
+            FOREIGN KEY(plate_model) REFERENCES plate_type(plate_type)
+            ); """
+
 compound_data_table = """ CREATE TABLE IF NOT EXISTS compound_data( 
             compound_id INTEGER NOT NULL,
             exp_id INTEGER NOT NULL UNIQUE,
@@ -100,19 +107,49 @@ location_table = """ CREATE TABLE IF NOT EXISTS locations(
             spot TEXT NOT NULL
             ); """
 
+assay = """ CREATE TABLE IF NOT EXISTS assay(
+            row_id INTEGER PRIMARY KEY AUTOINCREMENT,         
+            assay_name TEXT NOT NULL UNIQUE,
+            sop TEXT,
+            plate_layout TEXT,
+            z_prime_threshold	REAL,
+            hit_threshold	REAL,
+            FOREIGN KEY(plate_layout) REFERENCES plate_layout(plate_name)
+            ); """
+
+assay_runs = """ CREATE TABLE IF NOT EXISTS assay_runs(
+            run_name	TEXT NOT NULL UNIQUE,
+            assay_name	TEXT NOT NULL,
+            batch	INTEGER NOT NULL,
+            worklist	BLOB,
+            echo_data   TEXT,
+            date	REAL NOT NULL,
+            note	TEXT,
+            FOREIGN KEY("assay_name") REFERENCES "assay"("assay_name")
+            ); """
+
+plate_layout_sub = """CREATE TABLE IF NOT EXISTS plate_layout_sub(
+            plate_sub	TEXT NOT NULL UNIQUE,
+            plate_main	TEXT NOT NULL,
+            well_layout	TEXT NOT NULL,
+            FOREIGN KEY(plate_main) REFERENCES plate_layout(plate_name)
+            );"""
+
+
 bio_experiment_table = """ CREATE TABLE IF NOT EXISTS biological_plate_data(
             exp_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            assay_name TEXT NOT NULL,
-            raw_data TEXT NOT NULL,
-            responsible TEXT,
-            date REAL NOT NULL,
+            assay_run TEXT NOT NULL,
             plate_name	TEXT NOT NULL UNIQUE,
-            approval	TEXT NOT NULL,
-            z_prime	    REAL,
+            raw_data TEXT NOT NULL,
             process_data    TEXT,
-            plate_layout	TEXT NOT NULL,
+            z_prime	    REAL,
+            responsible TEXT,
+            approval	TEXT NOT NULL,
             note    TEXT,
-            FOREIGN KEY("assay_name") REFERENCES "assay"("assay_name")
+            plate_layout	TEXT NOT NULL,
+            analysed_method TEXT NOT NULL,
+            FOREIGN KEY("assay_run") REFERENCES "assay_runs"("run_name"),
+            FOREIGN KEY(plate_layout) REFERENCES plate_layout_sub(plate_sub)
             ); """
 
 biological_compound_data = """ CREATE TABLE IF NOT EXISTS biological_compound_data(
@@ -120,12 +157,13 @@ biological_compound_data = """ CREATE TABLE IF NOT EXISTS biological_compound_da
             compound_id INTEGER NOT NULL,
             assay_plate TEXT NOT NULL,
             assay_well TEXT NOT NULL,
-            raw_data REAL NOT NULL,
             score REAL NOT NULL,
             hit TEXT NOT NULL,
             concentration   REAL NOT NULL,
+            raw_data REAL NOT NULL,
             approved TEXT NOT NULL,
             note TEXT,
+            transferred TEXT,
             FOREIGN KEY (compound_id) REFERENCES compound_main(compound_id),
             FOREIGN KEY (assay_plate) REFERENCES biological_plate_data(plate_name)
             ); """
@@ -190,28 +228,12 @@ responsible = """ CREATE TABLE IF NOT EXISTS responsible(
             info BLOB
             ); """
 
-assay = """ CREATE TABLE IF NOT EXISTS assay(
-            row_id INTEGER PRIMARY KEY AUTOINCREMENT,         
-            assay TEXT NOT NULL UNIQUE,
-            plate_layout TEXT,
-            sop TEXT,
-            plates_run INTEGER,
-            compounds_run INTEGER,
-            z_prime_threshold	REAL,
-            hit_threshold	REAL,
-            FOREIGN KEY(plate_layout) REFERENCES plate_layout(plate_name)
-            ); """
-
 assay_customers = """ CREATE TABLE IF NOT EXISTS assay_customers(
             row_id INTEGER PRIMARY KEY AUTOINCREMENT,
             customer TEXT NOT NULL,
-            exp_id INTEGER NOT NULL, 
+            assay_name INTEGER NOT NULL, 
             FOREIGN KEY (customer) REFERENCES customers(name),
-            FOREIGN KEY (exp_id) REFERENCES bio_experiment(exp_id)
+            FOREIGN KEY (assay_name) REFERENCES assay(assay_name)
             ); """
 
-plate_layout = """ CREATE TABLE IF NOT EXISTS plate_layout(  
-            plate_name TEXT NOT NULL UNIQUE,
-            well_layout TEXT,
-            plate_type TEXT
-            ); """
+

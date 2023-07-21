@@ -628,8 +628,6 @@ class CSVReader:
     def grab_headlines(csv_file):
         splitter = [";", ",", "."]
         split_indicator = 0
-        splitter = [";", ",", "."]
-        split_indicator = 0
         with open(csv_file) as file:
             for index, lines in enumerate(file):
                 lines = lines.removesuffix("\n")
@@ -640,7 +638,8 @@ class CSVReader:
                     return headlines
 
     @staticmethod
-    def echo_worklist_to_dict(config, config_headline, csv_file, right_headlines, new_headline, sample_dict):
+    def echo_worklist_to_dict(config, config_headline, csv_file, right_headlines, new_headline, sample_dict,
+                              all_destination_plates):
         splitter = [";", ",", "."]
         split_indicator = 0
         with open(csv_file) as file:
@@ -685,6 +684,10 @@ class CSVReader:
                             temp_source_well = data
                         elif data_index == destination_well_index:
                             temp_destination_well = data
+
+                    if temp_destination_plate not in all_destination_plates:
+                        all_destination_plates.append(temp_destination_plate)
+
                     try:
                         sample_dict[temp_destination_plate]
                     except KeyError:
@@ -699,7 +702,7 @@ class CSVReader:
                                                                                       "smiles": "",
                                                                                       "compound_id": ""}
 
-        return "done", headlines, sample_dict
+        return "done", headlines, sample_dict, all_destination_plates
 
 
 class CSVConverter:
@@ -729,29 +732,5 @@ class CSVConverter:
 
 
 if __name__ == "__main__":
-    file_input_1 = "DTU-CML-Plate14-101105-Full-Silvia.csv"
-    folder = "O:/Organisk kemi/molecular library running plate/FullPlates/NEW FILES/CSV FILES"
-    full_list = f"{folder}/{file_input_1}"
-    file_type_2 = "pb_mp"
-    file_type_1 = "tab"
-
-    right_headlines = ["source_plates", "destination_plates", "source_well", "destination_well"]
-    csv_file = "C:/Users/phch/Desktop/more_data_files/50sets_picklist_updated_worklists_new.txt"
-    new_headline = None
-    sample_dict = {}
-    csv = CSVReader()
-    test = csv.echo_worklist_to_dict(csv_file, right_headlines, new_headline, sample_dict)
-    if type(test) == str:
-        print(test)
-    else:
-        for plates in test:
-            for wells in test[plates]:
-
-                print(test[plates][wells]["source_plate"])
-                print(test[plates][wells]["source_well"])
-
-
-    # csvw = CSVWriter()
-    # csvw.compound_handler(com_list)
-
+    ...
 

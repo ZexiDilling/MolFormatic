@@ -10,7 +10,7 @@ import natsort
 from natsort import natsorted
 from os import mkdir
 
-from gui_popup import new_headlines_popup, plate_layout_chooser
+from gui_popup import new_headlines_popup, plate_layout_chooser, assay_run_naming, bio_data_approval_table
 from csv_handler import CSVWriter, CSVConverter, CSVReader
 from lc_data_handler import LCMSHandler
 from database_handler import DataBaseFunctions
@@ -482,7 +482,6 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
             well_dict[temp_well]["group"] = group
             well_dict[temp_well]["well_id"] = well_id
             well_dict[temp_well]["state"] = well_state
-            well_dict[temp_well]["colour"] = fill_colour
 
     min_x = start_x - size[plate_type]
     min_y = start_y - (columns[plate_type] * size[plate_type])
@@ -511,7 +510,7 @@ def bio_compound_info_from_worklist(config, sg, bio_sample_list):
     right_headlines_v2 = []
     for headline in temp_headlines:
         right_headlines_v2.append(config["worklist_headlines_v2"][headline])
-
+    all_destination_plates = []
     sample_dict = {}
     for files in bio_sample_list:
         file_headlines = CSVReader.grab_headlines(files)
@@ -526,21 +525,21 @@ def bio_compound_info_from_worklist(config, sg, bio_sample_list):
             config_headline = "worklist_headlines_v1"
 
         new_headline = None
-        msg, file_headlines, sample_dict = CSVReader.echo_worklist_to_dict(config, config_headline, files, right_headlines, new_headline,
-                                                                           sample_dict)
+        msg, file_headlines, sample_dict, all_destination_plates = CSVReader.echo_worklist_to_dict(
+            config, config_headline, files, right_headlines, new_headline, sample_dict, all_destination_plates)
 
         # if the file uses wrong names for the headlines, this will give a popup with the "wrong headlines" and an
         # option to change them.
         if msg == "Wrong headlines":
             print(f"{files} have the wrong format")
             new_headline = new_headlines_popup(sort_table, right_headlines, file_headlines)
-            msg, file_headlines, sample_dict = CSVReader.echo_worklist_to_dict(config, config_headline, files, right_headlines, new_headline,
-                                                                               sample_dict)
+            msg, file_headlines, sample_dict, all_destination_plates = CSVReader.echo_worklist_to_dict(
+                config, config_headline, files, right_headlines, new_headline, sample_dict, all_destination_plates)
         elif msg == "Not a CSV file":
             sg.popup_error("Wrong file fomate!!!")              # ToDo sort out this guard so it dose not crash.
             continue
 
-    return sample_dict
+    return sample_dict, all_destination_plates
 
 
 def _folder_digger_for_file_names(folder):
@@ -580,7 +579,7 @@ def plate_layout_setup(folder, default_plate_layout, plate_layout_list):
     return all_plate_layouts
 
 
-def bio_data(config, folder, plate_to_layout, archive_plates_dict, bio_plate_report_setup, analysis, bio_sample_dict,
+def bio_data(config, folder, plate_to_layout, archive_plates_dict, bio_plate_report_setup, analysis_method, bio_sample_dict,
              save_location, add_compound_ids, write_to_excel=True):
 
     """
@@ -599,12 +598,14 @@ def bio_data(config, folder, plate_to_layout, archive_plates_dict, bio_plate_rep
     :type bio_plate_report_setup: dict
     :param bio_sample_dict: None or a dict of sample ide, per plate analysed
     :type bio_sample_dict: dict
-    :param analysis: The analysis method
-    :type analysis: str
+    :param analysis_method: The analysis method
+    :type analysis_method: str
     :param save_location: where to save all the excel files
     :type save_location: str
     :param add_compound_ids: Will add the compound ID to each well on the hit-list
     :type add_compound_ids: bool
+    :param write_to_excel: A bool statement to see if the results should be exported to excel
+    :type write_to_excel: bool
     :return: All the data for the plates raw data, and their calculations
     :rtype: dict
     """
@@ -631,12 +632,13 @@ def bio_data(config, folder, plate_to_layout, archive_plates_dict, bio_plate_rep
                 continue
             else:
                 temp_plate_layout = archive_plates_dict[temp_plate_layout_name]
+
                 all_data, well_row_col, well_type, barcode, date = original_data_dict(files, temp_plate_layout)
                 if not all_data:
                     return False
                 used_plates.append(barcode)
                 all_plates_data[barcode] = bioa.bio_data_controller(files, temp_plate_layout, all_data, well_row_col,
-                                                                    well_type, analysis, write_to_excel,
+                                                                    well_type, analysis_method, write_to_excel,
                                                                     bio_sample_dict, save_location, add_compound_ids)
 
         else:
@@ -689,8 +691,9 @@ def bio_full_report(config, analyse_method, all_plate_data, final_report_setup, 
                                 archive_plates_dict, include_structure)
 
 
-def bio_experiment_to_database(config, assay_data, plate_data, plate_analyse_methods,
-                               date, responsible, bio_sample_dict, concentration):
+def bio_experiment_to_database(config, assay_data, used_plates, all_plates_data, plate_analyse_methods, responsible,
+                               bio_sample_dict, concentration, all_compound_data, sub_layouts, dismissed_plates,
+                               dead_plates):
     """
     Controls adding Biological data, to two different databases: Biological_plate_data and Biological_compound_data
 
@@ -698,18 +701,20 @@ def bio_experiment_to_database(config, assay_data, plate_data, plate_analyse_met
     :type config: configparser.ConfigParser
     :param assay_data: Data for the assay
     :type assay_data: dict
-    :param plate_data: The data for all the plates
-    :type plate_data: dict
+    :param all_plates_data: The data for all the plates
+    :type all_plates_data: dict
     :param plate_analyse_methods: The method that have been used to analyse the data
     :type plate_analyse_methods: list
-    :param date: The data for the data
-    :type date: dict or str
     :param responsible: The responsible person for the run
     :type responsible: dict or str
     :param bio_sample_dict: All the data for the compounds
     :type bio_sample_dict: dict
     :param concentration: Either a single value if the analys type is "single". It should be a dict for Dose-Reponse
     :type concentration: str or dict
+    :param all_compound_data:
+    :type all_compound_data: dict
+    :param sub_layouts:
+    :type sub_layouts: dict
     :return:
     """
 
@@ -724,28 +729,68 @@ def bio_experiment_to_database(config, assay_data, plate_data, plate_analyse_met
     dbf = DataBaseFunctions(config)
 
     # Add plates to the database
-    total_plate_amount = len(plate_data)
+    total_plate_amount = len(all_plates_data)
+    sub_layout_table = "plate_layout_sub"
 
-    for plate_index, plates in enumerate(plate_data):
+    # add new sub_layouts to db:
+    for plates in sub_layouts:
+        if sub_layouts[plates]["new"]:
+            temp_plate_sub = sub_layouts[plates]["name"]
+            temp_plate_layout = sub_layouts[plates]["layout"]
+            temp_sub_layout_data = {
+                "plate_sub": temp_plate_sub,
+                "plate_main": assay_data["plate_layout"],
+                "plate_layout": f"{temp_plate_layout['well_layout']}"
+            }
+            dbf.add_records_controller(sub_layout_table, temp_sub_layout_data)
+
+    for plate_index, plates in enumerate(used_plates):
 
         # A guard to check if the plate is already in the database. If this is the case it skips to the next plate
         guard = dbf.find_data_single_lookup(plate_table, plates, "plate_name")
         if guard:
+            print(plates)
             print("skipping plate")
             continue
 
         # Set up for the import of each plate:
         exp_id = get_number_of_rows(config, plate_table) + 1
+        if plates in dismissed_plates:
+            print(f"dissed: {all_plates_data[plates]}")
+            plate_raw_data = f"{all_plates_data[plates]['plates'][plate_analyse_methods[0]]['wells']}"
+            process_data = "Null"
+            z_prime = float(all_plates_data[plates]["calculations"]["other"]["z_prime"])
+            plate_approval = f"{all_plates_data[plates]['approved']}"
+            plate_note = f"{all_plates_data[plates]['note']}"
+            assay_run = f"{all_plates_data[plates]['run_name']}"
+            analysis_method = f"{all_plates_data[plates]['analysis_method']}"
+        elif plates in dead_plates:
+            print(f"dead_plate: {all_plates_data[plates]}")
+            plate_raw_data = "None"
+            process_data = "Null"
+            z_prime = "Null"
+            plate_approval = f"{all_plates_data[plates]['approved']}"
+            plate_note = "Dead Plate - See Run note"
+            assay_run = f"{all_plates_data[plates]['run_name']}"
+            analysis_method = f"{all_plates_data[plates]['analysis_method']}"
+        else:
+            print(f"Good: {all_plates_data[plates]}")
+            plate_raw_data = f"{all_plates_data[plates]['plates'][plate_analyse_methods[0]]['wells']}"
+            process_data = f"{all_plates_data[plates]['plates'][plate_analyse_methods[-1]]['wells']}"
+            z_prime = float(all_plates_data[plates]["calculations"]["other"]["z_prime"])
+            plate_approval = f"{all_plates_data[plates]['approved']}"
+            plate_note = f"{all_plates_data[plates]['note']}"
+            assay_run = f"{all_plates_data[plates]['run_name']}"
+            analysis_method = f"{all_plates_data[plates]['analysis_method']}"
 
-        plate_raw_data = f"{plate_data[plates]['plates'][plate_analyse_methods[0]]['wells']}"
-        process_data = f"{plate_data[plates]['plates'][plate_analyse_methods[-1]]['wells']}"
-        z_prime = float(plate_data[plates]["calculations"]["other"]["z_prime"])
-        plate_approval = f"{plate_data[plates]['approved']}"
-        plate_note = f"{plate_data[plates]['note']}"
+        if sub_layouts[plates]["new"]:
+            temp_plate_layout = sub_layouts[plates]["name"]
+        else:
+            temp_plate_layout = assay_data["assay_name"]
 
         temp_plate_data = {
             "exp_id": exp_id,
-            "assay_name": assay_data["assay_name"],
+            "assay_run": assay_run,
             "plate_name": plates,
             "raw_data": plate_raw_data,
             "process_data": process_data,
@@ -753,8 +798,8 @@ def bio_experiment_to_database(config, assay_data, plate_data, plate_analyse_met
             "responsible": responsible,
             "approval": plate_approval,
             "note": plate_note,
-            "plate_layout": assay_data["plate_layout"],
-            "date": date
+            "plate_layout": temp_plate_layout,
+            "analysis_method": analysis_method
         }
 
         # Adds the plate to the database
@@ -765,86 +810,152 @@ def bio_experiment_to_database(config, assay_data, plate_data, plate_analyse_met
         # Loops through the wells on each plate.
         for wells in bio_sample_dict[plates]:
 
-            if wells in plate_data[plates]["plates"][plate_analyse_methods[-1]]['sample']:
-                # Gets the bio_data_id
-                bio_data_id = get_number_of_rows(config, compound_table) + 1
+            # Gets the bio_data_id
+            bio_data_id = get_number_of_rows(config, compound_table) + 1
 
-                compound_id = bio_sample_dict[plates][wells]["compound_id"]
+            compound_id = bio_sample_dict[plates][wells]["compound_id"]
 
-                if not compound_id:
-                    table = "compound_mp"
-                    well_headline = "mp_well"
-                    temp_well_data = bio_sample_dict[plates][wells]["source_well"]
-                    plate_headline = "mp_barcode"
-                    temp_plate_data = bio_sample_dict[plates][wells]["source_plate"]
-                    temp_row_data = dbf.find_data_double_lookup(table, temp_well_data, temp_plate_data, well_headline,
-                                                                plate_headline)
+            if not compound_id:
+                table = "compound_mp"
+                well_headline = "mp_well"
+                temp_well_data = bio_sample_dict[plates][wells]["source_well"]
+                plate_headline = "mp_barcode"
+                temp_plate_data = bio_sample_dict[plates][wells]["source_plate"]
+                temp_row_data = dbf.find_data_double_lookup(table, temp_well_data, temp_plate_data, well_headline,
+                                                            plate_headline)
 
+                try:
+                    temp_row_data[0][3]
+                except IndexError:
+                    print(f"Missing data for MP: {temp_plate_data} well: {temp_well_data}")
+                else:
+                    compound_id = temp_row_data[0][3]
+                    bio_sample_dict[plates][wells]["compound_id"] = compound_id
                     try:
-                        temp_row_data[0][3]
-                    except IndexError:
-                        print(f"Missing data for MP: {temp_plate_data} well: {temp_well_data}")
-                        print(bio_sample_dict[plates][wells])
+                        score = all_plates_data[plates]["plates"][plate_analyse_methods[-1]]["wells"][wells]
+                    except KeyError:
+                        score = ""
+                        hit = False
                     else:
-                        compound_id = temp_row_data[0][3]
-                        bio_sample_dict[plates][wells]["compound_id"] = compound_id
+                        if score <= assay_data["hit_threshold"]:
+                            hit = True
+                        else:
+                            hit = False
 
-                score = plate_data[plates]["plates"][plate_analyse_methods[-1]]["wells"][wells]
+                    # The raw data is the initial value before any calculations have been done.
+                    try:
+                        compound_raw_data = all_plates_data[plates]["plates"][plate_analyse_methods[0]]["wells"][wells]
+                    except KeyError:
+                        compound_raw_data = 0
 
-                if score <= assay_data["hit_threshold"]:
-                    hit = True
-                else:
-                    hit = False
-
-                # The raw data is the initial value before any calculations have been done.
-                compound_raw_data = plate_data[plates]["plates"][plate_analyse_methods[0]]["wells"][wells]
-
-                # gets the concentration
-                if type(concentration) == str:
-                    temp_concentration = concentration
-                else:
-                    temp_concentration = concentration[wells]
-
-                # Checks if the plate is approved, then check if the well for the selected sample is still in the sample
-                # list for the plate. The well could have been removed doing the plate_check
-                if plate_approval:
-                    if wells in plate_data[plates]["plates"][plate_analyse_methods[-1]]["sample"]:
-                        print(plate_analyse_methods[-1])
-                        print(plate_data[plates]["plates"][plate_analyse_methods[-1]]["sample"])
-                        compound_approval = True
+                    # gets the concentration
+                    if type(concentration) == str:
+                        temp_concentration = concentration
                     else:
-                        compound_approval = False
-                else:
-                    compound_approval = False
+                        temp_concentration = concentration[wells]
+                    # check if the well have been transferred before adding it to the database.
+                    if wells in all_plates_data[plates]["transferred_wells"]:
+                        # Not sure if this is needed...
+                        compound_note = all_compound_data[plates][wells]["note"]
+                        compound_approval = all_compound_data[plates][wells]["approved"]
+                        transferred = all_compound_data[plates][wells]["transfereed"]
 
-                # Not sure if this is needed...
-                compound_note = ""
+                    else:
+                        compound_note = "Not transferred"
+                        compound_approval = "0"
+                        transferred = "0"
 
-                temp_compound_data = {
-                    "bio_data_id": bio_data_id,
-                    "compound_id": compound_id,
-                    "assay_plate": plates,
-                    "assay_well": wells,
-                    "score": score,
-                    "hit": hit,
-                    "concentration": temp_concentration,
-                    "raw_data": compound_raw_data,
-                    "approval": compound_approval,
-                    "note": compound_note
-                }
+                    temp_compound_data = {
+                        "bio_data_id": bio_data_id,
+                        "compound_id": compound_id,
+                        "assay_plate": plates,
+                        "assay_well": wells,
+                        "score": score,
+                        "hit": hit,
+                        "concentration": temp_concentration,
+                        "raw_data": compound_raw_data,
+                        "approval": compound_approval,
+                        "note": compound_note,
+                        "transferred": transferred
+                    }
 
-                dbf.add_records_controller(compound_table, temp_compound_data)
-
-                compound_counter += 1
+                    dbf.add_records_controller(compound_table, temp_compound_data)
+                    compound_counter += 1
 
         print(f"{plate_index + 1} / {total_plate_amount} have been uploaded to the database - last plate was: {plates}")
 
-        # Updates the Assay table with amount of compounds and plates that have been run.
-        table_row = f"UPDATE assay SET plates_run = plates_run + {plate_counter} WHERE assay_name = '{assay_data['assay_name']}' "
-        dbf.submit_update(table_row)
-        table_row = f"UPDATE assay SET compounds_run = compounds_run + {compound_counter} WHERE assay_name = '{assay_data['assay_name']}' "
-        dbf.submit_update(table_row)
 
+def bio_import_report_handler(config, bio_import_folder, plate_to_layout, archive_plates_dict, bio_plate_report_setup,
+                              analyse_method, bio_sample_dict, bio_export_folder, add_compound_ids, export_to_excel,
+                              all_destination_plates, combined_report_check, import_to_database_check,
+                              bio_final_report_setup, final_report_name, include_hits, threshold, hit_amount,
+                              include_smiles, include_structure, assay_name, responsible, concentration):
+
+    worked, all_plates_data, date, used_plates, plate_to_layout = \
+        bio_data(config, bio_import_folder, plate_to_layout, archive_plates_dict,
+                 bio_plate_report_setup, analyse_method, bio_sample_dict, bio_export_folder,
+                 add_compound_ids, export_to_excel)
+
+    # Check if there should be produced a combined report over all the data
+    if combined_report_check:
+        bio_full_report(config, analyse_method, all_plates_data,
+                        bio_final_report_setup, bio_export_folder, final_report_name, include_hits,
+                        threshold, hit_amount, include_smiles, bio_sample_dict, plate_to_layout,
+                        archive_plates_dict, include_structure)
+
+    # Check if the data should be added to the database
+    if import_to_database_check:
+
+        # Makes a popup to assign assay_run names to plates.
+        if len(all_destination_plates) > len(used_plates):
+            dead_run_check = sg.PopupYesNo("Not all plates from worklist have data."
+                                           "Do you wish to add plates without data to the database?")
+        else:
+            dead_run_check = "No"
+
+        # Adds dead plates to the all_plates_data dict for later use
+        if dead_run_check.casefold() == "yes":
+            dead_plates = _add_dead_plates(all_destination_plates, used_plates, all_plates_data, bio_sample_dict)
+            used_plates = all_destination_plates
+        else:
+            dead_plates = []
+
+        check, transfer_dict, dismissed_plates = assay_run_naming(config, all_plates_data, analyse_method,
+                                                                  used_plates, assay_name, all_destination_plates,
+                                                                  dead_run_check, bio_compound_info_from_worklist)
+        if check:
+            if len(dismissed_plates) == len(used_plates):
+                all_plates_are_dismissed = True
+            else:
+                all_plates_are_dismissed = False
+            # Set up values for the database.
+
+            # # Grabs the value for the assay from the database
+            assay_data_row = grab_table_data(config, table_name="assay", single_row=True,
+                                             data_value=assay_name, headline="assay_name")
+            plate_layout = assay_data_row[0][4]
+            plate_data = grab_table_data(config, table_name="plate_layout", single_row=True, data_value=plate_layout,
+                                         headline="plate_name")
+            plate_size = plate_data[0][2]
+            assay_data = {"assay_name": assay_data_row[0][2],
+                          "plate_layout": plate_layout,
+                          "z_prime_threshold": assay_data_row[0][5],
+                          "hit_threshold": assay_data_row[0][6],
+                          "plate_size": plate_size}
+
+            # Open a popup window where data can be checked before being added to the database.
+            all_plates_data, all_compound_data, plate_analyse_methods, sub_layouts = \
+                bio_data_approval_table(draw_plate, config, all_plates_data, assay_data,
+                                        plate_to_layout, archive_plates_dict, bio_plate_report_setup,
+                                        transfer_dict, dismissed_plates, all_plates_are_dismissed, dead_plates)
+
+            if type(all_plates_data) != str:
+                # Adds the approved data to the database
+                bio_experiment_to_database(config, assay_data, used_plates, all_plates_data, plate_analyse_methods,
+                                           responsible, bio_sample_dict, concentration, all_compound_data, sub_layouts,
+                                           dismissed_plates, dead_plates)
+
+    return
 
 
 def mp_production_2d_to_pb_simulate(folder_output, barcodes_2d, mp_name, trans_vol):
@@ -1870,11 +1981,16 @@ def _get_plate_archive(dbf, table, column_headline, plate_names):
 
         # grabs data from the return rown
         plate_name = temp_row_data[0][1]
-        well_layout = temp_row_data[0][2]
-        plate_type = temp_row_data[0][3]
+        plate_type = temp_row_data[0][2]
+
+        temp_sub_row_data = dbf.find_data_single_lookup("plate_layout_sub", plate_name, "plate_sub")
+        try:
+            well_layout = eval(temp_sub_row_data[0][3])
+        except IndexError:
+            well_layout = None
 
         # Generates the dict
-        archive_plates_dict[plate_name] = {"well_layout": eval(well_layout),
+        archive_plates_dict[plate_name] = {"well_layout": well_layout,
                                            "plate_type": plate_type,
                                            "sample": [],
                                            "blank": [],
@@ -1883,24 +1999,26 @@ def _get_plate_archive(dbf, table, column_headline, plate_names):
                                            "positive": [],
                                            "negative": [],
                                            "empty": []}
+
         # Makes list of the different well-types and adds them
-        temp_well_dict = eval(well_layout)
-        for counter in temp_well_dict:
-            well_id = temp_well_dict[counter]["well_id"]
-            if temp_well_dict[counter]["state"] == "sample":
-                archive_plates_dict[plate_name]["sample"].append(well_id)
-            elif temp_well_dict[counter]["state"] == "blank":
-                archive_plates_dict[plate_name]["blank"].append(well_id)
-            elif temp_well_dict[counter]["state"] == "max":
-                archive_plates_dict[plate_name]["max"].append(well_id)
-            elif temp_well_dict[counter]["state"] == "minimum":
-                archive_plates_dict[plate_name]["minimum"].append(well_id)
-            elif temp_well_dict[counter]["state"] == "positive":
-                archive_plates_dict[plate_name]["positive"].append(well_id)
-            elif temp_well_dict[counter]["state"] == "negative":
-                archive_plates_dict[plate_name]["negative"].append(well_id)
-            elif temp_well_dict[counter]["state"] == "empty":
-                archive_plates_dict[plate_name]["empty"].append(well_id)
+        if well_layout is not None:
+            temp_well_dict = well_layout
+            for counter in temp_well_dict:
+                well_id = temp_well_dict[counter]["well_id"]
+                if temp_well_dict[counter]["state"] == "sample":
+                    archive_plates_dict[plate_name]["sample"].append(well_id)
+                elif temp_well_dict[counter]["state"] == "blank":
+                    archive_plates_dict[plate_name]["blank"].append(well_id)
+                elif temp_well_dict[counter]["state"] == "max":
+                    archive_plates_dict[plate_name]["max"].append(well_id)
+                elif temp_well_dict[counter]["state"] == "minimum":
+                    archive_plates_dict[plate_name]["minimum"].append(well_id)
+                elif temp_well_dict[counter]["state"] == "positive":
+                    archive_plates_dict[plate_name]["positive"].append(well_id)
+                elif temp_well_dict[counter]["state"] == "negative":
+                    archive_plates_dict[plate_name]["negative"].append(well_id)
+                elif temp_well_dict[counter]["state"] == "empty":
+                    archive_plates_dict[plate_name]["empty"].append(well_id)
 
     return archive_plates_dict
 
@@ -1963,6 +2081,24 @@ def rename_record_in_the_database(config, table, headline, old_value, new_value)
     dbf = DataBaseFunctions(config)
     dbf.rename_record_value(table, headline, old_value, new_value)
 
+
+def _add_dead_plates(all_destination_plates, used_plates, all_plates_data, bio_sample_dict):
+    """
+    Adds dead plates to "all_plates_data" to make it available for adding to the database
+    :param all_destination_plates:
+    :param used_plates:
+    :param all_plates_data:
+    :param bio_sample_dict:
+    :return:
+    """
+    dead_plates = []
+    for plates in all_destination_plates:
+        if plates not in used_plates:
+            all_plates_data[plates] = {}
+            all_plates_data[plates]["transferes"] = []
+            dead_plates.append(plates)
+
+    return dead_plates
 
 if __name__ == "__main__":
     ...

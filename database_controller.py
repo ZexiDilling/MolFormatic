@@ -7,7 +7,7 @@ from csv_handler import CSVReader
 from random import sample
 from operator import countOf
 from file_handler import get_file_list, file_list_distributor, move_files
-from xml_handler import XMLReader
+from xml_handler import xml_controller
 from lc_data_handler import LCMSHandler
 
 
@@ -358,7 +358,6 @@ class AddData:
         fd = FetchData(config)
         self.sdf_r = SDFReader(config, fd, self.dbf)
         self.csv_r = CSVReader()
-        self.xml_r = XMLReader()
         self.co = ChemOperators()
 
     def __str__(self):
@@ -603,7 +602,7 @@ class AddData:
         :return: Added data to the database and updates volumes.
         """
 
-        data_dict, plates_dict = self.xml_r.xml_controller(file_list)
+        data_dict, plates_dict = xml_controller(file_list)
 
         for plate in plates_dict:
             self.dbf.add_records_controller(plate_table_name, plates_dict[plate])

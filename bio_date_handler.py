@@ -535,7 +535,7 @@ class BIOAnalyser:
         save_file = f"{save_location}/{plate_name}.xlsx"
         wb.save(save_file)
 
-    def bio_data_controller(self, ex_file, plate_layout, all_data, well_row_col, well_type, analysis, write_to_excel,
+    def bio_data_controller(self, ex_file, plate_layout, all_data, well_row_col, well_type, analysis_method, write_to_excel,
                             bio_sample_dict, save_location, add_compound_ids):
         """
         The control modul for the bio analysing
@@ -550,8 +550,8 @@ class BIOAnalyser:
         :type well_row_col: dict
         :param well_type: A dict over what state/type each well/cell is in.
         :type well_type: dict
-        :param analysis: The analysis method
-        :type analysis: str
+        :param analysis_method: The analysis method
+        :type analysis_method: str
         :param bio_sample_dict: None or a dict of sample ide, per plate analysed
         :type bio_sample_dict: dict
         :param save_location: where to save all the excel files

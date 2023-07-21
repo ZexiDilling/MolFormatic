@@ -123,6 +123,36 @@ class DataBaseFunctions:
         table_row = f"UPDATE {source_table} SET volume = volume - {vol} WHERE {row_id} = {barcode_source} "
         self.submit_update(table_row)
 
+    def update_database_items(self, source_table, table_data, table_index_value, headline):
+        """
+        Updates a row in the database
+        :param source_table: The table
+        :type source_table: str
+        :param table_data: A dict of clm headlines and their values
+        :type table_data: dict
+        :param table_index_value: The index value, as to what row to update
+        :type table_index_value: str or int
+        :param headline: The headline for the index value
+        :type headline: str
+        :return:
+        """
+        # table_row_string = f"UPDATE {source_table} SET"
+        # for headlines in table_data:
+        #     table_row_string += f" {headlines} = '{ {table_data[headlines]} }', "
+        # table_row_string = table_row_string.removesuffix(", ")
+        # table_row_string += f" WHERE {headline} = '{table_index_value}'"
+        table_row_string = f"UPDATE {source_table} SET "
+        for column, value in table_data.items():
+            # Ensure string values are enclosed in single quotes and properly escaped
+            formatted_value = value.replace("'", "''") if isinstance(value, str) else value
+            table_row_string += f"{column} = '{formatted_value}', "
+        table_row_string = table_row_string.removesuffix(", ")
+        table_row_string += f" WHERE {headline} = '{table_index_value}'"
+
+        print(table_row_string)
+
+        self.submit_update(table_row_string)
+
     def rename_record_value(self, table, headline, old_value, new_value):
         """
         Renames a record based on the name of value of the record
