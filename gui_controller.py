@@ -604,6 +604,12 @@ def main(config, queue_gui, queue_mol):
     # COMPOUND TABLE CONSTANTS #
     all_data = None
     treedata = None
+    compound_info_tables = {"-COMPOUND_INFO_INFO_MP-": "-COMPOUND_INFO_INFO_MP_TABLE-",
+                            "-COMPOUND_INFO_INFO_DP-": "-COMPOUND_INFO_INFO_DP_TABLE-",
+                            "-COMPOUND_INFO_INFO_ASSAY-": "-COMPOUND_INFO_INFO_ASSAY_TABLE-",
+                            "-COMPOUND_INFO_INFO_HITS-": "-COMPOUND_INFO_INFO_HITS_TABLE-",
+                            "-COMPOUND_INFO_INFO_TRANSFERS-": "-COMPOUND_INFO_INFO_TRANSFERS_TABLE-",
+                            "-COMPOUND_INFO_INFO_PURITY-": "-COMPOUND_INFO_INFO_PURITY_USED_TABLE-"}
 
     # BIO EXP TABLE CONSTANTS:
     all_assays = None
@@ -625,7 +631,8 @@ def main(config, queue_gui, queue_mol):
     window.Element("-PLATE_TABLE_TABLE-").Widget.configure(displaycolumns=plate_table_table_heading_mp)
     search_reverse = {}
 
-    # Makes a dict over all tables in the software. Is used for updating the tables with data
+    # Makes a dict over all tables in the software. It is used to make tables sortable.
+    # Any tables in this dict, will be sortable by clicking the top bar.
     all_table_data = {"-COMPOUND_INFO_PLATE_TABLE-": None,
                       "-BIO_INFO_OVERVIEW_TABLE-": None,
                       "-BIO_INFO_OVERVIEW_AVG_TABLE-": None,
@@ -1111,7 +1118,6 @@ def main(config, queue_gui, queue_mol):
             #     bio_info_sub_setting_tab_plate_overview_calc = True
             #     bio_info_sub_setting_tab_z_prime_calc = True
             #     bio_info_sub_setting_tab_hit_list_calc = True
-
 
         #   WINDOW 1 - Purity           ###
         if event == "-PURITY_DATA_IMPORT-":
@@ -2534,16 +2540,22 @@ def main(config, queue_gui, queue_mol):
             if compound_id:
                 sample_row = grab_table_data(config, "compound_main", single_row=True, data_value=compound_id, headline="compound_id")
                 if sample_row:
-                    window["-COMPOUND_INFO_SMILES-"].update(value=sample_row[0][2])
-                    window["-COMPOUND_INFO_PIC-"].update(data=sample_row[0][3])
-                    window["-COMPOUND_INFO_MP_VOLUME-"].update(value=sample_row[0][4])
-                    window["-COMPOUND_INFO_CONCENTRATION-"].update(value=sample_row[0][5])
+                    # Get Academic/commercial information:
                     ac_id = sample_row[0][6]
-                    window["-COMPOUND_INFO_ORIGIN_ID-"].update(value=sample_row[0][7])
-
                     all_data_ac = grab_table_data(config, "origin", single_row=True, data_value=ac_id, headline="ac_id")
+
+                    # Update info frame:
                     window["-COMPOUND_INFO_AC-"].update(value=all_data_ac[0][1])
                     window["-COMPOUND_INFO_ORIGIN-"].update(value=all_data_ac[0][2])
+                    window["-COMPOUND_INFO_ORIGIN_ID-"].update(value=sample_row[0][7])
+                    window["-COMPOUND_INFO_CONCENTRATION-"].update(value=sample_row[0][5])
+                    window["-COMPOUND_INFO_TUBE_VOLUME-"].update(value=sample_row[0][4])
+                    # ToDo find info from DB if that is there, else:
+                    window["-COMPOUND_INFO_TUBE_VOLUME-"].update(value="Missing info")
+
+                    # Update Picture frame:
+                    window["-COMPOUND_INFO_SMILES-"].update(value=sample_row[0][2])
+                    window["-COMPOUND_INFO_PIC-"].update(data=sample_row[0][3])
 
                     mp_table_data = grab_table_data(config, "compound_mp", single_row=True, data_value=compound_id,
                                                     headline="compound_id")
@@ -2581,6 +2593,10 @@ def main(config, queue_gui, queue_mol):
                                                           search_list_clm="assay_name")
 
                     print(assay_table_data)
+
+        if event in compound_info_tables:
+            print(compound_info_tables[event])
+
 
 
         #   WINDOW 2 - BIO INFO         ###

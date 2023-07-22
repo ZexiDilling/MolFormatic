@@ -241,7 +241,6 @@ class MoleculeEditor(MoleculeViewer):
         elif event.key() == Qt.Key_F and type(self.closest_object) == Chem.rdchem.Atom:
             self.replace_atom(self.closest_object, 9)
 
-
         super().keyPressEvent(event)
 
     def canvas_click(self, point):
@@ -346,7 +345,7 @@ class MoleculeEditor(MoleculeViewer):
             min_index = np.argmin(distance_2)
             return min_index, sqrt(distance_2[min_index])
         else:
-            return None, 1e10       # Return a hugh number. if set to None, other code needs to be change #ToDo time it
+            return None, 1e10       # Return a hugh number. if set to None, other code needs to be change
 
     def get_nearest_bond(self, x_svg, y_svg):
         if self.mol is not None and self.mol.GetNumAtoms() > 2:

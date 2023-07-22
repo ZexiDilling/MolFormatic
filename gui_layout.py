@@ -13,6 +13,8 @@ class GUILayout:
         self.plate_list = plate_list
         self.sample_style = ["Single Point", "Duplicate", "Triplicate", "Custom"]
         self.analyse_style = ["Single", "Dose Response"]
+        self.lable_style = "solid"
+        self.show_input_style = "sunken"
 
     @staticmethod
     def menu_top():
@@ -539,7 +541,7 @@ class GUILayout:
             ])
         ]])
 
-        col_assay_settings = sg.Frame("Previuse assays", [[
+        col_assay_settings = sg.Frame("Previous assays", [[
             sg.Column([
                 [sg.Listbox(values=motherplates, key="-WORKLIST_ASSAY_LIST-", size=(15, 7),
                             select_mode=sg.LISTBOX_SELECT_MODE_MULTIPLE,
@@ -858,6 +860,25 @@ class GUILayout:
         :rtype: list
         """
 
+        col_info = sg.Frame("Info", [[
+            sg.Column([
+                [sg.Input("", key="-COMPOUND_INFO_ID-", size=15), sg.Push(),
+                 sg.Button("Search", key="-COMPOUND_INFO_SEARCH_COMPOUND_ID-")],
+                [sg.Text("Academic/Commercial", size=self.standard_size, relief=self.lable_style),
+                 sg.Text(key="-COMPOUND_INFO_AC-", size=self.standard_size, relief=self.show_input_style)],
+                [sg.Text("Origin", size=self.standard_size, relief=self.lable_style),
+                 sg.Text(key="-COMPOUND_INFO_ORIGIN-", size=self.standard_size, relief=self.show_input_style)],
+                [sg.Text("Origin ID", size=self.standard_size, relief=self.lable_style),
+                 sg.Text(key="-COMPOUND_INFO_ORIGIN_ID-", size=self.standard_size, relief=self.show_input_style)],
+                [sg.Text("Concentration", size=self.standard_size, relief=self.lable_style),
+                 sg.Text(key="-COMPOUND_INFO_CONCENTRATION-", size=self.standard_size, relief=self.show_input_style)],
+                [sg.Text("Purity", size=self.standard_size, relief=self.lable_style),
+                 sg.Text(key="-COMPOUND_INFO_PURITY-", size=self.standard_size, relief=self.show_input_style)],
+                [sg.Text("volume left in Tube", size=self.standard_size, relief=self.lable_style),
+                 sg.Text(key="-COMPOUND_INFO_TUBE_VOLUME-", size=self.standard_size, relief=self.show_input_style)]
+                ]),
+        ]])
+
         col_picture = sg.Frame("picture", [[
             sg.Column([
                 [sg.Image(key="-COMPOUND_INFO_PIC-", size=(500, 150))],
@@ -865,79 +886,56 @@ class GUILayout:
                 ])
         ]])
 
-        col_info = sg.Frame("Info", [[
+        text_size = 8
+        justification = "center"
+        compound_overview = sg.Frame("Overview", [[
             sg.Column([
-                [sg.Input("", key="-COMPOUND_INFO_ID-", size=15), sg.Push(),
-                 sg.Button("Search", key="-COMPOUND_INFO_SEARCH_COMPOUND_ID-")],
-                [sg.Text("Academic/Commercial", size=self.standard_size),
-                 sg.Text(key="-COMPOUND_INFO_AC-", size=self.standard_size)],
-                [sg.Text("Origin", size=self.standard_size),
-                 sg.Text(key="-COMPOUND_INFO_ORIGIN-", size=self.standard_size)],
-                [sg.Text("Origin ID", size=self.standard_size),
-                 sg.Text(key="-COMPOUND_INFO_ORIGIN_ID-", size=self.standard_size)],
-                [sg.Text("Concentration", size=self.standard_size),
-                 sg.Text(key="-COMPOUND_INFO_CONCENTRATION-", size=self.standard_size)],
-                [sg.Text("volume left in MP", size=self.standard_size),
-                 sg.Text(key="-COMPOUND_INFO_MP_VOLUME-", size=self.standard_size)]
-                ]),
+                [sg.T("Mp", relief=self.lable_style, size=text_size, justification=justification),
+                 sg.T("Dp", relief=self.lable_style, size=text_size, justification=justification),
+                 sg.T("Assays", relief=self.lable_style, size=text_size, justification=justification),
+                 sg.T("Hits", relief=self.lable_style, size=text_size, justification=justification),
+                 sg.T("Transfers", relief=self.lable_style, size=text_size, justification=justification),
+                 sg.T("Purity", relief=self.lable_style, size=text_size, justification=justification)],
+                [sg.T("", relief=self.show_input_style, key="-COMPOUND_INFO_INFO_MP-", size=text_size,
+                      justification=justification, enable_events=True),
+                 sg.T("", relief=self.show_input_style, key="-COMPOUND_INFO_INFO_DP-", size=text_size,
+                      justification=justification, enable_events=True),
+                 sg.T("", relief=self.show_input_style, key="-COMPOUND_INFO_INFO_ASSAY-", size=text_size,
+                      justification=justification, enable_events=True),
+                 sg.T("", relief=self.show_input_style, key="-COMPOUND_INFO_INFO_HITS-", size=text_size,
+                      justification=justification, enable_events=True),
+                 sg.T("", relief=self.show_input_style, key="-COMPOUND_INFO_INFO_TRANSFERS-", size=text_size,
+                      justification=justification, enable_events=True),
+                 sg.T("", relief=self.show_input_style, key="-COMPOUND_INFO_INFO_PURITY-", size=text_size,
+                      justification=justification, enable_events=True)],
+            ])
         ]])
 
-        plate_headlines = ["name", "type", "well", "volume", "date"]
-        row_plate_table = sg.Frame("Plate Table", [[
+
+        info_mp_table_headings = ["Plate", "well", "Vol"]
+        info_dp_table_headings = ["Plate", "well", "Vol"]
+        info_assay_table_headings = ["Name", "Plate", "Avg Score"]
+        info_hits_table_headings = ["Assay", "Score", "Replicates"]
+        info_transfer_table_headings = ["Tube", "Mp", "Assays"]
+        info_purity_table_headings = ["Purity", "Replicates", "Date"]
+        row_info_table = sg.Frame("Info Table", [[
             sg.Column([
-                [sg.Table(values=[], headings=plate_headlines, key="-COMPOUND_INFO_PLATE_TABLE-",
-                          auto_size_columns=False, enable_click_events=True)]
+                [sg.Table(values=[], headings=info_mp_table_headings, key="-COMPOUND_INFO_INFO_MP_TABLE-",
+                          auto_size_columns=False, enable_click_events=True, num_rows=2, visible=True)],
+                [sg.Table(values=[], headings=info_dp_table_headings, key="-COMPOUND_INFO_INFO_DP_TABLE-",
+                          auto_size_columns=False, enable_click_events=True, num_rows=2, visible=True)],
+                [sg.Table(values=[], headings=info_assay_table_headings, key="-COMPOUND_INFO_INFO_ASSAY_TABLE-",
+                          auto_size_columns=False, enable_click_events=True, num_rows=2, visible=True)],
+                [sg.Table(values=[], headings=info_hits_table_headings, key="-COMPOUND_INFO_INFO_HITS_TABLE-",
+                          auto_size_columns=False, enable_click_events=True, num_rows=2, visible=True)],
+                [sg.Table(values=[], headings=info_transfer_table_headings, key="-COMPOUND_INFO_INFO_TRANSFERS_TABLE-",
+                          auto_size_columns=False, enable_click_events=True, num_rows=2, visible=True)],
+                [sg.Table(values=[], headings=info_purity_table_headings, key="-COMPOUND_INFO_INFO_PURITY_USED_TABLE-",
+                          auto_size_columns=False, enable_click_events=True, num_rows=2, visible=True)]
             ])
         ]], expand_x=True)
-        plate_info_table_headings = ["test1", "test2", "Test3"]
-        tab_plates_table = sg.Tab("Plate info", [[
-            sg.TabGroup([[
-                sg.Tab("All Plates", [[
-                    sg.Frame("Plate Table", [[
-                        sg.Column([
-                            [sg.Table([], headings=plate_info_table_headings,
-                                      key="-COMPOUND_INFO_ALL_PLATE_INFO_TABLE-")]
-                        ])
-                    ]])
-                ]]),
-                sg.Tab("MP plates", [[
-                    sg.Frame("MP Table",
-                             [[sg.Column(
-                                 [[sg.Table([], headings=plate_info_table_headings,
-                                            key="-COMPOUND_INFO_MP_PLATE_INFO_TABLE-")]]
-                             )]])
-                ]]),
-                sg.Tab("DP plates", [[
-                    sg.Frame("DP Table",
-                             [[sg.Column(
-                                 [[sg.Table([], headings=plate_info_table_headings,
-                                            key="-COMPOUND_INFO_DP_PLATE_INFO_TABLE-")]]
-                             )]])
-                ]]),
-            ]], selected_background_color=self.tab_colour, key="-COMPOUND_INFO_TABLE_TABS-", enable_events=True,
-                                 expand_x=True, tab_location="righttop")
-        ]])
 
-        bio_info_table_headings = ["Assay", "Responsible", "Date"]
-        tab_bio_exp_table = sg.Tab("Bio Info", [[sg.Frame("Bio Experimental", [[
-            sg.Column([
-                [sg.Table([], headings=bio_info_table_headings, key="-COMPOUND_INFO_BIO_INFO_TABLE-")]
-            ])
-        ]])
-                                    ]])
-        purity_info_table_headings = ["Batch", "Result Max", "Result Ion", "Result Total", "Date"]
-        tab_purity_table = sg.Tab("Purity Info", [[sg.Frame("Purity", [[
-            sg.Column([
-                [sg.Table([], headings=purity_info_table_headings, key="-COMPOUND_INFO_PURITY_INFO_TABLE-")]
-            ])
-        ]])
-                                   ]])
-
-        tab_groups = sg.TabGroup([[tab_plates_table, tab_bio_exp_table, tab_purity_table]],
-                                 selected_background_color=self.tab_colour, key="-COMPOUND_INFO_SUB_DATA-", enable_events=True,
-                                 expand_x=True)
-
-        layout = [sg.vtop([col_info, col_picture]), [sg.VPush()], [row_plate_table], [tab_groups]]
+        layout = [sg.vtop([col_info, col_picture]), [compound_overview], [row_info_table]]
 
         return layout
 
