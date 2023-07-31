@@ -2080,7 +2080,37 @@ def _add_dead_plates(all_destination_plates, used_plates, all_plates_data, bio_s
 
     return dead_plates
 
+
+def bio_exp_compound_list(config, event, values, bio_exp_compound_data):
+
+    # Sort the list based on the score
+    bio_exp_compound_data.sort(key=lambda x: x[1])
+
+    try:
+        float(values["-BIO_EXP_SET_THRESHOLD-"])
+    except ValueError:
+        threshold = False
+    else:
+        threshold = float(values["-BIO_EXP_SET_THRESHOLD-"])
+
+    try:
+        float(values["-BIO_EXP_SET_COMPOUND_AMOUNT-"])
+    except ValueError:
+        compound_amount = False
+    else:
+        compound_amount = float(values["-BIO_EXP_SET_COMPOUND_AMOUNT-"])
+
+    bio_list = []
+    for rows, row_data in enumerate(bio_exp_compound_data):
+        if threshold and row_data[1] > threshold:
+            break
+
+        bio_list.append(row_data[0])
+        if compound_amount and rows + 1 >= compound_amount:
+            break
+
+
+
 if __name__ == "__main__":
     ...
-
 

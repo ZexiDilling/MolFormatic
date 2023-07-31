@@ -88,7 +88,8 @@ class GUILayout:
         col_sub_search = sg.Frame("Structure Search", [[
             sg.Column([
                 [sg.Checkbox(text="Structure Search", key="-SUB_SEARCH-")],
-                [sg.Text("Smiles", size=self.standard_size), sg.InputText(key="-SUB_SEARCH_SMILES-", size=self.standard_size),
+                [sg.Text("Smiles", size=self.standard_size),
+                 sg.InputText(key="-SUB_SEARCH_SMILES-", size=self.standard_size),
                  sg.Button("Draw molecule", key="-SUB_SEARCH_DRAW_MOL-")],
                 [sg.Text("Search Method", size=self.standard_size),
                  sg.DropDown(subs_search_methods, key="-SUB_SEARCH_METHOD-", default_value=subs_search_methods[0],
@@ -881,8 +882,9 @@ class GUILayout:
 
         col_picture = sg.Frame("picture", [[
             sg.Column([
-                [sg.Image(key="-COMPOUND_INFO_PIC-", size=(500, 150))],
-                [sg.Text(key="-COMPOUND_INFO_SMILES-", size=50)]
+                [sg.Image(key="-COMPOUND_INFO_PIC-", size=(1500, 500))],
+                [sg.Multiline(key="-COMPOUND_INFO_SMILES-", size=(50, 2), horizontal_scroll=True)],
+                [sg.B("Search", key="-COMPOUND_INFO_SEND_TO_SEARCH-", tooltip="Sends the smiles to the search field")]
                 ])
         ]])
 
@@ -911,31 +913,42 @@ class GUILayout:
             ])
         ]])
 
-
         info_mp_table_headings = ["Plate", "well", "Vol"]
         info_dp_table_headings = ["Plate", "well", "Vol"]
-        info_assay_table_headings = ["Name", "Plate", "Avg Score"]
-        info_hits_table_headings = ["Assay", "Score", "Replicates"]
-        info_transfer_table_headings = ["Tube", "Mp", "Assays"]
+        info_assay_table_headings = ["Name", "Plate", "Method"]
+        info_hits_table_headings = ["Assay", "Score", "Conc."]
+        # info_transfer_table_headings = ["Tube", "Mp", "Assays"]
         info_purity_table_headings = ["Purity", "Replicates", "Date"]
         row_info_table = sg.Frame("Info Table", [[
             sg.Column([
                 [sg.Table(values=[], headings=info_mp_table_headings, key="-COMPOUND_INFO_INFO_MP_TABLE-",
-                          auto_size_columns=False, enable_click_events=True, num_rows=2, visible=True)],
+                          justification="center", auto_size_columns=False, enable_click_events=True,
+                          num_rows=2, visible=True),
+                 sg.T("Mp")],
                 [sg.Table(values=[], headings=info_dp_table_headings, key="-COMPOUND_INFO_INFO_DP_TABLE-",
-                          auto_size_columns=False, enable_click_events=True, num_rows=2, visible=True)],
+                          justification="center", auto_size_columns=False, enable_click_events=True,
+                          num_rows=2, visible=True),
+                 sg.T("Dp")],
                 [sg.Table(values=[], headings=info_assay_table_headings, key="-COMPOUND_INFO_INFO_ASSAY_TABLE-",
-                          auto_size_columns=False, enable_click_events=True, num_rows=2, visible=True)],
+                          justification="center", auto_size_columns=False, enable_click_events=True,
+                          num_rows=2, visible=True),
+                 sg.T("Assays")],
                 [sg.Table(values=[], headings=info_hits_table_headings, key="-COMPOUND_INFO_INFO_HITS_TABLE-",
-                          auto_size_columns=False, enable_click_events=True, num_rows=2, visible=True)],
-                [sg.Table(values=[], headings=info_transfer_table_headings, key="-COMPOUND_INFO_INFO_TRANSFERS_TABLE-",
-                          auto_size_columns=False, enable_click_events=True, num_rows=2, visible=True)],
+                          justification="center", auto_size_columns=False, enable_click_events=True,
+                          num_rows=2, visible=True),
+                 sg.T("Hits")],
+                # [sg.Table(values=[], headings=info_transfer_table_headings, key="-COMPOUND_INFO_INFO_TRANSFERS_TABLE
+                # -", justification="center", #           auto_size_columns=False, enable_click_events=True,
+                # num_rows=2, visible=True),
+                # sg.T(Transfers"],
                 [sg.Table(values=[], headings=info_purity_table_headings, key="-COMPOUND_INFO_INFO_PURITY_USED_TABLE-",
-                          auto_size_columns=False, enable_click_events=True, num_rows=2, visible=True)]
+                          justification="center", auto_size_columns=False, enable_click_events=True,
+                          num_rows=2, visible=True),
+                 sg.T("Purity")]
             ])
         ]], expand_x=True)
 
-        layout = [sg.vtop([col_info, col_picture]), [compound_overview], [row_info_table]]
+        layout = [sg.vtop([col_info]), [compound_overview], [row_info_table], [col_picture]]
 
         return layout
 
@@ -1390,12 +1403,12 @@ class GUILayout:
         responsible = [keys for keys in list(self.config["Responsible"].keys())]
 
         compound_table_data = []
-        compound_table_headings = ["Compound ID", "score", "hit", "Concentration", "Approved", "Well", "Note"]
+        compound_table_headings = ["Compound ID", "score", "hit", "Concentration", "Well", "Note"]
         col_compound_table = sg.Frame("Experimental Data", [[
             sg.Column([
                 [sg.Table(values=compound_table_data, headings=compound_table_headings, key="-BIO_EXP_COMPOUND_TABLE-",
-                          auto_size_columns=False, col_widths=[10, 10, 10], enable_events=True,
-                          enable_click_events=True)],
+                          auto_size_columns=False, col_widths=[10, 8, 5, 10, 8, 5, 10], justification="center",
+                          enable_events=True, enable_click_events=True)],
                 [sg.T("Amount of Compounds: "), sg.T("0", key="-BIO_EXP_COMPOUND_COUNTER-")],
                 [
                     sg.Column([
@@ -1419,34 +1432,35 @@ class GUILayout:
         col_plate_table = sg.Frame("Plates", [[
             sg.Column([
                 [sg.Table(values=[], headings=assay_run_headings, key="-BIO_EXP_ASSAY_RUN_TABLE-",
-                          auto_size_columns=False, col_widths=[10, 10, 10], enable_events=True,
-                          enable_click_events=True),
+                          auto_size_columns=False, col_widths=[15, 10, 10, 5], justification="center",
+                          enable_events=True, enable_click_events=True),
                  sg.Listbox("", key="-BIO_EXP_TABLE_ASSAY_LIST_BOX-", enable_events=True, size=(10, 10),
                             select_mode=sg.LISTBOX_SELECT_MODE_MULTIPLE)
                  ],
                 [sg.Table(values=plate_table_data, headings=plate_table_headings, key="-BIO_EXP_PLATE_TABLE-",
-                          auto_size_columns=False, col_widths=[10, 10, 10],
+                          auto_size_columns=False, col_widths=[12, 10, 8, 5, 8, 15], justification="center",
                           enable_events=True, enable_click_events=True)],
-                [sg.T("Amount of Plates: "), sg.T("0", key="-BIO_EXP_PLATE_COUNTER-")],
+                [sg.T("Amount of Plates: "), sg.T("0", key="-BIO_EXP_PLATE_COUNTER-"),
+                 sg.T("Note: "), sg.T("", key="-BIO_EXP_PLATE_NOTE-")],
                 [sg.Checkbox("Only approved Plates", key="-BIO_EXP_APPROVED_PLATES_ONLY-", default=True,
                              enable_events=True)]
             ])
         ]])
 
-        col_search = sg.Frame("Assays", [[
-            sg.Column([
-                [],
-                [sg.T("Assay Name", size=10), sg.Input(key="-BIO_EXP_ASSAY_NAME_SEARCH-", size=10)],
-                [sg.CalendarButton("Start date", key="-BIO_EXP_TABLE_DATE_START-", format="%Y-%m-%d", enable_events=True
-                                   , target="-BIO_EXP_TABLE_DATE_START_TARGET-", size=(10, 1)),
-                 sg.Input(key="-BIO_EXP_TABLE_DATE_START_TARGET-", size=10, enable_events=True)],
-                [sg.CalendarButton("End date", key="-BIO_EXP_TABLE_DATE_END-", format="%Y-%m-%d", enable_events=True,
-                                   target="-BIO_EXP_TABLE_DATE_END_TARGET-", size=(10, 1)),
-                 sg.Input(key="-BIO_EXP_TABLE_DATE_END_TARGET-", size=10)],
-                [sg.T("Responsible", size=10), sg.DropDown(responsible, key="-BIO_EXP_TABLE_RESPONSIBLE-", size=10)],
-                [sg.B("Refresh", key="-BIO_EXP_TABLE_REFRESH-")]
-            ])
-        ]])
+        # col_search = sg.Frame("Assays", [[
+        #     sg.Column([
+        #         [],
+        #         [sg.T("Assay Name", size=10), sg.Input(key="-BIO_EXP_ASSAY_NAME_SEARCH-", size=10)],
+        #         [sg.CalendarButton("Start date", key="-BIO_EXP_TABLE_DATE_START-", format="%Y-%m-%d", enable_events=True
+        #                            , target="-BIO_EXP_TABLE_DATE_START_TARGET-", size=(10, 1)),
+        #          sg.Input(key="-BIO_EXP_TABLE_DATE_START_TARGET-", size=10, enable_events=True)],
+        #         [sg.CalendarButton("End date", key="-BIO_EXP_TABLE_DATE_END-", format="%Y-%m-%d", enable_events=True,
+        #                            target="-BIO_EXP_TABLE_DATE_END_TARGET-", size=(10, 1)),
+        #          sg.Input(key="-BIO_EXP_TABLE_DATE_END_TARGET-", size=10)],
+        #         [sg.T("Responsible", size=10), sg.DropDown(responsible, key="-BIO_EXP_TABLE_RESPONSIBLE-", size=10)],
+        #         [sg.B("Refresh", key="-BIO_EXP_TABLE_REFRESH-")]
+        #     ])
+        # ]])
 
         layout = [sg.vtop([col_compound_table, col_plate_table])]
         return layout
@@ -1544,23 +1558,14 @@ class GUILayout:
         :return: the layout for the tab groups in the top box
         :rtype: list
         """
-        tab_1_search = sg.Tab("Search", self.setup_1_search(),
-                              tooltip="Search for compounds in the database")
-        tab_1_bio_data = sg.Tab("Bio Data", self.setup_1_bio(),
-                                tooltip="Handles analysing of bio-data from platereader")
-        tab_1_purity_data = sg.Tab("Purity Data", self.setup_1_purity(),
-                                   tooltip="Handles data from LC/MS to get purity of compounds")
-        tab_1_plate_layout = sg.Tab("Plate Layout", self.setup_1_plate_layout(),
-                                    tooltip="Where you can draw a plate-layout used for analysing data, "
-                                            "or generate worklist ect.")
-        tab_1_add = sg.Tab("Update", self.setup_1_update(),
-                           tooltip="Updates the Database with new compounds, Mother-Plates or Daugther-Plates")
-        tab_1_worklist = sg.Tab("Worklist", self.set_1_worklist(),
-                                tooltip="A module for generating worklist for en Echo.")
-        tab_1_extra = sg.Tab("Extra", self.setup_1_extra(),
-                             tooltip="Updates the database with other stuff, and misc")
-        tab_1_sim = sg.Tab("Sim", self.setup_1_simulator(),
-                           tooltip="simulate output files from different aspect of the HTS for testing purpose")
+        tab_1_search = sg.Tab("Search", self.setup_1_search())
+        tab_1_bio_data = sg.Tab("Bio Data", self.setup_1_bio())
+        tab_1_purity_data = sg.Tab("Purity Data", self.setup_1_purity())
+        tab_1_plate_layout = sg.Tab("Plate Layout", self.setup_1_plate_layout())
+        tab_1_add = sg.Tab("Update", self.setup_1_update())
+        tab_1_worklist = sg.Tab("Worklist", self.set_1_worklist())
+        tab_1_extra = sg.Tab("Extra", self.setup_1_extra())
+        tab_1_sim = sg.Tab("Sim", self.setup_1_simulator())
 
         tab_group_1_list = [tab_1_search, tab_1_bio_data, tab_1_purity_data, tab_1_plate_layout, tab_1_add,
                             tab_1_worklist, tab_1_extra, tab_1_sim]

@@ -12,6 +12,8 @@ from gui_settings_control import GUISettingsController
 from gui_functions import *
 from gui_guards import *
 from bio_data_functions import org, norm, pora, pora_internal
+from gui_update_overview import update_overview_compound
+from gui_update_tables import update_bio_exp_compound_table, update_bio_exp_assay_table, update_bio_exp_plate_table
 from plate_formatting import plate_layout_re_formate
 from gui_popup import matrix_popup, sample_to_compound_name_controller, ms_raw_name_guard, bio_data_approval_table, \
     assay_generator, assay_run_naming
@@ -619,6 +621,9 @@ def main(config, queue_gui, queue_mol):
     well_dict_bio_info = {}
     well_dict_bio_info_calc_handler = {}
 
+    # Makes it possible to double-click on the table
+    window["-BIO_EXP_COMPOUND_TABLE-"].bind('<Double-Button-1>', "+-double click-")
+
     # PLATE TABLE CONSTANTS #
     plate_table_table_heading_mp = ["Barcode", "Compound", "Well", "Volume", "Date", "Active",
                                     "Freeze/Thaw", "Plate Type", "location"]
@@ -680,7 +685,6 @@ def main(config, queue_gui, queue_mol):
         # if event == "-SUB_SEARCH_DRAW_MOL-":
         #     smiles = values["-SUB_SEARCH_SMILES-"]
         #     queue_mol.put(("start_draw_tool", smiles))
-
 
         if event == "-START_UP_DB-":
             if db_active:
@@ -2212,137 +2216,6 @@ def main(config, queue_gui, queue_mol):
 
         #   WINDOW TABLE - BIO EXPERIMENT TABLE     ###
 
-        # ToDo Re-design
-        # if event == "-BIO_EXP_PLATE_TABLE-":
-        #     if bio_exp_table_data:
-        #         if not values["-BIO_INFO_ANALYSE_METHOD-"]:
-        #             window["-BIO_INFO_ANALYSE_METHOD-"].Update(value="original")
-        #         if not values["-BIO_INFO_MAPPING-"]:
-        #             window["-BIO_INFO_MAPPING-"].Update(value="state mapping")
-        #
-        #     gui_tab = "bio_exp"
-        #     archive = True
-        #
-        #     file_name = "bio_experiments.txt"
-        #     plate_dict_name = bio_exp_table_data[values["-BIO_EXP_PLATE_TABLE-"][0]][2]
-        #     plate_bio_info = ...
-        #
-        #     bio_info_plate_layout = bio_exp_table_data[values["-BIO_EXP_PLATE_TABLE-"][0]][3]
-        #     bio_info_plate_size = archive_plates_dict[bio_info_plate_layout]["plate_type"]
-        #     bio_info_state_dict = copy.deepcopy(archive_plates_dict[bio_info_plate_layout]["well_layout"])
-        #     bio_info_state_dict = plate_layout_re_formate(bio_info_state_dict)
-        #
-        #     well_dict_bio_info, bio_info_min_x, bio_info_min_y, bio_info_max_x, bio_info_max_y \
-        #         = draw_plate(config, graph_bio_exp, bio_info_plate_size, bio_info_state_dict, gui_tab, archive)
-        #
-        #     bio_info_plates = []
-        #     bio_info_states = []
-        #     bio_info_analyse_method = []
-        #     bio_info_calc = []
-        #     for plates in plate_bio_info:
-        #         bio_info_plates.append(plates)
-        #         for method in plate_bio_info[plates]["calculations"]:
-        #             if method != "other":
-        #                 if method not in bio_info_analyse_method:
-        #                     bio_info_analyse_method.append(method)
-        #                 for state in plate_bio_info[plates]["calculations"][method]:
-        #                     if state not in bio_info_states:
-        #                         bio_info_states.append(state)
-        #                     for calc in plate_bio_info[plates]["calculations"][method][state]:
-        #                         if calc not in bio_info_calc:
-        #                             bio_info_calc.append(calc)
-        #             if method == "other":
-        #                 for calc_other in plate_bio_info[plates]["calculations"][method]:
-        #                     if calc_other not in bio_info_calc:
-        #                         bio_info_calc.append(calc_other)
-        #
-        #     # Main settings info
-        #     window["-BIO_INFO_ANALYSE_METHOD-"].update(values=bio_info_analyse_method, value=bio_info_analyse_method[0])
-        #     window["-BIO_INFO_PLATES-"].update(values=bio_info_plates, value=bio_info_plates[0])
-        #     window["-BIO_INFO_STATES-"].update(values=bio_info_states)
-        #
-        #     # Map settings
-        #     list_box_index = None
-        #     for index_state, values in enumerate(bio_info_states):
-        #         if values == "sample":
-        #             list_box_index = index_state
-        #         if not list_box_index:
-        #             list_box_index = 0
-        #
-        #     window["-BIO_INFO_STATE_LIST_BOX-"].update(values=bio_info_states, set_to_index=list_box_index)
-        #
-        #     # Matrix Settings
-        #     window["-BIO_INFO_MATRIX_METHOD-"].update(values=bio_info_analyse_method)
-        #     window["-BIO_INFO_MATRIX_STATE-"].update(values=bio_info_states)
-        #     window["-BIO_INFO_MATRIX_CALC-"].update(values=bio_info_calc)
-        #
-        #     # # List settings
-        #     # window["-BIO_INFO_LIST_METHOD-"].update(values=bio_info_analyse_method, value=bio_info_analyse_method[0])
-        #     # window["-BIO_INFO_LIST_STATE-"].update(values=bio_info_states, value=bio_info_states[0])
-        #     # window["-BIO_INFO_LIST_CALC-"].update(values=bio_info_calc, value=bio_info_calc[0])
-        #
-        #     # Overview settings
-        #     window["-BIO_INFO_PLATE_OVERVIEW_METHOD_LIST-"].update(values=bio_info_analyse_method,
-        #                                                            set_to_index=len(bio_info_analyse_method) - 1)
-        #     window["-BIO_INFO_PLATE_OVERVIEW_STATE_LIST-"].update(values=bio_info_states,
-        #                                                           set_to_index=len(bio_info_states) - 1)
-        #     window["-BIO_INFO_PLATE_OVERVIEW_PLATE-"].update(values=bio_info_plates, value=bio_info_plates[0])
-        #     window["-BIO_INFO_OVERVIEW_METHOD-"].update(values=bio_info_analyse_method,
-        #                                                 value=bio_info_analyse_method[0])
-        #     window["-BIO_INFO_OVERVIEW_STATE-"].update(values=bio_info_states, value=bio_info_states[0])
-        #
-        #     # HIT List settings
-        #     window["-BIO_INFO_HIT_LIST_PLATES-"].update(values=bio_info_plates, value=bio_info_plates[0])
-        #     window["-BIO_INFO_HIT_LIST_METHOD-"].update(values=bio_info_analyse_method,
-        #                                                 value=bio_info_analyse_method[-1])
-        #     window["-BIO_INFO_HIT_LIST_STATE-"].update(values=bio_info_states, value="sample")
-        #
-        #     # Popup Matrix
-        #     method_values = bio_info_analyse_method
-        #     state_values = bio_info_states
-        #     calc_values = bio_info_calc
-        #
-        #     # bio_info_sub_setting_tab_mapping_calc = True
-        #     # bio_info_sub_setting_tab_matrix_calc = True
-        #     # bio_info_sub_setting_tab_list_calc = True
-        #     bio_info_sub_setting_tab_overview_calc = True
-        #     bio_info_sub_setting_tab_plate_overview_calc = True
-        #     bio_info_sub_setting_tab_z_prime_calc = True
-        #     bio_info_sub_setting_tab_hit_list_calc = True
-
-        # if event == "-BIO_EXP_TABLE_REFRESH-":
-        #     # ToDO make this work better...
-        #     start_date = values["-BIO_EXP_TABLE_DATE_START_TARGET-"]
-        #     end_date = values["-BIO_EXP_TABLE_DATE_END_TARGET-"]
-        #     bio_exp_table_responsible = values["-BIO_EXP_TABLE_RESPONSIBLE-"]
-        #
-        #     if start_date:
-        #         use_start_date = True
-        #     else:
-        #         use_start_date = False
-        #     if end_date:
-        #         use_end_date = True
-        #     else:
-        #         use_end_date = False
-        #     if bio_exp_table_responsible:
-        #         use_responsible = True
-        #     else:
-        #         use_responsible = False
-        #
-        #     search_limiter = {
-        #         "start_date": {"value": start_date, "operator": "<", "target_column": "date", "use": use_start_date},
-        #         "end_date": {"value": end_date, "operator": ">", "target_column": "date", "use": use_end_date},
-        #         # "responsible": {"value": bio_exp_table_responsible, "operator": "=", "target_column": "responsible",
-        #         #                 "use": use_responsible}
-        #     }
-        #
-        #     table_name = "assay_runs"
-        #
-        #     all_table_data["-BIO_EXP_PLATE_TABLE-"], headlines = grab_table_data(config, table_name, search_limiter)
-        #     # print(table_data)
-        #
-        #     window["-BIO_EXP_PLATE_TABLE-"].update(values=all_table_data["-BIO_EXP_PLATE_TABLE-"])
-
         if event == "-TABLE_TAB_GRP-" and values["-TABLE_TAB_GRP-"] == "Bio Experiment table":
 
             if all_assays is None:
@@ -2354,43 +2227,64 @@ def main(config, queue_gui, queue_mol):
                 window["-BIO_EXP_TABLE_ASSAY_LIST_BOX-"].update(values=all_assays)
 
         if event == "-BIO_EXP_TABLE_ASSAY_LIST_BOX-" and values["-BIO_EXP_TABLE_ASSAY_LIST_BOX-"]:
-            table_name = "assay_runs"
-            selected_assays = values["-BIO_EXP_TABLE_ASSAY_LIST_BOX-"]
-            selected_headlines = ["run_name", "batch", "date", "note"]
-            search_list_clm = "assay_name"
-            bio_exp_assay_runs, _ = grab_table_data(config, table_name, selected_assays,
-                                                    specific_rows=selected_headlines, search_list_clm=search_list_clm)
+            # clearing tables
+            window["-BIO_EXP_PLATE_TABLE-"].update(values=[[]])
+            window["-BIO_EXP_COMPOUND_TABLE-"].update(values=[[]])
+            window["-BIO_EXP_PLATE_NOTE-"].update(value="")
 
-            window["-BIO_EXP_ASSAY_RUN_TABLE-"].update(values=bio_exp_assay_runs)
+            # updating table
+            bio_exp_assay_runs = update_bio_exp_assay_table(config, sg, window, event, values)
 
-        if event == "-BIO_EXP_ASSAY_RUN_TABLE-" and values["-BIO_EXP_ASSAY_RUN_TABLE-"]:
-            table_name = "biological_plate_data"
-            bio_exp_selected_runs = []
-            for values in values["-BIO_EXP_ASSAY_RUN_TABLE-"]:
-                bio_exp_selected_runs.append(bio_exp_assay_runs[values][0])
-            search_list_clm = "assay_run"
+        if event == "-BIO_EXP_ASSAY_RUN_TABLE-" and values["-BIO_EXP_ASSAY_RUN_TABLE-"] or \
+                event == "-BIO_EXP_APPROVED_PLATES_ONLY-" and values["-BIO_EXP_ASSAY_RUN_TABLE-"]:
+            # clearing table:
+            window["-BIO_EXP_COMPOUND_TABLE-"].update(values=[[]])
+            window["-BIO_EXP_PLATE_NOTE-"].update(value="")
 
-            selected_headlines = ["plate_name", "z_prime", "approval", "note", "analysed_method", "assay_run"]
+            approval_check = values["-BIO_EXP_APPROVED_PLATES_ONLY-"]
 
-            bio_exp_plate_data, _ = grab_table_data(config, table_name, bio_exp_selected_runs,
-                                                    specific_rows=selected_headlines, search_list_clm=search_list_clm)
+            # updating table:
+            bio_exp_plate_data = update_bio_exp_plate_table(config, sg, window, event, values, bio_exp_assay_runs,
+                                                            approval_check=approval_check)
 
-            window["-BIO_EXP_PLATE_TABLE-"].update(values=bio_exp_plate_data)
+        if event == "-BIO_EXP_PLATE_TABLE-" and values["-BIO_EXP_PLATE_TABLE-"] or \
+                event == "-BIO_EXP_APPROVED_COMPOUNDS_ONLY-" and values["-BIO_EXP_PLATE_TABLE-"] or \
+                event == "-INIT_BIO_TABLE-" and values["-BIO_EXP_PLATE_TABLE-"] or \
+                event == "-BIO_EXP_APPROVED_COMPOUNDS_ONLY-" and values["-BIO_EXP_PLATE_TABLE-"]:
 
-        if event == "-BIO_EXP_PLATE_TABLE-" and values["-BIO_EXP_PLATE_TABLE-"]:
-            bio_exp_selected_plates = []
-            table_name = "biological_compound_data"
-            for values in values["-BIO_EXP_PLATE_TABLE-"]:
+            approval_check = values["-BIO_EXP_APPROVED_COMPOUNDS_ONLY-"]
+            try:
+                float(values["-BIO_EXP_SET_THRESHOLD-"])
+            except ValueError:
+                threshold = False
+            else:
+                threshold = float(values["-BIO_EXP_SET_THRESHOLD-"])
 
-                bio_exp_selected_plates.append(bio_exp_plate_data[values][0])
+            try:
+                float(values["-BIO_EXP_SET_COMPOUND_AMOUNT-"])
+            except ValueError:
+                compound_amount = False
+            else:
+                compound_amount = float(values["-BIO_EXP_SET_COMPOUND_AMOUNT-"])
 
-            search_list_clm = "assay_plate"
-            selected_headlines = ["compound_id", "score", "hit", "concentration", "approved", "assay_well", "note"]
+            bio_exp_compound_data = update_bio_exp_compound_table(config, sg, window, event, values, bio_exp_plate_data,
+                                                                  threshold=threshold, compound_amount=compound_amount,
+                                                                  approval_check=approval_check)
 
-            bio_exp_compound_data, _ = grab_table_data(config, table_name, bio_exp_selected_plates,
-                                                       specific_rows=selected_headlines, search_list_clm=search_list_clm)
-            #
-            window["-BIO_EXP_COMPOUND_TABLE-"].update(values=bio_exp_compound_data)
+        if event == "-BIO_EXP_COMPOUND_TABLE-+-double click-":
+            try:
+                table_row = values["-BIO_EXP_COMPOUND_TABLE-"][0]
+            except IndexError:
+                pass
+            else:
+                print(bio_exp_compound_data[table_row])
+                temp_compound_id = bio_exp_compound_data[table_row][0]
+                print(temp_compound_id)
+                window["-COMPOUND_INFO_ID-"].update(value=temp_compound_id)
+                update_overview_compound(config, sg, window, event, values, temp_compound_id)
+
+        if event == "-BIO_EXP_EXPORT_COMPOUNDS-" and values["-BIO_EXP_PLATE_TABLE-"]:
+            bio_exp_compound_list(config, event, values, bio_exp_compound_data)
 
         #   WINDOW TABLE - LC EXPERIMENT    ###
         if event == "-TABLE_TAB_GRP-" and values["-TABLE_TAB_GRP-"] == "LC Experiment table":
@@ -2535,69 +2429,15 @@ def main(config, queue_gui, queue_mol):
 
         #   WINDOW 2 - COMPOUND INFO    ###
         if event == "-COMPOUND_INFO_SEARCH_COMPOUND_ID-":
-            compound_id = values["-COMPOUND_INFO_ID-"]
-
-            if compound_id:
-                sample_row = grab_table_data(config, "compound_main", single_row=True, data_value=compound_id, headline="compound_id")
-                if sample_row:
-                    # Get Academic/commercial information:
-                    ac_id = sample_row[0][6]
-                    all_data_ac = grab_table_data(config, "origin", single_row=True, data_value=ac_id, headline="ac_id")
-
-                    # Update info frame:
-                    window["-COMPOUND_INFO_AC-"].update(value=all_data_ac[0][1])
-                    window["-COMPOUND_INFO_ORIGIN-"].update(value=all_data_ac[0][2])
-                    window["-COMPOUND_INFO_ORIGIN_ID-"].update(value=sample_row[0][7])
-                    window["-COMPOUND_INFO_CONCENTRATION-"].update(value=sample_row[0][5])
-                    window["-COMPOUND_INFO_TUBE_VOLUME-"].update(value=sample_row[0][4])
-                    # ToDo find info from DB if that is there, else:
-                    window["-COMPOUND_INFO_TUBE_VOLUME-"].update(value="Missing info")
-
-                    # Update Picture frame:
-                    window["-COMPOUND_INFO_SMILES-"].update(value=sample_row[0][2])
-                    window["-COMPOUND_INFO_PIC-"].update(data=sample_row[0][3])
-
-                    mp_table_data = grab_table_data(config, "compound_mp", single_row=True, data_value=compound_id,
-                                                    headline="compound_id")
-
-                    dp_table_data = grab_table_data(config, "compound_dp", single_row=True, data_value=compound_id,
-                                                    headline="compound_id")
-                    assay_compound_table_data = grab_table_data(config, "biological_compound_data", single_row=True,
-                                                       data_value=compound_id, headline="compound_id")
-                    print(mp_table_data)
-                    print(dp_table_data)
-                    print(assay_compound_table_data)
-                    assay_plate = []
-                    for assays in assay_compound_table_data:
-                        assay_plate.append(assays[3])
-                    # ToDo Figure out what to show and how to show the data for the compound
-                    assay_plate_table_data, _ = grab_table_data(config, "biological_plate_data", assay_plate,
-                                                             specific_rows=None,
-                                                            search_list_clm="plate_name")
-
-                    print(assay_plate_table_data)
-
-                    assay_runs = []
-                    for plates in assay_plate_table_data:
-                        assay_runs.append(plates[1])
-
-                    assay_run_table_data, _ = grab_table_data(config, "assay_runs", assay_runs,
-                                                       specific_rows=None, search_list_clm="run_name")
-
-                    # print(assay_run_table_data)
-
-                    assays = []
-                    for runs in assay_run_table_data:
-                        assays.append(runs[1])
-                    assay_table_data, _ = grab_table_data(config, "assay", assays, specific_rows=None,
-                                                          search_list_clm="assay_name")
-
-                    print(assay_table_data)
+            temp_compound_id = values["-COMPOUND_INFO_ID-"]
+            update_overview_compound(config, sg, window, event, values, temp_compound_id)
 
         if event in compound_info_tables:
-            print(compound_info_tables[event])
+            print(f"compound info table - {compound_info_tables[event]}")
 
-
+        if event == "-COMPOUND_INFO_SEND_TO_SEARCH-":
+            temp_compound_id = values["-COMPOUND_INFO_ID-"]
+            window["-SUB_SEARCH_SMILES-"].update(value=temp_compound_id)
 
         #   WINDOW 2 - BIO INFO         ###
         if event == "-BIO_INFO_STATES-" and values["-BIO_INFO_STATES-"]:
