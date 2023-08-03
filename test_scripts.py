@@ -1,388 +1,310 @@
-from gui_functions import grab_table_data, bio_compound_info_from_worklist, bio_data, get_plate_layout, draw_plate
+import copy
+from math import floor
 import PySimpleGUI as sg
 
-from bio_data_functions import org, norm, pora, pora_internal
-from gui_popup import bio_data_approval_table
+from gui_layout import GUILayout
+
+from gui_plate_drawing_functions import on_up, save_layout, delete_layout, rename_layout, export_layout, draw_layout, \
+    _update_dose_tool, on_move, dose_colouring, dose_sample_amount, dose_dilution_replicates
+from heatmap import Heatmap
+from gui_functions import get_plate_layout, draw_plate, plate_layout_to_excel, update_database, \
+    delete_records_from_database, rename_record_in_the_database
+from info import clm_to_row_96, clm_to_row_384, clm_to_row_1536, row_to_clm_96, row_to_clm_384, row_to_clm_1536
+from plate_formatting import plate_layout_re_formate
 
 
-def testing(config, folder, default_plate_layout, bio_plate_report_setup, work_sheet, color_select):
-    plate_list, archive_plates_dict = get_plate_layout(config)
-    plate_to_layout = default_plate_layout
-    # Sets values for different parametors
-    bio_import_folder = folder
-    # default_plate_layout = archive_plates_dict[values["-BIO_PLATE_LAYOUT-"]]
-    default_plate_layout = default_plate_layout
-    include_hits = False
+class Tester:
+    def __init__(self, config, plate_list):
+        self.config = config
+        self.standard_size = 20
+        self.colour_size = 5
+        self.button_height = 1
+        self.tab_colour = config["GUI"]["tab_colour"]
+        self.sample_style = ["Single Point", "Duplicate", "Triplicate", "Custom", "Dose Response"]
+        self.analyse_style = ["Single", "Dose Response"]
+        self.plate_list = plate_list
+        self.lable_style = "solid"
+        self.show_input_style = "sunken"
 
-    threshold = False
 
-    hit_amount = int(10)
+    def setup_1_plate_layout(self):
+        """
 
-    include_smiles = True
-    final_report_name = "testing"
-    export_to_excel = False
-    same_layout = True
-    include_structure = False
+        :return: A layour for the plate-module in the top box
+        :rtype: list
+        """
+        color_select = {}
+        for keys in list(self.config["plate_colouring"].keys()):
+            color_select[keys] = self.config["plate_colouring"][keys]
 
-    bio_export_folder = folder
+        plate_type = ["plate_96", "plate_384", "plate_1536"]
+        sample_type = self.sample_style
 
-    bio_sample_list = work_sheet
-    bio_sample_list = bio_sample_list.split(";")
-    bio_sample_dict = bio_compound_info_from_worklist(config, sg, bio_sample_list)
+        col_graph = sg.Frame("Plate Layout", [[
+            sg.Column([
+                [sg.Graph(canvas_size=(500, 350), graph_bottom_left=(0, 0), graph_top_right=(500, 350),
+                      background_color='grey', key="-RECT_BIO_CANVAS-", enable_events=True, drag_submits=True,
+                      motion_events=True)],
+                [sg.DropDown(values=plate_type, default_value=plate_type[1], key="-PLATE-"),
+                 sg.B("Draw Plate", key="-DRAW-"),
+                 # sg.B("Add sample layout", key="-DRAW_SAMPLE_LAYOUT-"),
+                 sg.Text(key="-CANVAS_INFO_WELL-"),
+                 sg.Text(key="-CANVAS_INFO_GROUP-"),
+                 sg.Text(key="-CANVAS_INFO_COUNT-")]
+            ])
+        ]])
 
-    analyse_method = "single point"
-    add_compound_ids = False
+        coloring_tab = sg.Tab("State", [[
+            sg.Column([
+                [sg.Radio(f"Select Sample", 1, key="-RECT_SAMPLES-", size=self.standard_size, enable_events=True,
+                          default=True),
+                 sg.T(background_color=self.config["plate_colouring"]["sample"], size=self.colour_size,
+                      key="-PLATE_LAYOUT_COLOUR_BOX_SAMPLE-", relief="groove")],
+                [sg.Radio(f"Select Blank", 1, key="-RECT_BLANK-", size=self.standard_size, enable_events=True),
+                 sg.T(background_color=self.config["plate_colouring"]["blank"], size=self.colour_size,
+                      key="-PLATE_LAYOUT_COLOUR_BOX_BLANK-", relief="groove")],
+                [sg.Radio(f"Select Max Signal", 1, key="-RECT_MAX-", size=self.standard_size, enable_events=True),
+                 sg.T(background_color=self.config["plate_colouring"]["max"], size=self.colour_size,
+                      key="-PLATE_LAYOUT_COLOUR_BOX_NAX-", relief="groove")],
+                [sg.Radio(f"Select Minimum Signal", 1, key="-RECT_MIN-", size=self.standard_size,
+                          enable_events=True),
+                 sg.T(background_color=self.config["plate_colouring"]["minimum"], size=self.colour_size,
+                      key="-PLATE_LAYOUT_COLOUR_BOX_MINIMUM-", relief="groove")],
+                [sg.Radio(f"Select Positive Control", 1, key="-RECT_POS-", size=self.standard_size,
+                          enable_events=True),
+                 sg.T(background_color=self.config["plate_colouring"]["positive"], size=self.colour_size,
+                      key="-PLATE_LAYOUT_COLOUR_BOX_POSITIVE-", relief="groove")],
+                [sg.Radio(f"Select Negative Control", 1, key="-RECT_NEG-", size=self.standard_size,
+                          enable_events=True),
+                 sg.T(background_color=self.config["plate_colouring"]["negative"], size=self.colour_size,
+                      key="-PLATE_LAYOUT_COLOUR_BOX_NEGATIVE-", relief="groove")],
+                [sg.Radio(f"Select Empty", 1, key="-RECT_EMPTY-", size=self.standard_size, enable_events=True),
+                 sg.T(background_color=self.config["plate_colouring"]["empty"], size=self.colour_size,
+                      key="-PLATE_LAYOUT_COLOUR_BOX_EMPTY-", relief="groove")],
+                [sg.Radio(f"Colour", 1, key="-COLOUR-", enable_events=True, size=self.standard_size),
+                 sg.ColorChooserButton("Colour", key="-PLATE_LAYOUT_COLOUR_CHOSE-",
+                                       target="-PLATE_LAYOUT_COLOUR_CHOSE_TARGET-"),
+                 sg.Input(key="-PLATE_LAYOUT_COLOUR_CHOSE_TARGET-", visible=False, enable_events=True, disabled=True,
+                          default_text="#ffffff")],
+                # [sg.Radio('Erase', 1, key='-ERASE-', enable_events=True)],
+                # [sg.Radio('Move Stuff', 1, key='-MOVE-', enable_events=True)],
 
-    worked, all_plates_data, date, used_plates, plate_to_layout = \
-        bio_data(config, bio_import_folder, plate_to_layout, archive_plates_dict,
-                 bio_plate_report_setup, analyse_method, bio_sample_dict, bio_export_folder,
-                 add_compound_ids, export_to_excel)
+            ])]])
 
-    assay_name = "Alpha_so"
+        grp_tab = sg.Tab("Dose Response", [[
+            sg.Column([
+                [sg.T("Amount of available sample spots:"),
+                 sg.T("", key="-SAMPLE_SPOTS-")],
+                [sg.T("Sample Amount", size=self.standard_size),
+                 sg.Input("", key="-DOSE_SAMPLE_AMOUNT-", size=5, enable_events=True)],
+                [sg.T("Replicate", size=self.standard_size),
+                 sg.Input("", key="-DOSE_REPLICATES_AMOUNT-", size=5, enable_events=True)],
+                [sg.T("Empty Sample Spots", size=self.standard_size),
+                 sg.Input("", key="-DOSE_EMPTY_SAMPLE_SPOTS-", size=5, enable_events=True)],
+                [sg.Checkbox("Equal split", key="-EQUAL_SPLIT-", default=True,
+                             tooltip="If this is true, the amount of replicates per sample will be the same")],
+                [sg.T("", size=self.standard_size)],
+                [sg.DropDown(values=[1], key="-SAMPLE_CHOOSER_DROPDOWN-", default_value=1, enable_events=True)],
+                [sg.Radio(f"Horizontal", 2, key="-AUTO_HORIZONTAL-", size=10, enable_events=True,
+                          default=True),
+                 sg.Radio(f"Vertical", 2, key="-AUTO_VERTICAL-", size=10, enable_events=True)],
+                [sg.ColorChooserButton("First Colour", button_color=self.config["plate_colouring"]["dose_low"],
+                                       target="-DOSE_COLOUR_LOW-", key="-DOSE_COLOUR_BUTTON_LOW-"),
+                 sg.Input(self.config["plate_colouring"]["dose_low"], key="-DOSE_COLOUR_LOW-", size=5,
+                          enable_events=True, visible=False),
+                 sg.ColorChooserButton("Last Colour", button_color=self.config["plate_colouring"]["dose_high"],
+                                       target="-DOSE_COLOUR_LOW-", key="-DOSE_COLOUR_BUTTON_HIGH-"),
+                 sg.Input(self.config["plate_colouring"]["dose_high"], key="-DOSE_COLOUR_HIGH-", size=5,
+                          enable_events=True, visible=False)],
+                [sg.Radio(f"", 1, key="-RECT_DOSE-", size=15, enable_events=True, visible=False)]
+            ])
+        ]])
 
-    # # Grabs the value for the assay from the database
-    assay_data_row = grab_table_data(config, table_name="assay", single_row=True,
-                                     data_value=assay_name, headline="assay_name")
+        draw_tab_group = [coloring_tab, grp_tab]
+        tab_draw_group = sg.TabGroup([draw_tab_group], selected_title_color=self.tab_colour,
+                                     key="-PLATE_LAYOUT_DRAW_GROUPS-", enable_events=True)
+        draw_options = sg.Frame("Options", [[
+            sg.Column([
+                [tab_draw_group],
+                [sg.Checkbox("Use Archive", default=False, key="-ARCHIVE-", size=floor(self.standard_size / 2)),
+                 sg.DropDown(sample_type, key="-RECT_SAMPLE_TYPE-", default_value=sample_type[0], visible=True,
+                             enable_events=True)],
+                [sg.T("Main", size=5),
+                 sg.DropDown(sorted(self.plate_list), key="-ARCHIVE_PLATES-", size=self.standard_size,
+                             enable_events=True)],
+                [sg.T("Sub", size=5),
+                 sg.DropDown([], key="-ARCHIVE_PLATES_SUB-", size=self.standard_size)],
+                [sg.Button("Save", key="-SAVE_LAYOUT-"),
+                 sg.Button("Rename", key="-RENAME_LAYOUT-"),
+                 sg.Button("Delete", key="-DELETE_LAYOUT-"),
+                 sg.Button("Export", key="-EXPORT_LAYOUT-")],
+            ])
+        ]])
 
-    assay_data = {"assay_name": assay_data_row[0][2],
-                  "plate_layout": assay_data_row[0][4],
-                  "z_prime_threshold": assay_data_row[0][7],
-                  "hit_threshold": assay_data_row[0][8],
-                  "plate_size": assay_data_row[0][9]}
+        layout = [[col_graph, draw_options]]
 
-    # Open a popup window where data can be checked before being added to the database.
-    all_plates_data, plate_analyse_methods = \
-        bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, same_layout,
-                                plate_to_layout, archive_plates_dict, color_select, bio_plate_report_setup)
+        return sg.Window("Samples", layout, finalize=True, resizable=True)
+
+
+def run(config, plate_list, archive_plates_dict):
+
+    gui = GUILayout(config, plate_list)
+    layout = gui.setup_1_plate_layout()
+    window = sg.Window("Samples", layout, finalize=True, resizable=True)
+    graph_bio_exp = well_dict_bio_info = plate_bio_info = None
+    graph_plate = window["-RECT_BIO_CANVAS-"]
+    dragging = False
+    temp_selector = False
+    plate_active = False
+    temp_draw_tool = "sample"
+    color_select = {}
+    for keys in list(config["plate_colouring"].keys()):
+        color_select[keys] = config["plate_colouring"][keys]
+    well_dict = {}
+    start_point = end_point = prior_rect = temp_tool = None
+
+    clm_to_row_converter = {"plate_96": clm_to_row_96, "plate_384": clm_to_row_384, "plate_1536": clm_to_row_1536}
+    row_to_clm_converter = {"plate_96": row_to_clm_96, "plate_384": row_to_clm_384, "plate_1536": row_to_clm_1536}
+    plate_type_count = {"plate_96": 96, "plate_384": 384, "plate_1536": 1536}
+    total_sample_spots = 0
+    temp_sample_amount = 0
+    x = y = min_x = max_x = min_y = max_y = plate_type = None
+    dose_colour_dict = {}
+    draw_tool_dict = {
+        "-RECT_SAMPLES-": "sample",
+        "-RECT_BLANK-": "blank",
+        "-RECT_MAX-": "max",
+        "-RECT_MIN-": "minimum",
+        "-RECT_NEG-": "negative",
+        "-RECT_POS-": "positive",
+        "-RECT_EMPTY-": "empty",
+        "-COLOUR-": "paint",
+        "-RECT_DOSE-": "dose"
+    }
+
+    while True:
+        event, values = window.read()
+
+        if event == sg.WIN_CLOSED:
+            window.close()
+            break
+
+        # Tabs interactions
+        if event == "-PLATE_LAYOUT_DRAW_GROUPS-":
+            if values["-PLATE_LAYOUT_DRAW_GROUPS-"] == "Dose Response":
+                for tools in draw_tool_dict:
+                    if values[tools]:
+                        temp_draw_tool_tracker = tools
+
+                window["-RECT_DOSE-"].update(value=True)
+                total_sample_spots = 0
+                for wells in well_dict:
+                    if well_dict[wells]["state"] == "sample":
+                        total_sample_spots += 1
+
+                window["-SAMPLE_SPOTS-"].update(value=total_sample_spots)
+            elif values["-PLATE_LAYOUT_DRAW_GROUPS-"] == "State":
+                window[temp_draw_tool_tracker].update(value=True)
+
+        # Dose Response Tab
+        if event == "-DOSE_SAMPLE_AMOUNT-" and values["-EQUAL_SPLIT-"]:
+            dose_colour_dict = dose_sample_amount(window, event, values, total_sample_spots, dose_colour_dict)
+
+        if event == "-DOSE_DILUTIONS-" or event == "-DOSE_REPLICATES-":
+            dose_colour_dict = dose_dilution_replicates(window, event, values, total_sample_spots, dose_colour_dict)
+
+        if event == "-DOSE_COLOUR_LOW-":
+            dose_colour_dict = dose_colouring(window, event, values, temp_sample_amount,
+                                              "-DOSE_COLOUR_BUTTON_LOW-", "-DOSE_COLOUR_LOW-")
+
+        if event == "-DOSE_COLOUR_HIGH-":
+            dose_colour_dict = dose_colouring(window, event, values, temp_sample_amount,
+                                              "-DOSE_COLOUR_BUTTON_HIGH-", "-DOSE_COLOUR_HIGH-")
+
+        # State mapping
+        if event == "-PLATE_LAYOUT_COLOUR_CHOSE_TARGET-":
+            if values["-PLATE_LAYOUT_COLOUR_CHOSE_TARGET-"] != "None":
+                window["-PLATE_LAYOUT_COLOUR_CHOSE-"].update(
+                    button_color=values["-PLATE_LAYOUT_COLOUR_CHOSE_TARGET-"])
+
+        # Plate Layout functions:
+        if event == "-ARCHIVE_PLATES-":
+            print("Needs to update ARCHIVE_PLATES_SUB")
+
+        if event == "-RECT_SAMPLE_TYPE-" and values["-ARCHIVE_PLATES-"]:
+            print("Needs to update ARCHIVE_PLATES_SUB")
+
+        if event == "-DRAW-":
+            well_dict, min_x, min_y, max_x, max_y, plate_active, graph, plate_type, archive_plates, gui_tab, sample_type\
+                = draw_layout(config, sg, window, event, values, well_dict, graph_plate, archive_plates_dict)
+
+        if event == "-EXPORT_LAYOUT-":
+            print(well_dict)
+            # export_layout(config, sg, window, event, values, well_dict)
+
+        if event == "-SAVE_LAYOUT-":
+            save_layout(config, sg, window, event, values, well_dict, archive_plates_dict)
+
+        if event == "-DELETE_LAYOUT-":
+            delete_layout(config, sg, window, event, values)
+
+        if event == "-RENAME_LAYOUT-":
+            rename_layout(config, sg, window, event, values)
+
+        # Used both for Plate layout and Bio Info
+        # prints coordinate and well under the plate layout
+        try:
+            event.endswith("+MOVE")
+
+        except AttributeError:
+            pass
+
+        else:
+            if event.endswith("+MOVE") and type(event) != tuple:
+                on_move(config, sg, window, event, values, graph_bio_exp, well_dict_bio_info, plate_bio_info,
+                        graph_plate, well_dict)
+
+        if event == "-RECT_BIO_CANVAS-":
+            x, y = values["-RECT_BIO_CANVAS-"]
+            if not dragging:
+                start_point = (x, y)
+                dragging = True
+            else:
+                end_point = (x, y)
+            if prior_rect:
+                graph_plate.delete_figure(prior_rect)
+
+            # Choosing which tool to pain the plate with.
+            if None not in (start_point, end_point):
+                for temp_draw_value in draw_tool_dict:
+                    if values[temp_draw_value]:
+                        temp_draw_tool = draw_tool_dict[temp_draw_value]
+                temp_selector = True
+                prior_rect = graph_plate.draw_rectangle(start_point, end_point, fill_color="",
+                                                        line_color="white")
+
+        # it does not always detect this event:
+        try:
+            event.endswith("+UP")
+        except AttributeError:
+            pass
+        else:
+            if event.endswith("+UP"):
+                start_point, end_point, dragging, prior_rect, temp_selector, temp_draw_tool, well_dict = \
+                    on_up(config, sg, window, event, values, temp_selector, plate_active, start_point, end_point, x, y,
+                          min_x, max_x, min_y, max_y, graph_plate, clm_to_row_converter, plate_type_count, plate_type,
+                          color_select, temp_draw_tool, well_dict, prior_rect, dose_colour_dict)
+
 
 if __name__ == "__main__":
     import configparser
     config = configparser.ConfigParser()
     config.read("config.ini")
-    folder = r"C:\Users\phch\Desktop\test\test_data\data"
-    work_sheet = r"C:\Users\phch\OneDrive - Danmarks Tekniske Universitet\Mapper\Python_data\alpha_SO\worklisted_used_with_good_data\Worklist_alpha_so_225_to_234.txt"
-
-    bio_plate_report_setup = {
-        "well_states_report_method": {"original": config["Settings_bio"].
-            getboolean("well_states_report_method_original"),
-                                      "normalised": config["Settings_bio"].
-                                          getboolean("well_states_report_method_normalised"),
-                                      "pora": config["Settings_bio"].getboolean("well_states_report_method_pora"),
-                                      "pora_internal": config["Settings_bio"].
-                                          getboolean("well_states_report_method_pora_internal")},
-        "well_states_report": {'sample': config["Settings_bio"].getboolean("plate_report_well_states_report_sample"),
-                               'blank': config["Settings_bio"].getboolean("plate_report_well_states_report_blank"),
-                               'max': config["Settings_bio"].getboolean("plate_report_well_states_report_max"),
-                               'minimum': config["Settings_bio"].getboolean("plate_report_well_states_report_minimum"),
-                               'positive': config["Settings_bio"].getboolean("plate_report_well_states_report_positive")
-            ,
-                               'negative': config["Settings_bio"].getboolean("plate_report_well_states_report_negative")
-            ,
-                               'empty': config["Settings_bio"].getboolean("plate_report_well_states_report_empty")},
-        "calc_dict": {"original": {"use": config["Settings_bio"].getboolean("plate_report_calc_dict_original_use"),
-                                   "avg": config["Settings_bio"].getboolean("plate_report_calc_dict_original_avg"),
-                                   "stdev": config["Settings_bio"].getboolean("plate_report_calc_dict_original_stdev"),
-                                   "pstdev": config["Settings_bio"].getboolean(
-                                       "plate_report_calc_dict_original_pstdev"),
-                                   "pvariance": config["Settings_bio"].getboolean(
-                                       "plate_report_calc_dict_original_pvariance"),
-                                   "variance": config["Settings_bio"].getboolean(
-                                       "plate_report_calc_dict_original_variance"),
-                                   "st_dev_%": config["Settings_bio"].getboolean(
-                                       "plate_report_calc_dict_original_st_dev_%"),
-                                   "state": {"sample": config["Settings_bio"].
-                                       getboolean("plate_report_calc_dict_original_state_sample"),
-                                             "minimum": config["Settings_bio"].
-                                                 getboolean("plate_report_calc_dict_original_state_minimum"),
-                                             "max": config["Settings_bio"].
-                                                 getboolean("plate_report_calc_dict_original_state_max"),
-                                             "empty": config["Settings_bio"].
-                                                 getboolean("plate_report_calc_dict_original_state_empty"),
-                                             "negative": config["Settings_bio"].
-                                                 getboolean("plate_report_calc_dict_original_state_negative"),
-                                             "positive": config["Settings_bio"].
-                                                 getboolean("plate_report_calc_dict_original_state_positive"),
-                                             "blank": config["Settings_bio"].
-                                                 getboolean("plate_report_calc_dict_original_state_blank")}},
-                      "normalised": {"use": config["Settings_bio"].getboolean("plate_report_calc_dict_normalised_use"),
-                                     "avg": config["Settings_bio"].
-                                         getboolean("plate_report_calc_dict_normalised_avg"),
-                                     "stdev": config["Settings_bio"].
-                                         getboolean("plate_report_calc_dict_normalised_stdev"),
-                                     "pstdev": config["Settings_bio"].
-                                         getboolean("plate_report_calc_dict_normalised_pstdev"),
-                                     "pvariance": config["Settings_bio"].
-                                         getboolean("plate_report_calc_dict_normalised_pvariance"),
-                                     "variance": config["Settings_bio"].
-                                         getboolean("plate_report_calc_dict_normalised_variance"),
-                                     "st_dev_%": config["Settings_bio"].
-                                         getboolean("plate_report_calc_dict_normalised_st_dev_%"),
-                                     "state": {"sample": config["Settings_bio"].
-                                         getboolean("plate_report_calc_dict_normalised_"
-                                                    "state_sample"),
-                                               "minimum": config["Settings_bio"].
-                                                   getboolean("plate_report_calc_dict_normalised_"
-                                                              "state_minimum"),
-                                               "max": config["Settings_bio"].
-                                                   getboolean("plate_report_calc_dict_normalised_"
-                                                              "state_max"),
-                                               "empty": config["Settings_bio"].
-                                                   getboolean("plate_report_calc_dict_normalised_"
-                                                              "state_empty"),
-                                               "negative": config["Settings_bio"].
-                                                   getboolean("plate_report_calc_dict_normalised_"
-                                                              "state_negative"),
-                                               "positive": config["Settings_bio"].
-                                                   getboolean("plate_report_calc_dict_normalised_"
-                                                              "state_positive"),
-                                               "blank": config["Settings_bio"].
-                                                   getboolean("plate_report_calc_dict_normalised_"
-                                                              "state_blank")}},
-                      "pora": {"use": config["Settings_bio"].getboolean("plate_report_calc_dict_pora_use"),
-                               "avg": config["Settings_bio"].getboolean("plate_report_calc_dict_pora_avg"),
-                               "stdev": config["Settings_bio"].getboolean("plate_report_calc_dict_pora_stdev"),
-                               "pstdev": config["Settings_bio"].getboolean("plate_report_calc_dict_pora_pstdev"),
-                               "pvariance": config["Settings_bio"].getboolean("plate_report_calc_dict_pora_pvariance"),
-                               "variance": config["Settings_bio"].getboolean("plate_report_calc_dict_pora_variance"),
-                               "st_dev_%": config["Settings_bio"].getboolean("plate_report_calc_dict_pora_st_dev_%"),
-                               "state": {"sample": config["Settings_bio"].
-                                   getboolean("plate_report_calc_dict_pora_state_sample"),
-                                         "minimum": config["Settings_bio"].
-                                             getboolean("plate_report_calc_dict_pora_state_minimum"),
-                                         "max": config["Settings_bio"].getboolean(
-                                             "plate_report_calc_dict_pora_state_max"),
-                                         "empty": config["Settings_bio"].
-                                             getboolean("plate_report_calc_dict_pora_state_empty"),
-                                         "negative": config["Settings_bio"].
-                                             getboolean("plate_report_calc_dict_pora_state_negative"),
-                                         "positive": config["Settings_bio"].
-                                             getboolean("plate_report_calc_dict_pora_state_positive"),
-                                         "blank": config["Settings_bio"].
-                                             getboolean("plate_report_calc_dict_pora_state_blank")}},
-                      "pora_internal": {"use": config["Settings_bio"].
-                          getboolean("plate_report_calc_dict_pora_internal_use"),
-                                        "avg": config["Settings_bio"].
-                                            getboolean("plate_report_calc_dict_pora_internal_avg"),
-                                        "stdev": config["Settings_bio"].
-                                            getboolean("plate_report_calc_dict_pora_internal_stdev"),
-                                        "state": {"sample": config["Settings_bio"].
-                                            getboolean("plate_report_calc_dict_pora_internal_state_sample"),
-                                                  "minimum": config["Settings_bio"].
-                                                      getboolean("plate_report_calc_dict_pora_internal_state_minimum"),
-                                                  "max": config["Settings_bio"].
-                                                      getboolean("plate_report_calc_dict_pora_internal_state_max"),
-                                                  "empty": config["Settings_bio"].
-                                                      getboolean("plate_report_calc_dict_pora_internal_state_empty"),
-                                                  "negative": config["Settings_bio"].
-                                                      getboolean("plate_report_calc_dict_pora_internal_state_negative"),
-                                                  "positive": config["Settings_bio"].
-                                                      getboolean("plate_report_calc_dict_pora_internal_state_positive"),
-                                                  "blank": config["Settings_bio"].
-                                                      getboolean("plate_report_calc_dict_pora_internal_state_blank")}},
-                      "other": {"use": config["Settings_bio"].getboolean("plate_report_calc_dict_other_use"),
-                                "calc": {"z_prime": config["Settings_bio"].
-                                    getboolean("plate_report_calc_dict_other_calc_z_prime")}}},
-        "plate_calc_dict": {
-            "original": {"use": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_original_use"),
-                         "avg": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_original_avg"),
-                         "stdev": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_original_stdev"),
-                         "pstdev": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_original_pstdev"),
-                         "pvariance": config["Settings_bio"].getboolean(
-                             "plate_report_plate_calc_dict_original_pvariance"),
-                         "variance": config["Settings_bio"].getboolean(
-                             "plate_report_plate_calc_dict_original_variance"),
-                         "st_dev_%": config["Settings_bio"].getboolean(
-                             "plate_report_plate_calc_dict_original_st_dev_%"),
-                         "state": {"sample": config["Settings_bio"].
-                             getboolean("plate_report_plate_calc_dict_original_state_sample"),
-                                   "minimum": config["Settings_bio"].
-                                       getboolean("plate_report_plate_calc_dict_original_state_minimum"),
-                                   "max": config["Settings_bio"].
-                                       getboolean("plate_report_plate_calc_dict_original_state_max"),
-                                   "empty": config["Settings_bio"].
-                                       getboolean("plate_report_plate_calc_dict_original_state_empty"),
-                                   "negative": config["Settings_bio"].
-                                       getboolean("plate_report_plate_calc_dict_original_state_negative"),
-                                   "positive": config["Settings_bio"].
-                                       getboolean("plate_report_plate_calc_dict_original_state_positive"),
-                                   "blank": config["Settings_bio"].
-                                       getboolean("plate_report_plate_calc_dict_original_state_blank")}},
-            "normalised": {"use": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_normalised_use"),
-                           "avg": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_normalised_avg"),
-                           "stdev": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_normalised_stdev"),
-                           "pstdev": config["Settings_bio"].getboolean(
-                               "plate_report_plate_calc_dict_normalised_pstdev"),
-                           "pvariance": config["Settings_bio"].getboolean(
-                               "plate_report_plate_calc_dict_normalised_pvariance"),
-                           "variance": config["Settings_bio"].getboolean(
-                               "plate_report_plate_calc_dict_normalised_variance"),
-                           "st_dev_%": config["Settings_bio"].getboolean(
-                               "plate_report_plate_calc_dict_normalised_st_dev_%"),
-                           "state": {"sample": config["Settings_bio"].
-                               getboolean("plate_report_plate_calc_dict_normalised_state_sample"),
-                                     "minimum": config["Settings_bio"].
-                                         getboolean("plate_report_plate_calc_dict_normalised_state_minimum"),
-                                     "max": config["Settings_bio"].
-                                         getboolean("plate_report_plate_calc_dict_normalised_state_max"),
-                                     "empty": config["Settings_bio"].
-                                         getboolean("plate_report_plate_calc_dict_normalised_state_empty"),
-                                     "negative": config["Settings_bio"].
-                                         getboolean("plate_report_plate_calc_dict_normalised_state_negative"),
-                                     "positive": config["Settings_bio"].
-                                         getboolean("plate_report_plate_calc_dict_normalised_state_positive"),
-                                     "blank": config["Settings_bio"].
-                                         getboolean("plate_report_plate_calc_dict_normalised_state_blank")}},
-            "pora": {"use": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_pora_use"),
-                     "avg": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_pora_avg"),
-                     "stdev": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_pora_stdev"),
-                     "pstdev": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_pora_pstdev"),
-                     "pvariance": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_pora_pvariance"),
-                     "variance": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_pora_variance"),
-                     "st_dev_%": config["Settings_bio"].getboolean("plate_report_plate_calc_dict_pora_st_dev_%"),
-                     "state": {"sample": config["Settings_bio"].
-                         getboolean("plate_report_plate_calc_dict_pora_state_sample"),
-                               "minimum": config["Settings_bio"].
-                                   getboolean("plate_report_plate_calc_dict_pora_state_minimum"),
-                               "max": config["Settings_bio"].
-                                   getboolean("plate_report_plate_calc_dict_pora_state_max"),
-                               "empty": config["Settings_bio"].
-                                   getboolean("plate_report_plate_calc_dict_pora_state_empty"),
-                               "negative": config["Settings_bio"].
-                                   getboolean("plate_report_plate_calc_dict_pora_state_negative"),
-                               "positive": config["Settings_bio"].
-                                   getboolean("plate_report_plate_calc_dict_pora_state_positive"),
-                               "blank": config["Settings_bio"].
-                                   getboolean("plate_report_plate_calc_dict_pora_state_blank")}},
-            "pora_internal": {"use": config["Settings_bio"].
-                getboolean("plate_report_plate_calc_dict_pora_internal_use"),
-                              "avg": config["Settings_bio"].
-                                  getboolean("plate_report_plate_calc_dict_pora_internal_avg"),
-                              "stdev": config["Settings_bio"].
-                                  getboolean("plate_report_plate_calc_dict_pora_internal_stdev"),
-                              "pstdev": config["Settings_bio"].
-                                  getboolean("plate_report_plate_calc_dict_pora_internal_pstdev"),
-                              "pvariance": config["Settings_bio"].
-                                  getboolean("plate_report_plate_calc_dict_pora_internal_pvariance"),
-                              "variance": config["Settings_bio"].
-                                  getboolean("plate_report_plate_calc_dict_pora_internal_variance"),
-                              "st_dev_%": config["Settings_bio"].
-                                  getboolean("plate_report_plate_calc_dict_pora_internal_st_dev_%"),
-                              "state": {"sample": config["Settings_bio"].
-                                  getboolean("plate_report_plate_calc_dict_pora_internal_state_sample"),
-                                        "minimum": config["Settings_bio"].
-                                            getboolean("plate_report_plate_calc_dict_pora_internal_state_minimum"),
-                                        "max": config["Settings_bio"].
-                                            getboolean("plate_report_plate_calc_dict_pora_internal_state_max"),
-                                        "empty": config["Settings_bio"].
-                                            getboolean("plate_report_plate_calc_dict_pora_internal_state_empty"),
-                                        "negative": config["Settings_bio"].
-                                            getboolean("plate_report_plate_calc_dict_pora_internal_state_negative"),
-                                        "positive": config["Settings_bio"].
-                                            getboolean("plate_report_plate_calc_dict_pora_internal_state_positive"),
-                                        "blank": config["Settings_bio"].
-                                            getboolean("plate_report_plate_calc_dict_pora_internal_state_blank")}},
-        },
-        "plate_analysis_dict": {"original": {"use": config["Settings_bio"].
-            getboolean("plate_report_plate_analysis_dict_original_use"),
-                                             "methode": org,
-                                             "state_map": config["Settings_bio"].
-                                                 getboolean("plate_report_plate_analysis_dict_original_state_map"),
-                                             "heatmap": config["Settings_bio"].
-                                                 getboolean("plate_report_plate_analysis_dict_original_heatmap"),
-                                             "hit_map": config["Settings_bio"].
-                                                 getboolean("plate_report_plate_analysis_dict_original_hit_map"),
-                                             "none": config["Settings_bio"].
-                                                 getboolean("plate_report_plate_analysis_dict_original_none")},
-                                "normalised": {"use": config["Settings_bio"].
-                                    getboolean("plate_report_plate_analysis_dict_normalised_use"),
-                                               "methode": norm,
-                                               "state_map": config["Settings_bio"].
-                                                   getboolean("plate_report_plate_analysis_dict_normalised_state_map"),
-                                               "heatmap": config["Settings_bio"].
-                                                   getboolean("plate_report_plate_analysis_dict_normalised_heatmap"),
-                                               "hit_map": config["Settings_bio"].
-                                                   getboolean("plate_report_plate_analysis_dict_normalised_hit_map"),
-                                               "none": config["Settings_bio"].
-                                                   getboolean("plate_report_plate_analysis_dict_normalised_none")},
-                                "pora": {"use": config["Settings_bio"].
-                                    getboolean("plate_report_plate_analysis_dict_pora_use"),
-                                         "methode": pora,
-                                         "state_map": config["Settings_bio"].
-                                             getboolean("plate_report_plate_analysis_dict_pora_state_map"),
-                                         "heatmap": config["Settings_bio"].
-                                             getboolean("plate_report_plate_analysis_dict_pora_heatmap"),
-                                         "hit_map": config["Settings_bio"].
-                                             getboolean("plate_report_plate_analysis_dict_pora_hit_map"),
-                                         "none": config["Settings_bio"].
-                                             getboolean("plate_report_plate_analysis_dict_pora_none")},
-                                "pora_internal": {"use": config["Settings_bio"].
-                                    getboolean("plate_report_plate_analysis_dict_pora_internal_use"),
-                                                  "methode": pora_internal,
-                                                  "state_map": config["Settings_bio"].
-                                                      getboolean(
-                                                      "plate_report_plate_analysis_dict_pora_internal_state_map")
-                                    ,
-                                                  "heatmap": config["Settings_bio"].
-                                                      getboolean(
-                                                      "plate_report_plate_analysis_dict_pora_internal_heatmap"),
-                                                  "hit_map": config["Settings_bio"].
-                                                      getboolean(
-                                                      "plate_report_plate_analysis_dict_pora_internal_hit_map"),
-                                                  "none": config["Settings_bio"].
-                                                      getboolean("plate_report_plate_analysis_dict_pora_internal_none")}
-                                },
-        "z_prime_calc": config["Settings_bio"].getboolean("plate_report_z_prime_calc"),
-        "heatmap_colours": {'low': config["Settings_bio"]["plate_report_heatmap_colours_low"],
-                            'mid': config["Settings_bio"]["plate_report_heatmap_colours_mid"],
-                            'high': config["Settings_bio"]["plate_report_heatmap_colours_high"]},
-        "pora_threshold": {"th_1": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_1_min"),
-                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_1_max"),
-                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_1_use")},
-                           "th_2": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_2_min"),
-                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_2_max"),
-                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_2_use")},
-                           "th_3": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_3_min"),
-                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_3_max"),
-                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_3_use")},
-                           "th_4": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_4_min"),
-                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_4_max"),
-                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_4_use")},
-                           "th_5": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_5_min"),
-                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_5_max"),
-                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_5_use")},
-                           "th_6": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_6_min"),
-                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_6_max"),
-                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_6_use")},
-                           "th_7": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_7_min"),
-                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_7_max"),
-                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_7_use")},
-                           "th_8": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_8_min"),
-                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_8_max"),
-                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_8_use")},
-                           "th_9": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_9_min"),
-                                    "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_9_max"),
-                                    "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_9_use")},
-                           "th_10": {"min": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_10_min"),
-                                     "max": config["Settings_bio"].getfloat("plate_report_pora_threshold_th_10_max"),
-                                     "use": config["Settings_bio"].getboolean("plate_report_pora_threshold_th_10_use")},
-                           "colour": {"th_1": config["Settings_bio"]["plate_report_pora_threshold_colour_th_1"],
-                                      "th_2": config["Settings_bio"]["plate_report_pora_threshold_colour_th_2"],
-                                      "th_3": config["Settings_bio"]["plate_report_pora_threshold_colour_th_3"],
-                                      "th_4": config["Settings_bio"]["plate_report_pora_threshold_colour_th_4"],
-                                      "th_5": config["Settings_bio"]["plate_report_pora_threshold_colour_th_5"],
-                                      "th_6": config["Settings_bio"]["plate_report_pora_threshold_colour_th_6"],
-                                      "th_7": config["Settings_bio"]["plate_report_pora_threshold_colour_th_7"],
-                                      "th_8": config["Settings_bio"]["plate_report_pora_threshold_colour_th_8"],
-                                      "th_9": config["Settings_bio"]["plate_report_pora_threshold_colour_th_9"],
-                                      "th_10": config["Settings_bio"]["plate_report_pora_threshold_colour_th_10"]}
-                           }
-    }
-    default_plate_layout = "Daniells_Alpha_So"
+    plate_list, archive_plates_dict = get_plate_layout(config)
+    # print(archive_plates_dict)
+    run(config, plate_list, archive_plates_dict)
 
 
 
-    color_select = {}
-    for keys in list(config["plate_colouring"].keys()):
-        color_select[keys] = config["plate_colouring"][keys]
 
-    testing(config, folder, default_plate_layout, bio_plate_report_setup, work_sheet, color_select)
+

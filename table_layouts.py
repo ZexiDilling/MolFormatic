@@ -131,7 +131,8 @@ assay_runs = """ CREATE TABLE IF NOT EXISTS assay_runs(
 plate_layout_sub = """CREATE TABLE IF NOT EXISTS plate_layout_sub(
             plate_sub	TEXT NOT NULL UNIQUE,
             plate_main	TEXT NOT NULL,
-            well_layout	TEXT NOT NULL,
+            well_layout	BLOB NOT NULL,
+            style   TEXT NOT NULL,
             FOREIGN KEY(plate_main) REFERENCES plate_layout(plate_name)
             );"""
 

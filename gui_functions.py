@@ -423,8 +423,6 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
     }
     counter = 0
     sample_counter = 0
-    group = 1
-
     for row in range(rows[plate_type]):
         for column in range(columns[plate_type]):
             bottom_left = (start_x + row * size[plate_type],
@@ -432,13 +430,18 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
             top_right = (bottom_left[0] - size[plate_type],
                          bottom_left[1] - size[plate_type])
             well_id = f"{well_id_col[column]}{row+1}"
+
             if archive_plate:
                 counter += 1
-                # print(well_dict)
                 well_state = well_data_dict[well_id]["state"]
-                fill_colour = config["plate_colouring"][well_state]
+                if sample_layout == "single point":
+                    fill_colour = config["plate_colouring"][well_state]
+                else:
+                    fill_colour = well_data_dict[well_id]["colour"]
+                group = well_data_dict[well_id]["group"]
 
-            if sample_layout and sample_layout.casefold() != "single point":
+            elif sample_layout and sample_layout.casefold() != "single point":
+                group = 1
                 if well_state == "sample":
                     sample_counter += 1
                     temp_colour = group % 200
@@ -449,7 +452,7 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
                     if sample_counter % sample_layout_dict[sample_layout] == 0:
                         group += 1
             else:
-                group = counter
+                group = 0
 
             if mapping:
                 try:
@@ -479,9 +482,12 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
 
             temp_well = graph.DrawRectangle(bottom_left, top_right, line_color=line_colour, fill_color=fill_colour)
             well_dict[temp_well] = {}
+            if group == "dose":
+                group = well_data_dict[well_id]["group"]
             well_dict[temp_well]["group"] = group
             well_dict[temp_well]["well_id"] = well_id
             well_dict[temp_well]["state"] = well_state
+            well_dict[temp_well]["colour"] = fill_colour
 
     min_x = start_x - size[plate_type]
     min_y = start_y - (columns[plate_type] * size[plate_type])
@@ -1299,11 +1305,11 @@ def set_colours(window, reports):
         update(background_color=bio_plate_report_setup["pora_threshold"]["colour"]["th_3"])
 
 
-def plate_layout_to_excel(well_dict, name, folder):
+def plate_layout_to_excel(config, well_dict, name, folder):
     # for index, plate in enumerate(well_dict):
     #     if index == 0:
     well_col_row, well_type = well_row_col_type(well_dict)
-    plate_layout = plate_layout_re_formate(well_dict)
+    plate_layout = plate_layout_re_formate(config, well_dict)
 
     export_plate_layout(plate_layout, well_col_row, name, folder)
 
@@ -1319,7 +1325,7 @@ def plate_dilution(config, function, file, dw_amount, add_source_wells, source_w
         return state
 
     elif function == "Generate":
-        plate_layout = plate_layout_re_formate(plate_layout["well_layout"])
+        plate_layout = plate_layout_re_formate(config, plate_layout["well_layout"])
         sample_info_dict, replicate_samples_max, replicate_plate_sets, dilution_factor, concentration_counter, \
             control_vol, control_conc = plate_dilution_excel(file, save_plates, dw_amount, well_layout)
 
@@ -1969,9 +1975,15 @@ def _get_plate_archive(dbf, table, column_headline, plate_names):
         except IndexError:
             well_layout = None
 
+        try:
+            sample_type = temp_sub_row_data[0][4]
+        except IndexError:
+            sample_type = None
+
         # Generates the dict
         archive_plates_dict[plate_name] = {"well_layout": well_layout,
                                            "plate_type": plate_type,
+                                           "sample_type": sample_type,
                                            "sample": [],
                                            "blank": [],
                                            "max": [],

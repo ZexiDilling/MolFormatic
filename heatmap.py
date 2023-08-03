@@ -39,7 +39,7 @@ class Heatmap:
 
         return self._color_dict(rgb_list)
 
-    def _poly_linear_gradient(self, colors, n):
+    def poly_linear_gradient(self, colors, n):
         ''' returns a list of colors forming linear gradients between
           all sequential pairs of colors. "n" specifies the total
           number of desired output colors '''
@@ -56,6 +56,24 @@ class Heatmap:
                     gradient_dict[k] += next[k][1:]
 
         return gradient_dict
+
+    @staticmethod
+    def get_complementary(color):
+        # strip the # from the beginning
+        color = color[1:]
+
+        # convert the string into hex
+        color = int(color, 16)
+
+        # invert the three bytes
+        # as good as substracting each of RGB component by 255(FF)
+        comp_color = 0xFFFFFF ^ color
+
+        # convert the color back to hex by prefixing a #
+        comp_color = "#%06X" % comp_color
+
+        # return the result
+        return comp_color
 
     @staticmethod
     def _convert_percentiles(well_dict, percentiles):
@@ -163,7 +181,7 @@ class Heatmap:
         colour_amount = 1000
         colour_dict = {}
         for percentile in percentile_dict:
-            colour_dict[percentile] = self._poly_linear_gradient(colours[percentile], colour_amount)
+            colour_dict[percentile] = self.poly_linear_gradient(colours[percentile], colour_amount)
 
         well_percentile_dict = self._samples_per_percentile(well_dict, percentile_dict, colour_amount)
 

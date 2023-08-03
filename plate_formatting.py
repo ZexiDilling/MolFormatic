@@ -78,7 +78,7 @@ def daughter_plate_generator(mp_data, sample_amount, dp_name, dp_layout, volume)
     return dp_dict
 
 
-def plate_layout_re_formate(plate_layout):
+def plate_layout_re_formate(config, plate_layout):
     """
     Reformate the platlayout from having a counter, to using the well-ID instead
 
@@ -87,14 +87,19 @@ def plate_layout_re_formate(plate_layout):
     :return: Reformate the platlayout from having a counter, to using the well-ID instead
     :rtype: dict
     """
+    print(plate_layout)
     plate_layout_re = {}
     for counter in plate_layout:
         plate_layout_re[plate_layout[counter]["well_id"]] = {}
 
         if "group" in plate_layout[counter]:
             plate_layout_re[plate_layout[counter]["well_id"]]["group"] = plate_layout[counter]["group"]
-        plate_layout_re[plate_layout[counter]["well_id"]]["state"] = plate_layout[counter]["state"]
-        plate_layout_re[plate_layout[counter]["well_id"]]["colour"] = plate_layout[counter]["colour"]
+        well_state = plate_layout[counter]["state"]
+        plate_layout_re[plate_layout[counter]["well_id"]]["state"] = well_state
+        if "colour" in plate_layout[counter]:
+            plate_layout_re[plate_layout[counter]["well_id"]]["colour"] = plate_layout[counter]["colour"]
+        else:
+            plate_layout_re[plate_layout[counter]["well_id"]]["colour"] = config["plate_colouring"][well_state]
 
     return plate_layout_re
 

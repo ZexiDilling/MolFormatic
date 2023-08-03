@@ -1,5 +1,6 @@
+import re
 from math import floor
-
+from info import unit_converter_dict
 
 def hex_to_rgb(hex_colour):
     """
@@ -47,6 +48,59 @@ def increment_text_string(txt):
     tail = int(tail) + 1
     incremented_text = f"{head}{tail}"
     return incremented_text
+
+
+def unit_converter(input_value, new_unit_out=None, old_unit_out=False, as_list=False):
+    # Validate input_value format
+    pattern = r'^(\d+(\.\d+)?(?:e[-+]?\d+)?)([a-zA-Z]+)([a-zA-Z]*)$'
+    match = re.match(pattern, input_value)
+    if not match:
+        raise ValueError("Invalid input format. Input should be in the format '<number><unit>' or '<number><unit><type>'")
+
+    number_str, _, unit_type, _ = match.groups()
+
+    unit_type = [letter for letter in unit_type]
+    if len(unit_type) > 1:
+        original_unit = unit_type[0]
+        temp_type = unit_type[1]
+    else:
+        original_unit = ""
+        temp_type = unit_type[0]
+
+    # Make the unit case-insensitive
+    original_unit = original_unit.lower()
+
+    # Check if the unit is valid
+    if original_unit not in unit_converter_dict:
+        raise ValueError(f"Invalid unit '{original_unit}'. Available units are: {', '.join(unit_converter_dict.keys())}")
+
+    number = float(number_str)
+    base_number = unit_converter_dict[original_unit] * number
+
+    if old_unit_out:
+        unit_out = original_unit
+    elif new_unit_out:
+        unit_out = new_unit_out
+    else:
+        unit_out = None
+
+    if unit_out:
+        new_unit_out = unit_out.lower()  # Make the unit_out case-insensitive
+
+        # Check if the unit_out is valid
+        if new_unit_out not in unit_converter_dict:
+            raise ValueError(f"Invalid unit_out '{new_unit_out}'. Available units are: {', '.join(unit_converter_dict.keys())}")
+
+        converted_number = base_number / unit_converter_dict[new_unit_out]
+
+    else:
+        converted_number = base_number
+        new_unit_out = ""
+
+    if as_list:
+        return converted_number, new_unit_out, temp_type, original_unit
+    else:
+        return f"{converted_number}{new_unit_out}{temp_type}"
 
 
 if __name__ == "__main__":

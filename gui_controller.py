@@ -14,6 +14,9 @@ from gui_guards import *
 from bio_data_functions import org, norm, pora, pora_internal
 from gui_update_overview import update_overview_compound
 from gui_update_tables import update_bio_exp_compound_table, update_bio_exp_assay_table, update_bio_exp_plate_table
+from info import clm_to_row_96, clm_to_row_384, clm_to_row_1536, row_to_clm_96, row_to_clm_384, row_to_clm_1536
+from gui_plate_drawing_functions import on_up, save_layout, delete_layout, rename_layout, export_layout, draw_layout,\
+    dose_colouring, dose_dilution, dose_sample_amount, on_move
 from plate_formatting import plate_layout_re_formate
 from gui_popup import matrix_popup, sample_to_compound_name_controller, ms_raw_name_guard, bio_data_approval_table, \
     assay_generator, assay_run_naming
@@ -559,6 +562,24 @@ def main(config, queue_gui, queue_mol):
     dragging = False
     temp_selector = False
     plate_active = False
+    x = y = min_x = max_x = min_y = max_y = plate_type = temp_replicates = None
+    clm_to_row_converter = {"plate_96": clm_to_row_96, "plate_384": clm_to_row_384, "plate_1536": clm_to_row_1536}
+    row_to_clm_converter = {"plate_96": row_to_clm_96, "plate_384": row_to_clm_384, "plate_1536": row_to_clm_1536}
+    plate_type_count = {"plate_96": 96, "plate_384": 384, "plate_1536": 1536}
+    total_sample_spots = 0
+    temp_sample_amount = 0
+    dose_colour_dict = {}
+    draw_tool_dict = {
+        "-RECT_SAMPLES-": "sample",
+        "-RECT_BLANK-": "blank",
+        "-RECT_MAX-": "max",
+        "-RECT_MIN-": "minimum",
+        "-RECT_NEG-": "negative",
+        "-RECT_POS-": "positive",
+        "-RECT_EMPTY-": "empty",
+        "-COLOUR-": "paint",
+        "-RECT_DOSE-": "dose"
+    }
 
     #   WINDOW 1 - EXTRA    #
     customers_data = None
@@ -833,7 +854,7 @@ def main(config, queue_gui, queue_mol):
         if event == "-BIO_PLATE_LAYOUT-":
             well_dict.clear()
             well_dict = copy.deepcopy(archive_plates_dict[values["-BIO_PLATE_LAYOUT-"]]["well_layout"])
-            well_dict = plate_layout_re_formate(well_dict)
+            well_dict = plate_layout_re_formate(config, well_dict)
             plate_size = archive_plates_dict[values["-BIO_PLATE_LAYOUT-"]]["plate_type"]
             archive = True
             gui_tab = "bio"
@@ -844,7 +865,7 @@ def main(config, queue_gui, queue_mol):
             if values["-BIO_PLATE_LAYOUT-"]:
                 well_dict.clear()
                 well_dict = copy.deepcopy(archive_plates_dict[values["-BIO_PLATE_LAYOUT-"]]["well_layout"])
-                well_dict = plate_layout_re_formate(well_dict)
+                well_dict = plate_layout_re_formate(config, well_dict)
                 plate_size = archive_plates_dict[values["-BIO_PLATE_LAYOUT-"]]["plate_type"]
                 archive = True
                 gui_tab = "bio"
@@ -1263,168 +1284,81 @@ def main(config, queue_gui, queue_mol):
             sg.Popup("Not working atm")  # ToDo Make this work. create a report based on data.
 
         #     WINDOW 1 - PLATE LAYOUT     ###
+        # Tabs interactions
+        if event == "-PLATE_LAYOUT_DRAW_GROUPS-":
+            if values["-PLATE_LAYOUT_DRAW_GROUPS-"] == "Dose Response":
+                for tools in draw_tool_dict:
+                    if values[tools]:
+                        temp_draw_tool_tracker = tools
+
+                window["-RECT_DOSE-"].update(value=True)
+                total_sample_spots = 0
+                for wells in well_dict:
+                    if well_dict[wells]["state"] == "sample":
+                        total_sample_spots += 1
+
+                window["-SAMPLE_SPOTS-"].update(value=total_sample_spots)
+            elif values["-PLATE_LAYOUT_DRAW_GROUPS-"] == "State":
+                window[temp_draw_tool_tracker].update(value=True)
+
+        # Dose Response Tab
+        if event == "-DOSE_SAMPLE_AMOUNT-" and values["-EQUAL_SPLIT-"]:
+            dose_colour_dict = dose_sample_amount(window, event, values, total_sample_spots, dose_colour_dict)
+
+        if event == "-DOSE_REPLICATES_AMOUNT-":
+            dose_colour_dict = dose_dilution(window, event, values, total_sample_spots, dose_colour_dict)
+
+        if event == "-DOSE_COLOUR_LOW-":
+            dose_colour_dict = dose_colouring(window, event, values, temp_sample_amount,
+                                              "-DOSE_COLOUR_BUTTON_LOW-", "-DOSE_COLOUR_LOW-")
+
+        if event == "-DOSE_COLOUR_HIGH-":
+            dose_colour_dict = dose_colouring(window, event, values, temp_sample_amount,
+                                              "-DOSE_COLOUR_BUTTON_HIGH-", "-DOSE_COLOUR_HIGH-")
+
+        # State mapping
         if event == "-PLATE_LAYOUT_COLOUR_CHOSE_TARGET-":
             if values["-PLATE_LAYOUT_COLOUR_CHOSE_TARGET-"] != "None":
-                window["-PLATE_LAYOUT_COLOUR_CHOSE-"].update(button_color=values["-PLATE_LAYOUT_COLOUR_CHOSE_TARGET-"])
+                window["-PLATE_LAYOUT_COLOUR_CHOSE-"].update(
+                    button_color=values["-PLATE_LAYOUT_COLOUR_CHOSE_TARGET-"])
+
+        # Plate Layout functions:
+        if event == "-ARCHIVE_PLATES-":
+            print("Needs to update ARCHIVE_PLATES_SUB")
+
+        if event == "-RECT_SAMPLE_TYPE-" and values["-ARCHIVE_PLATES-"]:
+            print("Needs to update ARCHIVE_PLATES_SUB")
 
         if event == "-DRAW-":
-            well_dict.clear()
-            # sets the size of the well for when it draws the plate
-            graph = graph_plate
-            plate_type = values["-PLATE-"]
-            archive_plates = values["-ARCHIVE-"]
-            gui_tab = "plate_layout"
-            sample_type = values["-RECT_SAMPLE_TYPE-"]
-
-            if values["-ARCHIVE-"]:
-                try:
-                    well_dict = copy.deepcopy(archive_plates_dict[values["-ARCHIVE_PLATES-"]]["well_layout"])
-                    well_dict = plate_layout_re_formate(well_dict)
-                    window["-PLATE-"].update(archive_plates_dict[values["-ARCHIVE_PLATES-"]]["plate_type"])
-                    plate_type = archive_plates_dict[values["-ARCHIVE_PLATES-"]]["plate_type"]
-
-                except KeyError:
-                    window["-ARCHIVE-"].update(False)
-                    values["-ARCHIVE-"] = False
-
-            well_dict, min_x, min_y, max_x, max_y = draw_plate(config, graph, plate_type, well_dict, gui_tab,
-                                                               archive_plates, sample_layout=sample_type)
-            plate_active = True
+            well_dict, min_x, min_y, max_x, max_y, plate_active = draw_layout(config, sg, window, event, values,
+                                                                              well_dict, graph_plate,
+                                                                              archive_plates_dict)
 
         if event == "-EXPORT_LAYOUT-":
-            if not well_dict:
-                sg.PopupError("Please create a layout to Export")
-            name = sg.PopupGetText("Name the file")
-            if name:
-                folder = sg.PopupGetFolder("Choose save location")
-                if folder:
-                    plate_layout_to_excel(well_dict, name, folder)
-
-                    sg.Popup("Done")
+            export_layout(config, sg, window, event, values, well_dict)
 
         if event == "-SAVE_LAYOUT-":
-            if not well_dict:
-                sg.PopupError("Please create a layout to save")
-            elif any("paint" in stuff.values() for stuff in well_dict.values()):
-                sg.PopupError("Can't save layout with paint as well states")
-            else:
-                temp_well_dict = {}
-                temp_dict_name = sg.PopupGetText("Name plate layout")
-
-                if temp_dict_name:
-                    archive_plates_dict[temp_dict_name] = {}
-                    for index, well_counter in enumerate(well_dict):
-                        temp_well_dict[index + 1] = copy.deepcopy(well_dict[well_counter])
-
-                    archive_plates_dict[temp_dict_name]["well_layout"] = temp_well_dict
-                    archive_plates_dict[temp_dict_name]["plate_type"] = values["-PLATE-"]
-
-                    # saves the layout to the Database
-                    # setting up the data for importing the new plate_layout to the database
-                    temp_table = "plate_layout"
-                    # ToDo add plate model ??
-                    temp_plate_layout_data = {
-                        "plate_name": temp_dict_name,
-                        "plate_type": values["-PLATE-"],
-                        "plate_model": "placeholder"
-                    }
-
-                    update_database(config, temp_table, temp_plate_layout_data)
-
-                    temp_sub_plate_layout_data = {
-                        "plate_sub": temp_dict_name,
-                        "plate_main": temp_dict_name,
-                        "plate_layout": f"{temp_well_dict}"
-                    }
-                    update_database(config, "plate_layout_sub", temp_sub_plate_layout_data)
-
-                    # Updates the plate_list and archive_plates_dict with the new plate
-                    plate_list, archive_plates_dict = get_plate_layout(config)
-
-                    # Updates the window with new values
-                    window["-ARCHIVE_PLATES-"].update(values=sorted(plate_list), value=plate_list[0])
-                    window["-BIO_PLATE_LAYOUT-"].update(values=sorted(plate_list), value="")
-                    window["-SEARCH_PLATE_LAYOUT-"].update(values=sorted(plate_list), value="")
+            save_layout(config, sg, window, event, values, well_dict, archive_plates_dict)
 
         if event == "-DELETE_LAYOUT-":
-            if not values["-ARCHIVE_PLATES-"]:
-                sg.PopupError("Please select a layout to delete")
-            else:
-                # Set up values for the database, and deletes the record
-                table = "plate_layout"
-                headline = "plate_name"
-                data_value = values["-ARCHIVE_PLATES-"]
-                delete_records_from_database(config, table, headline, data_value)
-
-                # Grabs the updated data from the database
-                plate_list, archive_plates_dict = get_plate_layout(config)
-
-                # Updates the window with new values
-                try:
-                    window["-ARCHIVE_PLATES-"].update(values=sorted(plate_list), value=plate_list[0])
-                    window["-BIO_PLATE_LAYOUT-"].update(values=sorted(plate_list), value="")
-                except IndexError:
-                    window["-ARCHIVE_PLATES-"].update(values=[], value="")
-                    window["-BIO_PLATE_LAYOUT-"].update(values=[], value="")
+            delete_layout(config, sg, window, event, values)
 
         if event == "-RENAME_LAYOUT-":
-            if not values["-ARCHIVE_PLATES-"]:
-                sg.PopupError("Please select a layout to rename")
-            else:
-                temp_dict_name = sg.PopupGetText("Name plate layout")
-                if temp_dict_name:
-                    # Updates the database with new values
-                    table = "plate_layout"
-                    headline = "plate_name"
-                    old_value = values["-ARCHIVE_PLATES-"]
-                    new_value = temp_dict_name
-                    rename_record_in_the_database(config, table, headline, old_value, new_value)
-
-                    # Grabs the updated data from the database
-                    plate_list, archive_plates_dict = get_plate_layout(config)
-
-                    # Removes the old name and data from the plate_list and archive_plates_dict and adds the new one
-                    # archive_plates_dict[temp_dict_name] = archive_plates_dict[values["-ARCHIVE_PLATES-"]]
-                    # archive_plates_dict.pop(values["-ARCHIVE_PLATES-"])
-                    # plate_list.remove(values["-ARCHIVE_PLATES-"])
-                    # plate_list.append(temp_dict_name)
-
-                    # Updates the window with new values
-                    window["-ARCHIVE_PLATES-"].update(values=sorted(plate_list), value=plate_list[0])
-                    window["-BIO_PLATE_LAYOUT-"].update(values=sorted(plate_list), value="")
+            rename_layout(config, sg, window, event, values)
 
         # Used both for Plate layout and Bio Info
         # prints coordinate and well under the plate layout
         try:
-            if event.endswith("+MOVE") and type(event) != tuple:
-
-                if values["-BIO_INFO_CANVAS-"][0] and values["-BIO_INFO_CANVAS-"][1]:
-                    try:
-                        temp_well_bio_info = graph_bio_exp.get_figures_at_location(values['-BIO_INFO_CANVAS-'])[0]
-                        temp_well_id_bio_info = well_dict_bio_info[temp_well_bio_info]["well_id"]
-                    except IndexError:
-                        temp_well_id_bio_info = ""
-                    window["-INFO_BIO_GRAPH_TARGET-"].update(value=f"{temp_well_id_bio_info}")
-
-                    if temp_well_id_bio_info:
-                        temp_plate_name = values["-BIO_INFO_PLATES-"]
-                        temp_analyse_method = values["-BIO_INFO_ANALYSE_METHOD-"]
-
-                        temp_plate_wells_bio_info = plate_bio_info[temp_plate_name]["plates"][temp_analyse_method][
-                            "wells"]
-                        window["-INFO_BIO_WELL_VALUE-"].update(value=temp_plate_wells_bio_info[temp_well_id_bio_info])
-
-                if values["-RECT_BIO_CANVAS-"][0] and values["-RECT_BIO_CANVAS-"][1]:
-                    try:
-                        temp_well = graph_plate.get_figures_at_location(values['-RECT_BIO_CANVAS-'])[0]
-                        temp_well_id = well_dict[temp_well]["well_id"]
-                    except (IndexError or KeyError) as error:
-                        print(f"Canvas Error: {error}")
-                        temp_well_id = ""
-                    window["-INFO-"].update(value=f"{values['-RECT_BIO_CANVAS-']} {temp_well_id}")
+            event.endswith("+MOVE")
 
         except AttributeError:
             pass
+
+        else:
+            if event.endswith("+MOVE") and type(event) != tuple:
+                on_move(config, sg, window, event, values, graph_bio_exp, well_dict_bio_info, plate_bio_info,
+                        graph_plate,
+                        well_dict)
 
         if event == "-RECT_BIO_CANVAS-":
             x, y = values["-RECT_BIO_CANVAS-"]
@@ -1438,96 +1372,25 @@ def main(config, queue_gui, queue_mol):
 
             # Choosing which tool to pain the plate with.
             if None not in (start_point, end_point):
-                # ToDo clean up the code
-                if values["-RECT_SAMPLES-"]:
-                    temp_draw_tool = "sample"
-                elif values["-RECT_BLANK-"]:
-                    temp_draw_tool = "blank"
-                elif values["-RECT_MAX-"]:
-                    temp_draw_tool = "max"
-                if values["-RECT_MIN-"]:
-                    temp_draw_tool = "minimum"
-                elif values["-RECT_NEG-"]:
-                    temp_draw_tool = "negative"
-                elif values["-RECT_POS-"]:
-                    temp_draw_tool = "positive"
-                elif values["-RECT_EMPTY-"]:
-                    temp_draw_tool = "empty"
-                elif values["-COLOUR-"]:
-                    temp_draw_tool = "paint"
+                for temp_draw_value in draw_tool_dict:
+                    if values[temp_draw_value]:
+                        temp_draw_tool = draw_tool_dict[temp_draw_value]
                 temp_selector = True
                 prior_rect = graph_plate.draw_rectangle(start_point, end_point, fill_color="",
                                                         line_color="white")
 
         # it does not always detect this event:
         try:
-            if event.endswith("+UP"):
-
-                if temp_selector and plate_active:
-
-                    # if you drag and let go too fast, the values are set to None. this is to handle that bug
-                    if not start_point:
-                        start_point = (0, 0)
-                    if not end_point:
-                        end_point = (0, 0)
-
-                    # get a list of coordination within the selected area
-                    temp_x = []
-                    temp_y = []
-
-                    if start_point[0] < end_point[0]:
-                        for x_cord in range(start_point[0], end_point[0]):
-                            temp_x.append(x_cord)
-                    if start_point[0] > end_point[0]:
-                        for x_cord in range(end_point[0], start_point[0]):
-                            temp_x.append(x_cord)
-
-                    if start_point[1] < end_point[1]:
-                        for y_cord in range(start_point[1], end_point[1]):
-                            temp_y.append(y_cord)
-                    if start_point[1] > end_point[1]:
-                        for y_cord in range(end_point[1], start_point[1]):
-                            temp_y.append(y_cord)
-
-                    # This is to enable clicking on wells to mark them
-                    if not temp_x:
-                        temp_x = [x]
-                    if not temp_y:
-                        temp_y = [y]
-
-                    # makes a set, for adding wells, to avoid duplicates
-                    graphs_list = set()
-
-                    # goes over the coordinates and if they are within the bounds of the plate
-                    # if that is the case, then the figure for that location is added the set
-                    for index_x, cords_x in enumerate(temp_x):
-                        for index_y, cords_y in enumerate(temp_y):
-                            if min_x <= temp_x[index_x] <= max_x and min_y <= temp_y[index_y] <= max_y:
-                                graphs_list.add(
-                                    graph_plate.get_figures_at_location((temp_x[index_x], temp_y[index_y]))[0])
-
-                    # colours the wells in different colour, depending on if they are samples or blanks
-                    for wells in graphs_list:
-                        color = color_select[temp_draw_tool]
-                        well_state = temp_draw_tool
-                        if color == "paint":
-                            color = values["-PLATE_LAYOUT_COLOUR_CHOSE_TARGET-"]
-                        graph_plate.Widget.itemconfig(wells, fill=color)
-                        well_dict[wells]["colour"] = color
-                        well_dict[wells]["state"] = well_state
-
-                # deletes the rectangle used for selection
-                if prior_rect:
-                    graph_plate.delete_figure(prior_rect)
-
-                # reset everything
-                start_point, end_point = None, None
-                dragging = False
-                prior_rect = None
-                temp_selector = False
-                temp_draw_tool = None
+            event.endswith("+UP")
         except AttributeError:
             pass
+        else:
+            if event.endswith("+UP"):
+                start_point, end_point, dragging, prior_rect, temp_selector, temp_draw_tool = \
+                    on_up(config, sg, window, event, values, temp_selector, plate_active, start_point, end_point, x, y,
+                          min_x, max_x, min_y, max_y, graph_plate, clm_to_row_converter, plate_type_count, plate_type,
+                          color_select, temp_draw_tool, well_dict, prior_rect,
+                          dose_colour_dict)
 
         #     WINDOW 1 - UPDATE Database      ###
         if event == "-UPDATE_COMPOUND-":
@@ -2199,7 +2062,7 @@ def main(config, queue_gui, queue_mol):
                     dp_name = sg.PopupGetText("Dp name? ")
                     if dp_name:
                         plate_layout = archive_plates_dict[values["-SEARCH_PLATE_LAYOUT-"]]
-                        sample_amount = int(values["-SEARCH_PLATE_LAYOUT_SAMPLE_AMOUNT-"])
+                        temp_sample_amount = int(values["-SEARCH_PLATE_LAYOUT_SAMPLE_AMOUNT-"])
                         vol_converter = {"mL": 1000000, "uL": 10000, "nL": 1}
 
                         transferee_volume = values["-SEARCH_TRANS_VOL-"] * vol_converter[
@@ -2207,7 +2070,7 @@ def main(config, queue_gui, queue_mol):
                         output_folder = values["-SEARCH_OUTPUT_FOLDER-"]
                         mp_data = all_data["mp_data"]
 
-                        dp_creator(config, plate_layout, sample_amount, mp_data, transferee_volume, dp_name,
+                        dp_creator(config, plate_layout, temp_sample_amount, mp_data, transferee_volume, dp_name,
                                    output_folder)
 
                         file_location = f"{values['-SEARCH_OUTPUT_FOLDER-']}/dp_output/"

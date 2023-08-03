@@ -73,10 +73,10 @@ class DataBaseFunctions:
         :type data: list
         :return: Data added to a table
         """
-        # try:
-        self.cursor.execute(layout, data)
-        # except sqlite3.IntegrityError:
-        #     print(f"Data is properly in the database: {data}")
+        try:
+            self.cursor.execute(layout, data)
+        except sqlite3.IntegrityError as error:
+            print(f"{error}")
             #print("ERROR") # NEEDS TO WRITE REPORT OVER ERRORS TO SEE WHY DATA WAS NOT ADDED!!!
             # EITHER DUE TO DUPLICATES OR MISSING REFERENCE(FOREIGN KEY)
         self.conn.commit()
