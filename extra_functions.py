@@ -53,20 +53,40 @@ def increment_text_string(txt):
 def unit_converter(input_value, new_unit_out=None, old_unit_out=False, as_list=False):
     # Validate input_value format
     pattern = r'^(\d+(\.\d+)?(?:e[-+]?\d+)?)([a-zA-Z]+)([a-zA-Z]*)$'
-    match = re.match(pattern, input_value)
-    if not match:
-        raise ValueError("Invalid input format. Input should be in the format '<number><unit>' or '<number><unit><type>'")
+    try:
+        re.match(pattern, input_value)
+    except TypeError:
+        if new_unit_out:
+            new_unit = [letter for letter in new_unit_out]
+            if len(new_unit) > 1:
+                new_unit_out = new_unit[0]
+                unit_type = new_unit[1]
+            else:
+                unit_type = new_unit[0]
+        else:
+            unit_type = ""
+        number_str = input_value
 
-    number_str, _, unit_type, _ = match.groups()
+    else:
+        match = re.match(pattern, input_value)
+        if not match:
+            print(input_value)
+            raise ValueError("Invalid input format. Input should be in the format '<number><unit>' or '<number><unit><type>'")
+        number_str, _, unit_type, _ = match.groups()
 
     unit_type = [letter for letter in unit_type]
+
     if len(unit_type) > 1:
         original_unit = unit_type[0]
         temp_type = unit_type[1]
     else:
         original_unit = ""
-        temp_type = unit_type[0]
-
+        try:
+            unit_type[0]
+        except IndexError:
+            temp_type = ""
+        else:
+            temp_type = unit_type[0]
     # Make the unit case-insensitive
     original_unit = original_unit.lower()
 

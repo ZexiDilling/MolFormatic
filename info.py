@@ -220,6 +220,8 @@ unit_converter_dict = {
     "n": 0.000000001,
     "p": 0.000000000001,
 }
+unit_converter_list = [keys for keys in unit_converter_dict]
+
 
 
 if __name__ == "__main__":

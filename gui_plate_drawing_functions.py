@@ -156,6 +156,14 @@ def _on_up_well_handler(sg, values, well_dict, graph_plate, new_graphs_list, tem
             graph_plate.Widget.itemconfig(wells, fill=colour)
             well_dict[wells]["colour"] = colour
             well_dict[wells]["state"] = well_state
+            try:
+                well_dict[wells]["group"]
+            except KeyError:
+                pass
+            else:
+                well_dict[wells]["group"] = 0
+                well_dict[wells]["replicate"] = 0
+                well_dict[wells]["concentration"] = 0
 
     return well_dict
 
@@ -172,7 +180,7 @@ def on_up(config, sg, window, event, values, temp_selector, plate_active, start_
             temp_sample_group = _int_guard(window, values["-SAMPLE_CHOOSER_DROPDOWN-"], 1)
             replicates = _int_guard(window, values["-DOSE_REPLICATES-"], 1)
             concentration_count = 0
-            replicate_loop = 1
+            replicate_loop = _int_guard(window, values["-REPLICATE_CHOOSER_DROPDOWN-"], 1)
         else:
             temp_dilutions = temp_sample_amount = temp_sample_group = \
                 replicates = replicate_loop = concentration_count = 0
@@ -432,7 +440,17 @@ def _update_dose_tool(window, event, values, temp_sample_amount):
         temp_sample_amount = 0
 
     sample_group_list = [number for number in range(1, temp_sample_amount + 1)]
-    window["-SAMPLE_CHOOSER_DROPDOWN-"].update(values=sample_group_list, value=sample_group_list[0])
+    if sample_group_list:
+        window["-SAMPLE_CHOOSER_DROPDOWN-"].update(values=sample_group_list, value=sample_group_list[0])
+
+    try:
+        int(values["-DOSE_REPLICATES-"])
+    except ValueError:
+        pass
+    else:
+        replicate_list = [x for x in range(1, int(values["-DOSE_REPLICATES-"]) + 1)]
+        if replicate_list:
+            window["-REPLICATE_CHOOSER_DROPDOWN-"].update(values=replicate_list, value=replicate_list[0])
 
     heatmap = Heatmap()
     colour_list = [values["-DOSE_COLOUR_LOW-"], values["-DOSE_COLOUR_HIGH-"]]
@@ -461,12 +479,18 @@ def _int_guard(window, value, fall_back_value):
 
 
 def dose_sample_amount(window, event, values, total_sample_spots, dose_colour_dict):
+
     temp_replicates = _int_guard(window, values["-DOSE_REPLICATES-"], 1)
     temp_sample_amount = _int_guard(window, values["-DOSE_SAMPLE_AMOUNT-"], 0)
 
+    if values["-DOSE_REPLICATES-"] == None or values["-DOSE_SAMPLE_AMOUNT-"] == None or total_sample_spots == None \
+            or temp_replicates == None or temp_sample_amount == None or total_sample_spots == 0 \
+            or temp_sample_amount == 0 or temp_replicates == 0:
+        return dose_colour_dict
+
     try:
         temp_dilutions = int(floor(total_sample_spots / (temp_sample_amount * temp_replicates)))
-    except ZeroDivisionError:
+    except (ZeroDivisionError or TypeError):
         return dose_colour_dict
     else:
         window["-DOSE_DILUTIONS-"].update(value=temp_dilutions)
@@ -478,8 +502,14 @@ def dose_sample_amount(window, event, values, total_sample_spots, dose_colour_di
 
 
 def dose_dilution_replicates(window, event, values, total_sample_spots, dose_colour_dict):
+
     temp_replicates = _int_guard(window, values["-DOSE_REPLICATES-"], 1)
     temp_dilutions = _int_guard(window, values["-DOSE_DILUTIONS-"], 0)
+
+    if values["-DOSE_REPLICATES-"] == None or values["-DOSE_DILUTIONS-"] == None or total_sample_spots == None \
+            or temp_dilutions == 0 or temp_replicates == 0 or total_sample_spots == None or temp_dilutions == None \
+            or temp_replicates == None:
+        return dose_colour_dict
 
     try:
         int(floor(total_sample_spots / (temp_dilutions * temp_replicates)))

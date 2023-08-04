@@ -465,8 +465,11 @@ class GUILayout:
                 [sg.T("", size=self.standard_size)],
                 [sg.T("Sample"),
                  sg.DropDown(values=[1], key="-SAMPLE_CHOOSER_DROPDOWN-", default_value=1, enable_events=True),
+                 sg.T("Conc"),
+                 sg.DropDown(values=[1], key="-CONC_CHOOSER_DROPDOWN-", default_value=1, enable_events=True),
                  sg.T("Replicate"),
                  sg.DropDown(values=[1], key="-REPLICATE_CHOOSER_DROPDOWN-", default_value=1, enable_events=True)],
+
                 [sg.Radio(f"Horizontal", 2, key="-DOSE_HORIZONTAL-", size=10, enable_events=True,
                           default=True),
                  sg.Radio(f"Vertical", 2, key="-DOSE_VERTICAL-", size=10, enable_events=True)],

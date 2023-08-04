@@ -287,6 +287,44 @@ class CSVWriter:
                                                      source_well, source_barcode, sour_plate_type])
 
     @staticmethod
+    def dose_response_worklist_writer(config, plate_layout, source_layout, plate_amount, initial_plate, fill_up, assay_name):
+
+        output_folder = Path(f'{config["output_folders"]["output"]}/worklist')
+        try:
+            os.mkdir(output_folder)
+        except OSError:
+            print("directory exist")
+
+        path = output_folder/assay_name
+        try:
+            os.mkdir(path)
+        except OSError:
+            print("directory exist")
+
+        headlines = [headlines for headlines in config["worklist_headlines_v1"]]
+        temp_file_name = f"Worklist_{assay_name}_{initial_plate}_dose_response"
+        file = path / f"{temp_file_name}.csv"
+        file_name_counter = 1
+        while file.exists():
+            file_name = f"{temp_file_name}_{file_name_counter}"
+            file = path / f"{file_name}.csv"
+            file_name_counter += 1
+        file.touch()
+        with open(file, "w", newline="\n") as csv_file:
+
+            csv_writer = csv.writer(csv_file, delimiter=";")
+            csv_writer.writerow(headlines)
+
+            for plate in range(plate_amount):
+                destination_plate = f"{assay_name}_{plate + initial_plate}"
+
+                for wells in plate_layout:
+                    pass
+
+
+
+
+    @staticmethod
     def worklist_writer(config, plate_layout, mps, free_well_dict, assay_name, plate_amount, initial_plate, volume,
                         sample_direction, worklist_analyse_method, control_bonus_source, control_samples,
                         bonus_compound):
