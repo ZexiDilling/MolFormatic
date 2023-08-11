@@ -1,22 +1,36 @@
 import copy
 import os.path
 import configparser
+from pathlib import Path
 
+import natsort
+from matplotlib import pyplot as plt
+from natsort import natsorted
 from rdkit.Chem import MolToSmiles
 import multiprocessing as mp
 from multiprocessing import Queue
+import PySimpleGUI as sg
 
-from excel_handler import purity_sample_layout_import, purity_sample_layout_export
+from bio_dose_response import calculate_dilution_series
+from database_controller import FetchData
+from excel_handler import purity_sample_layout_import, purity_sample_layout_export, well_compound_list
+from gui_functions import get_plate_layout, grab_table_data, config_update, draw_plate, set_colours, plate_layout_setup, \
+    bio_compound_info_from_worklist, bio_import_report_handler, import_ms_data, sort_table, purity_data_to_db, \
+    get_peak_information, grab_sample_data, name_changer, purity_ops, add_start_end_time, purity_data_compounds_to_db, \
+    update_database, generate_worklist, plate_dilution, database_to_table, get_number_of_rows, \
+    compound_freezer_to_2d_simulate, mp_production_2d_to_pb_simulate, compound_info_table_data, table_update_tree, \
+    compound_export, dp_creator, bio_exp_compound_list, update_bio_info_values, sub_settings_plate_overview, \
+    sub_settings_overview, sub_settings_z_prime, sub_settings_hit_list, purity_plotting
+from gui_guards import guard_purity_data_wavelength
 from gui_layout import GUILayout
 from gui_settings_control import GUISettingsController
-from gui_functions import *
-from gui_guards import *
+
 from bio_data_functions import org, norm, pora, pora_internal
 from gui_update_overview import update_overview_compound
 from gui_update_tables import update_bio_exp_compound_table, update_bio_exp_assay_table, update_bio_exp_plate_table
 from info import clm_to_row_96, clm_to_row_384, clm_to_row_1536, row_to_clm_96, row_to_clm_384, row_to_clm_1536
 from gui_plate_drawing_functions import on_up, save_layout, delete_layout, rename_layout, export_layout, draw_layout,\
-    dose_colouring, dose_dilution, dose_sample_amount, on_move
+    dose_colouring, dose_dilution_replicates, dose_sample_amount, on_move
 from plate_formatting import plate_layout_re_formate
 from gui_popup import matrix_popup, sample_to_compound_name_controller, ms_raw_name_guard, bio_data_approval_table, \
     assay_generator, assay_run_naming
@@ -559,10 +573,15 @@ def main(config, queue_gui, queue_mol):
 
     #   WINDOW 1 - PLATE LAYOUT #
     graph_plate = window["-RECT_BIO_CANVAS-"]
-    dragging = False
-    temp_selector = False
-    plate_active = False
-    x = y = min_x = max_x = min_y = max_y = plate_type = temp_replicates = None
+    dragging = temp_selector = plate_active = False
+    temp_draw_tool = "sample"
+    color_select = {}
+    for keys in list(config["plate_colouring"].keys()):
+        color_select[keys] = config["plate_colouring"][keys]
+    well_dict = {}
+    start_point = end_point = prior_rect = temp_tool = graph_bio_exp = well_dict_bio_info = plate_bio_info = None
+    x = y = min_x = max_x = min_y = max_y = plate_type = None
+
     clm_to_row_converter = {"plate_96": clm_to_row_96, "plate_384": clm_to_row_384, "plate_1536": clm_to_row_1536}
     row_to_clm_converter = {"plate_96": row_to_clm_96, "plate_384": row_to_clm_384, "plate_1536": row_to_clm_1536}
     plate_type_count = {"plate_96": 96, "plate_384": 384, "plate_1536": 1536}
@@ -580,6 +599,7 @@ def main(config, queue_gui, queue_mol):
         "-COLOUR-": "paint",
         "-RECT_DOSE-": "dose"
     }
+    temp_draw_tool_tracker = "-RECT_SAMPLES-"
 
     #   WINDOW 1 - EXTRA    #
     customers_data = None
@@ -1305,8 +1325,8 @@ def main(config, queue_gui, queue_mol):
         if event == "-DOSE_SAMPLE_AMOUNT-" and values["-EQUAL_SPLIT-"]:
             dose_colour_dict = dose_sample_amount(window, event, values, total_sample_spots, dose_colour_dict)
 
-        if event == "-DOSE_REPLICATES_AMOUNT-":
-            dose_colour_dict = dose_dilution(window, event, values, total_sample_spots, dose_colour_dict)
+        if event == "-DOSE_DILUTIONS-" or event == "-DOSE_REPLICATES-":
+            dose_colour_dict = dose_dilution_replicates(window, event, values, total_sample_spots, dose_colour_dict)
 
         if event == "-DOSE_COLOUR_LOW-":
             dose_colour_dict = dose_colouring(window, event, values, temp_sample_amount,
@@ -1330,12 +1350,12 @@ def main(config, queue_gui, queue_mol):
             print("Needs to update ARCHIVE_PLATES_SUB")
 
         if event == "-DRAW-":
-            well_dict, min_x, min_y, max_x, max_y, plate_active = draw_layout(config, sg, window, event, values,
-                                                                              well_dict, graph_plate,
-                                                                              archive_plates_dict)
+            well_dict, min_x, min_y, max_x, max_y, plate_active, graph, plate_type, archive_plates, gui_tab, sample_type \
+                = draw_layout(config, sg, window, event, values, well_dict, graph_plate, archive_plates_dict)
 
         if event == "-EXPORT_LAYOUT-":
-            export_layout(config, sg, window, event, values, well_dict)
+            print(well_dict)
+            # export_layout(config, sg, window, event, values, well_dict)
 
         if event == "-SAVE_LAYOUT-":
             save_layout(config, sg, window, event, values, well_dict, archive_plates_dict)
@@ -1345,7 +1365,6 @@ def main(config, queue_gui, queue_mol):
 
         if event == "-RENAME_LAYOUT-":
             rename_layout(config, sg, window, event, values)
-
         # Used both for Plate layout and Bio Info
         # prints coordinate and well under the plate layout
         try:
@@ -1357,8 +1376,7 @@ def main(config, queue_gui, queue_mol):
         else:
             if event.endswith("+MOVE") and type(event) != tuple:
                 on_move(config, sg, window, event, values, graph_bio_exp, well_dict_bio_info, plate_bio_info,
-                        graph_plate,
-                        well_dict)
+                        graph_plate, well_dict)
 
         if event == "-RECT_BIO_CANVAS-":
             x, y = values["-RECT_BIO_CANVAS-"]
@@ -1386,11 +1404,10 @@ def main(config, queue_gui, queue_mol):
             pass
         else:
             if event.endswith("+UP"):
-                start_point, end_point, dragging, prior_rect, temp_selector, temp_draw_tool = \
+                start_point, end_point, dragging, prior_rect, temp_selector, temp_draw_tool, well_dict = \
                     on_up(config, sg, window, event, values, temp_selector, plate_active, start_point, end_point, x, y,
-                          min_x, max_x, min_y, max_y, graph_plate, clm_to_row_converter, plate_type_count, plate_type,
-                          color_select, temp_draw_tool, well_dict, prior_rect,
-                          dose_colour_dict)
+                          min_x, max_x, min_y, max_y, graph_plate, clm_to_row_converter, plate_type_count,
+                          plate_type, color_select, temp_draw_tool, well_dict, prior_rect, dose_colour_dict)
 
         #     WINDOW 1 - UPDATE Database      ###
         if event == "-UPDATE_COMPOUND-":
@@ -2242,10 +2259,10 @@ def main(config, queue_gui, queue_mol):
                 use_end_date = False
 
             search_limiter = {
-                "start_date": {"value": values["-PLATE_TABLE_START_DATE_TARGET-"], "operator": "<", "target_column":
-                    "date", "use": use_start_date},
-                "end_date": {"value": values["-PLATE_TABLE_END_DATE_TARGET-"], "operator": ">", "target_column":
-                    "date", "use": use_end_date},
+                "start_date": {"value": values["-PLATE_TABLE_START_DATE_TARGET-"], "operator": "<",
+                               "target_column": "date", "use": use_start_date},
+                "end_date": {"value": values["-PLATE_TABLE_END_DATE_TARGET-"], "operator": ">",
+                             "target_column": "date", "use": use_end_date},
             }
             plate_data, _ = grab_table_data(config, table_dict[values["-PLATE_TABLE_CHOOSER-"]], search_limiter)
             if plate_data:
@@ -2338,7 +2355,8 @@ def main(config, queue_gui, queue_mol):
                     update(background_color=values["-BIO_INFO_HIT_MAP_HIGH_COLOUR_TARGET-"])
         if event == "-BIO_INFO_BOUNDS_BUTTON-":
             sg.PopupError(
-                "This is not working")  # ToDo make this button work. Should get a small popup, to choose all the bins for the bio analysis.
+                "This is not working")
+            # ToDo make this button work. Should get a small popup, to choose all the bins for the bio analysis.
 
         if event == "-BIO_INFO_SUB_SETTINGS_TABS-" and values["-BIO_INFO_SUB_SETTINGS_TABS-"] == "Plate Overview" \
                 and bio_info_sub_setting_tab_plate_overview_calc or event == "-BIO_INFO_PLATE_OVERVIEW_METHOD_LIST-" \
@@ -2774,8 +2792,43 @@ def main(config, queue_gui, queue_mol):
                     "peak_lines": {}
                 }
 
+        #   WINDOW 2 - CALCULATIONS DOSE  ###
+        if event == "-CALCULATIONS_BUTTON_DOSE_CALCULATION-":
+            if not values["-CALCULATIONS_INFO_DOSE_STOCK-"]:
+                sg.PopupError("Please Fill in all the informations")
+            elif not values["-CALCULATIONS_INFO_DOSE_STOCK_DILUTION-"]:
+                sg.PopupError("Please Fill in all the informations")
+            elif not values["-CALCULATIONS_INFO_DOSE_MAX_CONC-"]:
+                sg.PopupError("Please Fill in all the informations")
+            elif not values["-CALCULATIONS_INFO_DOSE_MIN_CONC-"]:
+                sg.PopupError("Please Fill in all the informations")
+            elif not values["-CALCULATIONS_INFO_DOSE_FINAL_VOL-"]:
+                sg.PopupError("Please Fill in all the informations")
+            elif not values["-CALCULATIONS_INFO_DOSE_DILUTION_FACTOR-"]:
+                sg.PopupError("Please Fill in all the informations")
+            elif not values["-CALCULATIONS_INFO_MAX_SOLVENT_CONCENTRATION-"]:
+                sg.PopupError("Please Fill in all the informations")
+            else:
+
+                stock = f'{values["-CALCULATIONS_INFO_DOSE_STOCK-"]}{values["-CALCULATIONS_INFO_DOSE_STOCK_UNIT-"]}'
+                max_concentration = f'{values["-CALCULATIONS_INFO_DOSE_MAX_CONC-"]}{values["-CALCULATIONS_INFO_DOSE_MAX_CONC_UNIT-"]}'
+                min_concentration = f'{values["-CALCULATIONS_INFO_DOSE_MIN_CONC-"]}{values["-CALCULATIONS_INFO_DOSE_MIN_CONC_UNIT-"]}'
+                dilutions_steps = values["-CALCULATIONS_INFO_DOSE_DILUTION_STEPS-"]
+                dilutions_factor = int(values["-CALCULATIONS_INFO_DOSE_DILUTION_FACTOR-"])
+                echo_min = f'{values["-CALCULATIONS_INFO_DOSE_MIN_TRANS_VOL-"]}{values["-CALCULATIONS_INFO_DOSE_MIN_TRANS_VOL_UNIT-"]}'
+                final_vol = f'{values["-CALCULATIONS_INFO_DOSE_FINAL_VOL-"]}{values["-CALCULATIONS_INFO_DOSE_FINAL_VOL_UNIT-"]}'
+                stock_dilution = int(values["-CALCULATIONS_INFO_DOSE_STOCK_DILUTION-"])
+                max_solvent_concentration = float(values["-CALCULATIONS_INFO_MAX_SOLVENT_CONCENTRATION-"])
+
+                vol_needed_pure, overview_table_data, stock_table_data = \
+                    calculate_dilution_series(stock, max_concentration, min_concentration, dilutions_steps,
+                                              dilutions_factor, echo_min, final_vol, stock_dilution,
+                                              max_solvent_concentration, table_data=True)
+
+                window["-CALCULATIONS_TABLE_OVERVIEW-"].update(values=overview_table_data)
+                window["-CALCULATIONS_TABLE_STOCK-"].update(values=stock_table_data)
+
         # Sorting when clicking on Table headers. All tables should be in here execpt compound table, as it is a tree
-        # Table...
         if isinstance(event, tuple):
             # TABLE CLICKED Event has value in format ('-TABLE=', '+CLICKED+', (row,col))
             # You can also call Table.get_last_clicked_position to get the cell clicked

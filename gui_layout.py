@@ -1,7 +1,7 @@
 from math import floor
 
 import PySimpleGUI as sg
-from info import matrix_header
+from info import matrix_header, unit_converter_list, unit_converter_list_liquids, unit_converter_list_mol
 
 #ToDo add tooltips to everything!!!!!!!!! ARG!!!!!!
 
@@ -10,6 +10,7 @@ class GUILayout:
     def __init__(self, config, plate_list):
         self.config = config
         self.standard_size = 20
+        self.input_size = 5
         self.colour_size = 5
         self.button_height = 1
         self.tab_colour = config["GUI"]["tab_colour"]
@@ -1408,22 +1409,65 @@ class GUILayout:
         layout = [sg.vtop([row_settings_col1, row_settings_col2, row_settings_col3]), [row_canvas], [table_tabs]]
         return layout
 
-    # def setup_2_misc(self):
-    #     headings = ["Name", "country", "AC"]
-    #     tab_customers = sg.Frame("FUCK", [[
-    #         sg.Column([
-    #             [sg.Table(values=[], headings=headings)]
-    #         ])
-    #     ]])
-    #
-    #     tabgroup = [sg.Tab("Custemors", [[tab_customers]])]
-    #
-    #     tab_groups = sg.TabGroup([tabgroup], selected_background_color=self.tab_colour, key="-COMPOUND_INFO_TABLE_TABS-",
-    #                              enable_events=True, expand_x=True, tab_location="righttop")
-    #
-    #     layout = [[tab_groups]]
-    #
-    #     return layout
+    def setup_2_calculations(self):
+        calculations = ["Dose Response"]
+
+        col_calculations = sg.Frame("Calculations", [[
+            sg.Column([
+                [sg.T("Calculations"),
+                 sg.DropDown(values=calculations, key="-CALCULATIONS_INFO_CHOOSER-", size=self.standard_size,
+                             default_value=calculations[0])],
+                [sg.T("Stock:", size=self.standard_size),
+                 sg.Input("", key="-CALCULATIONS_INFO_DOSE_STOCK-", size=self.input_size),
+                 sg.DropDown(values=unit_converter_list_mol, key="-CALCULATIONS_INFO_DOSE_STOCK_UNIT-",
+                             default_value="mM")],
+                [sg.T("Stock Dilution:", size=self.standard_size),
+                 sg.Input("", key="-CALCULATIONS_INFO_DOSE_STOCK_DILUTION-", size=self.input_size)],
+                [sg.T("Max % solvent conc.:", size=self.standard_size),
+                 sg.Input("", key="-CALCULATIONS_INFO_MAX_SOLVENT_CONCENTRATION-", size=self.input_size)],
+                [sg.T("Max Concentration:", size=self.standard_size),
+                 sg.Input("", key="-CALCULATIONS_INFO_DOSE_MAX_CONC-", size=self.input_size),
+                 sg.DropDown(values=unit_converter_list_mol, key="-CALCULATIONS_INFO_DOSE_MAX_CONC_UNIT-",
+                             default_value="mM")],
+                [sg.T("Min Concentration:", size=self.standard_size),
+                 sg.Input("", key="-CALCULATIONS_INFO_DOSE_MIN_CONC-", size=self.input_size),
+                 sg.DropDown(values=unit_converter_list_mol, key="-CALCULATIONS_INFO_DOSE_MIN_CONC_UNIT-",
+                             default_value="mM")],
+                [sg.T("Final Volume:", size=self.standard_size),
+                 sg.Input("", key="-CALCULATIONS_INFO_DOSE_FINAL_VOL-", size=self.input_size),
+                 sg.DropDown(values=unit_converter_list_liquids, key="-CALCULATIONS_INFO_DOSE_FINAL_VOL_UNIT-",
+                             default_value="uL")],
+                [sg.T("Min trans Volume:", size=self.standard_size),
+                 sg.Input(2.5, key="-CALCULATIONS_INFO_DOSE_MIN_TRANS_VOL-", size=self.input_size),
+                 sg.DropDown(values=unit_converter_list_liquids, key="-CALCULATIONS_INFO_DOSE_MIN_TRANS_VOL_UNIT-",
+                             default_value="nL")],
+                [sg.T("Dilution factor:", size=self.standard_size),
+                 sg.Input("", key="-CALCULATIONS_INFO_DOSE_DILUTION_FACTOR-", size=self.input_size)],
+                [sg.T("Dilution Steps:", size=self.standard_size, visible=False),
+                 sg.Input("", key="-CALCULATIONS_INFO_DOSE_DILUTION_STEPS-", size=self.input_size, visible=False)],
+                [sg.VPush(), sg.B("Calculate", key="-CALCULATIONS_BUTTON_DOSE_CALCULATION-")]
+
+            ]),
+        ]])
+
+        overview_headings = ["Conc.R", "Conc.T", "vol (nL)", "% solvent", "Stock", "D-Fold"]
+        stock_headings = ["Conc.", "D-Fold"]
+        col_tables = sg.Frame("Table", [[
+            sg.Column([
+                [sg.Table(values=[], headings=overview_headings, key="-CALCULATIONS_TABLE_OVERVIEW-",
+                          justification="center", auto_size_columns=False, enable_click_events=True,
+                          num_rows=15, visible=True)],
+                [sg.Table(values=[], headings=stock_headings, key="-CALCULATIONS_TABLE_STOCK-",
+                          justification="center", auto_size_columns=False, enable_click_events=True,
+                          num_rows=5, visible=True)],
+                [sg.B("Info", key="-CALCULATIONS_TABLE_BUTTON_INFO-"),
+                 sg.B("Send to Worklist-tab", key="-CALCULATIONS_TABLE_BUTTON_SENDER-")]
+            ])
+        ]])
+
+        layout = [[col_calculations], [col_tables]]
+
+        return layout
 
     def setup_table_compound(self):
         """
@@ -1641,9 +1685,10 @@ class GUILayout:
         tab_2_info = sg.Tab("Compound Info", self.setup_2_compound())
         tab_2_bio_bio = sg.Tab("bio info", self.setup_2_bio())
         tab_2_purity_purity = sg.Tab("purity info", self.setup_2_purity())
+        tab_2_calculations = sg.Tab("Cal", self.setup_2_calculations())
         # tab_2_customers = sg.Tab("Misc", self.setup_2_misc())
 
-        tab_group_2_list = [tab_2_info, tab_2_bio_bio, tab_2_purity_purity]
+        tab_group_2_list = [tab_2_info, tab_2_bio_bio, tab_2_purity_purity, tab_2_calculations]
 
         return [[sg.TabGroup([tab_group_2_list], selected_background_color=self.tab_colour, key="-TAB_GROUP_TWO-",
                              enable_events=True)]]

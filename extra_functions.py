@@ -1,6 +1,7 @@
 import re
 from math import floor
-from info import unit_converter_dict
+from info import unit_converter_dict, unit_converter_list
+
 
 def hex_to_rgb(hex_colour):
     """
@@ -121,6 +122,47 @@ def unit_converter(input_value, new_unit_out=None, old_unit_out=False, as_list=F
         return converted_number, new_unit_out, temp_type, original_unit
     else:
         return f"{converted_number}{new_unit_out}{temp_type}"
+
+
+def specific_round(value, base):
+    new_base, _, _, unit = unit_converter(base, old_unit_out=False, new_unit_out=False, as_list=True)
+
+    try:
+        unit_converter_dict[unit]
+    except KeyError:
+        zeroes = 4
+    else:
+
+        temp_unit = str(unit_converter_dict[unit])
+        if "e" in temp_unit:
+            zeroes = int(temp_unit[-1])
+        else:
+            zeroes = int(temp_unit.count("0"))
+
+        zeroes += 2
+        new_base = float(new_base)
+
+    return round(new_base * round(float(value)/new_base), zeroes)
+
+
+def number_to_unit_converter(value, unit, rounding=False):
+    new_value, new_unit, unit_type, _ = unit_converter(value, new_unit_out=unit, as_list=True)
+    if rounding:
+        temp_new_value = new_value
+        while temp_new_value < 1:
+            unit_count = unit_converter_list.index(new_unit)
+            try:
+                unit_converter_list[unit_count + 1]
+            except IndexError:
+                break
+            else:
+                temp_new_unit = unit_converter_list[unit_count + 1]
+                temp_new_value = float(unit_converter(value, new_unit_out=temp_new_unit, as_list=True)[0])
+                new_unit = temp_new_unit
+        new_value = round(temp_new_value, 2)
+
+    return f"{new_value}{new_unit}{unit_type}"
+
 
 
 if __name__ == "__main__":

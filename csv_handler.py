@@ -4,8 +4,8 @@ from math import ceil
 import os
 from pathlib import Path
 
-import info
-from info import *
+from extra_functions import unit_converter
+from info import plate_96_row, plate_96_column, compound_well_layout
 from plate_formatting import mother_plate_generator as mpg
 from gui_popup import new_headlines_popup
 
@@ -138,7 +138,7 @@ class CSVWriter:
             1 for comparing output files from PlateButler with Theoretical output
         """
         if not plate_layout:
-            plate_layout = info.plate_96
+            plate_layout = plate_96_row
         self.compound_freezer_writer(path, compound_list)
 
         # tube_dict = self.mp_workflow_handler(path, compound_list, plate_layout, tube_rack_list)
@@ -287,21 +287,57 @@ class CSVWriter:
                                                      source_well, source_barcode, sour_plate_type])
 
     @staticmethod
-    def dose_response_worklist_writer(config, plate_layout, source_layout, plate_amount, initial_plate, fill_up, assay_name):
+    def dose_response_worklist_writer(config, plate_layout, source_layout, plate_amount, dilution_layout, initial_plate,
+                                      assay_name, volume, fill_up=None):
+        """
+        Writes the worklist for a dose-response set-up.
+        The worklist is for an Echo-liquid handler.
+        :param config: The config handler, with all the default information in the config file.
+        :type config: configparser.ConfigParser
+        :param plate_layout: The layout for a single plate, where each sample goes and the samples dilutions
+        :type plate_layout: dict
+        :param source_layout: The layout for the source_plates. Where the stock solution of the samples are, and where
+            all the controls, and filler-solvent is located
+        :type source_layout: dict
+        :param plate_amount: The amount of plates to be produced
+        :type plate_amount: int
+        :param dilution_layout: The guide to tell witch stock and how much should go in each well
+        :type dilution_layout: dict
+        :param initial_plate: The first plate - used for naming
+        :type initial_plate: int
+        :param assay_name: The name of the assay / experiment
+        :type assay_name: str
+        :param volume: How much volume to add for the controls, in string formate including unit type
+        :type volume: str
+        :param fill_up: If all the wells should have the same amount of liquid in them, can be None.
+            It is the amount of liquid to fill up to, in string formate including unit type.
+        :type fill_up: str
+        :return:
+        """
 
+        if fill_up:
+            fill_up_vol, _, _, _ = unit_converter(fill_up, old_unit_out=False, new_unit_out=False, as_list=True)
+            print(fill_up_vol)
+        echo_min_transfer = "2.5nL"
+        echo_min_transfer, _, _, _ = unit_converter(echo_min_transfer, old_unit_out=False, new_unit_out=False,
+                                                    as_list=True)
+        volume, _, _, _ = unit_converter(volume, old_unit_out=False, new_unit_out=False, as_list=True)
+        dead_vol = "2.5uL"
+        dead_vol, _, _, _ = unit_converter(dead_vol, old_unit_out=False, new_unit_out=False, as_list=True)
         output_folder = Path(f'{config["output_folders"]["output"]}/worklist')
         try:
             os.mkdir(output_folder)
         except OSError:
             print("directory exist")
 
-        path = output_folder/assay_name
+        path = output_folder / assay_name
         try:
             os.mkdir(path)
         except OSError:
             print("directory exist")
 
         headlines = [headlines for headlines in config["worklist_headlines_v1"]]
+        headlines.append("compound_id")
         temp_file_name = f"Worklist_{assay_name}_{initial_plate}_dose_response"
         file = path / f"{temp_file_name}.csv"
         file_name_counter = 1
@@ -317,12 +353,90 @@ class CSVWriter:
 
             for plate in range(plate_amount):
                 destination_plate = f"{assay_name}_{plate + initial_plate}"
-
+                fill_up_dict = {}
                 for wells in plate_layout:
-                    pass
+                    destination_well = plate_layout[wells]["well_id"]
+                    well_state = plate_layout[wells]["state"]
 
+                    # Check if the well is suppose to have samples in it, and if it does, add sample from MotherPlates
 
+                    if well_state == "sample":
+                        current_sample = plate_layout[wells]["group"] + plate
 
+                        current_concentration = plate_layout[wells]["concentration"] - 1
+                        try:
+                            current_stock = dilution_layout[current_concentration]["stock"]
+                        except KeyError:
+                            print(f"key-error for dilution layout - {plate_layout[wells]}")
+                            break
+                        transferee_vol = dilution_layout[current_concentration]["vol"]
+                        try:
+                            source_well = source_layout[well_state][current_sample]["conc"][current_stock]["well"]
+                        except KeyError:
+                            continue
+                        source_plate = source_layout[well_state][current_sample]["conc"][current_stock]["plate"]
+                        temp_compound_id = source_layout[well_state][current_sample]["compound_id"]
+
+                        temp_trans_vol, _, _, _ = unit_converter(transferee_vol, old_unit_out=False, new_unit_out="n",
+                                                                 as_list=True)
+                        temp_fill_vol, _, _, _ = unit_converter(fill_up_vol, old_unit_out=False, new_unit_out="n",
+                                                                as_list=True)
+
+                        test_val = temp_fill_vol - temp_trans_vol
+
+                        if fill_up and test_val > 1:
+                            dmso_trans_vol = fill_up_vol - transferee_vol
+                            well_counter = source_layout["filler"]["well_counter"]
+                            while dmso_trans_vol > (
+                                    source_layout["filler"]["source_wells"][well_counter]["vol"] - dead_vol):
+                                well_counter += 1
+                                source_layout["filler"]["well_counter"] += 1
+
+                            fill_up_dict[wells] = {"destination_plate": destination_plate,
+                                                   "destination_well": destination_well,
+                                                   "source_plate":
+                                                       source_layout["filler"]["source_wells"][well_counter]["plate"],
+                                                   "soruce_well": source_layout["filler"]["source_wells"][well_counter][
+                                                       "well_id"],
+                                                   "transferee_vol": dmso_trans_vol}
+
+                    elif source_layout[well_state]["use"]:
+
+                        transferee_vol = volume
+                        well_counter = source_layout[well_state]["well_counter"]
+
+                        while transferee_vol > (
+                                source_layout[well_state]["source_wells"][well_counter]["vol"] - dead_vol):
+                            well_counter += 1
+
+                        source_layout[well_state]["well_counter"] = well_counter
+
+                        source_well = source_layout[well_state]["source_wells"][well_counter]["well_id"]
+                        source_plate = source_layout[well_state]["source_wells"][well_counter]["plate"]
+                        transferee_vol = volume
+                        temp_compound_id = well_state
+                    else:
+                        continue
+
+                    transferee_vol, _, _, _ = unit_converter(transferee_vol, old_unit_out=False, new_unit_out="n",
+                                                             as_list=True)
+                    csv_writer.writerow([destination_plate, destination_well, transferee_vol,
+                                         source_well, source_plate, temp_compound_id])
+                    destination_well = transferee_vol = source_well = source_plate = None
+                if fill_up:
+                    for counter in fill_up_dict:
+                        destination_plate = fill_up_dict[counter]["destination_plate"]
+                        destination_well = fill_up_dict[counter]["destination_well"]
+                        transferee_vol = fill_up_dict[counter]["transferee_vol"]
+                        transferee_vol, _, _, _ = unit_converter(transferee_vol, old_unit_out=False, new_unit_out="n",
+                                                                 as_list=True)
+                        source_well = fill_up_dict[counter]["soruce_well"]
+                        source_plate = fill_up_dict[counter]["source_plate"]
+                        temp_compound_id = "dmso-filler"
+                        csv_writer.writerow([destination_plate, destination_well, transferee_vol,
+                                             source_well, source_plate, temp_compound_id])
+
+        print(file)
 
     @staticmethod
     def worklist_writer(config, plate_layout, mps, free_well_dict, assay_name, plate_amount, initial_plate, volume,

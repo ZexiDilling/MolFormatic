@@ -7,6 +7,7 @@ from rdkit.Chem import Draw
 from openpyxl.drawing.image import Image as XLImage
 import tempfile
 
+from extra_functions import unit_converter
 from info import plate_384_row, plate_384_column
 
 
@@ -292,6 +293,7 @@ def well_compound_list(file):
 
     return compound_data
 
+
 def insert_structure_NOT_USED_ATM(worksheet):
     """
     Inserts a structure for each row in the excel sheet. The smiles needs to be in the sheet, with the headline "smiles"
@@ -340,6 +342,94 @@ def insert_structure_NOT_USED_ATM(worksheet):
         # Clean up the temporary file
         temp_image.close()
 
+
+def get_source_layout(ex_file, source_layout):
+    wb = load_workbook(filename=ex_file)
+    ws = wb.active
+    excel_dict = {}
+    vol_unit = "uL"
+    compound_to_group = {}
+    group_counter = 1
+    for row, data in enumerate(ws):
+        if row == 0:
+
+            for col, cells in enumerate(data):
+                excel_dict[col] = cells.value.casefold()
+
+        else:
+            for col, cells in enumerate(data):
+
+                if excel_dict[col] == "state":
+                   temp_state = cells.value
+
+                if temp_state != "sample":
+                    source_layout[temp_state]["use"] = True
+
+                    if excel_dict[col] == "compound":
+                        source_layout[temp_state]["compound"] = cells.value
+
+                    elif excel_dict[col] == "source_wells":
+                        well_counter = source_layout[temp_state]["well_counter"]
+
+                        try:
+                            source_layout[temp_state]["source_wells"][well_counter]
+                        except KeyError:
+                            source_layout[temp_state]["source_wells"][well_counter] = {}
+
+                        source_layout[temp_state]["source_wells"][well_counter]["well_id"] = cells.value
+
+                    elif excel_dict[col] == "source_plate":
+                        source_layout[temp_state]["source_wells"][well_counter]["plate"] = cells.value
+
+                    elif excel_dict[col] == "vol":
+                        temp_vol = f"{cells.value}{vol_unit}"
+                        temp_vol, _, _, _ = unit_converter(temp_vol, old_unit_out=False, new_unit_out=False, as_list=True)
+                        source_layout[temp_state]["source_wells"][well_counter]["vol"] = temp_vol
+
+                else:
+                    if excel_dict[col] == "compound":
+                        temp_compound_id = cells.value
+
+                        try:
+                            compound_to_group[temp_compound_id]
+                        except KeyError:
+                            compound_to_group[temp_compound_id] = group_counter
+                            group_counter += 1
+
+                        try:
+                            source_layout[temp_state][compound_to_group[temp_compound_id]]
+                        except KeyError:
+                            source_layout[temp_state][compound_to_group[temp_compound_id]] = {"compound_id": temp_compound_id,
+                                                                                              "conc": {}}
+                    elif excel_dict[col] == "concentration":
+                        temp_conc = cells.value
+                        temp_conc, _, _, _ = unit_converter(temp_conc, old_unit_out=False, new_unit_out=False, as_list=True)
+
+                        try:
+                            source_layout[temp_state][compound_to_group[temp_compound_id]]["conc"][temp_conc]
+                        except KeyError:
+                            source_layout[temp_state][compound_to_group[temp_compound_id]]["conc"][temp_conc] = {}
+
+                    elif excel_dict[col] == "source_wells":
+                        source_layout[temp_state][compound_to_group[temp_compound_id]]["conc"][temp_conc]["well"] = cells.value
+
+                    elif excel_dict[col] == "source_plate":
+                        source_layout[temp_state][compound_to_group[temp_compound_id]]["conc"][temp_conc]["plate"] = cells.value
+
+                    elif excel_dict[col] == "vol":
+                        temp_vol = f"{cells.value}{vol_unit}"
+                        temp_vol, _, _, _ = unit_converter(temp_vol, old_unit_out=False, new_unit_out=False, as_list=True)
+                        source_layout[temp_state][compound_to_group[temp_compound_id]]["conc"][temp_conc]["vol"] = temp_vol
+
+            if temp_state != "sample":
+                source_layout[temp_state]["well_counter"] += 1
+
+    for states in source_layout:
+        if states != "sample":
+            if source_layout[states]["use"]:
+                source_layout[states]["well_counter"] = 0
+
+    return source_layout
 
 if __name__ == "__main__":
 

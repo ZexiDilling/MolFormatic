@@ -221,7 +221,9 @@ unit_converter_dict = {
     "p": 0.000000000001,
 }
 unit_converter_list = [keys for keys in unit_converter_dict]
-
+unit_converter_list_liquids = [f"{keys}L" for keys in unit_converter_dict]
+unit_converter_list_mol = [f"{keys}M" for keys in unit_converter_dict]
+unit_converter_list_mass = [f"{keys}g" for keys in unit_converter_dict]
 
 
 if __name__ == "__main__":
