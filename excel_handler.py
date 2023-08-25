@@ -343,6 +343,28 @@ def insert_structure_NOT_USED_ATM(worksheet):
         temp_image.close()
 
 
+def sample_layout_to_dict(sample_layout):
+    wb = load_workbook(filename=sample_layout)
+    ws = wb.active
+    sample_layout_dict = {}
+    for row, data in enumerate(ws):
+        if row != 0:
+            state = data[0].value.casefold()
+            compound_id = data[1].value
+            concentration = data[2].value
+            source_well = data[3].value
+            source_plate = data[4].value
+
+            if state != "dmso-filler":
+                try:
+                    sample_layout_dict[source_plate]
+                except KeyError:
+                    sample_layout_dict[source_plate] = {source_well: compound_id}
+                else:
+                    sample_layout_dict[source_plate][source_well] = compound_id
+
+    return sample_layout_dict
+
 def get_source_layout(ex_file, source_layout):
     wb = load_workbook(filename=ex_file)
     ws = wb.active

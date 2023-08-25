@@ -163,7 +163,5 @@ def number_to_unit_converter(value, unit, rounding=False):
 
     return f"{new_value}{new_unit}{unit_type}"
 
-
-
 if __name__ == "__main__":
     print(row_col_to_cell(3, 53))

@@ -585,8 +585,8 @@ def plate_layout_setup(folder, default_plate_layout, plate_layout_list):
     return all_plate_layouts
 
 
-def bio_data(config, folder, plate_to_layout, archive_plates_dict, bio_plate_report_setup, analysis_method, bio_sample_dict,
-             save_location, add_compound_ids, write_to_excel=True):
+def bio_data(config, folder, plate_to_layout, archive_plates_dict, bio_plate_report_setup, analysis_method,
+             bio_sample_dict, save_location, add_compound_ids, write_to_excel=True):
 
     """
     Handles the Bio data.

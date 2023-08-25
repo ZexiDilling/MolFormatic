@@ -119,12 +119,12 @@ def calculate_dilution_series(stock, max_concentration, min_concentration, dilut
         vol_needed_string[counter]["d_fold"] = diff
 
     # These are created, but never used... can be deleted or used...
-    print(f"conc_check - {conc_check}")
-    print(f"diff_check - {diff_check}")
-    print(f"dmso_conc - {dmso_conc}")
-    print(f"vol_needed_string - {vol_needed_string}")
-    print(f"vol_needed_pure - {vol_needed_pure}")
-    print(f"all_stocks - {all_stocks}")
+    # print(f"conc_check - {conc_check}")
+    # print(f"diff_check - {diff_check}")
+    # print(f"dmso_conc - {dmso_conc}")
+    # print(f"vol_needed_string - {vol_needed_string}")
+    # print(f"vol_needed_pure - {vol_needed_pure}")
+    # print(f"all_stocks - {all_stocks}")
     if table_data:
         overview_table_data = []
         stock_table_data = []

@@ -288,7 +288,7 @@ class CSVWriter:
 
     @staticmethod
     def dose_response_worklist_writer(config, plate_layout, source_layout, plate_amount, dilution_layout, initial_plate,
-                                      assay_name, volume, fill_up=None):
+                                      assay_name, volume, sample_per_plate, fill_up=None):
         """
         Writes the worklist for a dose-response set-up.
         The worklist is for an Echo-liquid handler.
@@ -315,9 +315,13 @@ class CSVWriter:
         :return:
         """
 
+        missing_vol = {"filler": 0,
+                       }
+
         if fill_up:
             fill_up_vol, _, _, _ = unit_converter(fill_up, old_unit_out=False, new_unit_out=False, as_list=True)
             print(fill_up_vol)
+
         echo_min_transfer = "2.5nL"
         echo_min_transfer, _, _, _ = unit_converter(echo_min_transfer, old_unit_out=False, new_unit_out=False,
                                                     as_list=True)
@@ -361,8 +365,8 @@ class CSVWriter:
                     # Check if the well is suppose to have samples in it, and if it does, add sample from MotherPlates
 
                     if well_state == "sample":
-                        current_sample = plate_layout[wells]["group"] + plate
-
+                        current_sample = plate_layout[wells]["group"] + (sample_per_plate * plate)
+                        print(current_sample)
                         current_concentration = plate_layout[wells]["concentration"] - 1
                         try:
                             current_stock = dilution_layout[current_concentration]["stock"]
@@ -385,35 +389,68 @@ class CSVWriter:
                         test_val = temp_fill_vol - temp_trans_vol
 
                         if fill_up and test_val > 1:
+
                             dmso_trans_vol = fill_up_vol - transferee_vol
                             well_counter = source_layout["filler"]["well_counter"]
-                            while dmso_trans_vol > (
-                                    source_layout["filler"]["source_wells"][well_counter]["vol"] - dead_vol):
-                                well_counter += 1
-                                source_layout["filler"]["well_counter"] += 1
+                            filler_wells = len(source_layout["filler"]["source_wells"])
+
+                            if well_counter >= filler_wells:
+                                missing_vol["filler"] += dmso_trans_vol
+                            else:
+                                while dmso_trans_vol > (
+                                        source_layout["filler"]["source_wells"][well_counter]["vol"] - dead_vol):
+                                    well_counter += 1
+                                    source_layout["filler"]["well_counter"] += 1
+                                    if well_counter >= filler_wells:
+                                        missing_vol["filler"] += dmso_trans_vol
+                                        break
+
+                            try:
+                                source_layout["filler"]["source_wells"][well_counter]["well_id"]
+                            except KeyError:
+                                temp_dmso_source_well = "Missing"
+                                temp_dmso_source_plate = "Missing"
+                            else:
+                                temp_dmso_source_well = source_layout["filler"]["source_wells"][well_counter]["well_id"]
+                                temp_dmso_source_plate = source_layout["filler"]["source_wells"][well_counter]["plate"]
+                                source_layout["filler"]["source_wells"][well_counter]["vol"] -= dmso_trans_vol
 
                             fill_up_dict[wells] = {"destination_plate": destination_plate,
                                                    "destination_well": destination_well,
-                                                   "source_plate":
-                                                       source_layout["filler"]["source_wells"][well_counter]["plate"],
-                                                   "soruce_well": source_layout["filler"]["source_wells"][well_counter][
-                                                       "well_id"],
+                                                   "source_plate": temp_dmso_source_plate,
+                                                   "soruce_well": temp_dmso_source_well,
                                                    "transferee_vol": dmso_trans_vol}
 
                     elif source_layout[well_state]["use"]:
 
                         transferee_vol = volume
                         well_counter = source_layout[well_state]["well_counter"]
-
-                        while transferee_vol > (
-                                source_layout[well_state]["source_wells"][well_counter]["vol"] - dead_vol):
-                            well_counter += 1
+                        temp_amount_well_state = len(source_layout[well_state]["source_wells"])
+                        if well_counter >= temp_amount_well_state:
+                            missing_vol[well_state] += transferee_vol
+                        else:
+                            while transferee_vol > (
+                                    source_layout[well_state]["source_wells"][well_counter]["vol"] - dead_vol):
+                                well_counter += 1
+                                if well_counter >= temp_amount_well_state:
+                                    try:
+                                        missing_vol[well_state]
+                                    except KeyError:
+                                        missing_vol[well_state] = transferee_vol
+                                    else:
+                                        missing_vol[well_state] += transferee_vol
 
                         source_layout[well_state]["well_counter"] = well_counter
 
-                        source_well = source_layout[well_state]["source_wells"][well_counter]["well_id"]
-                        source_plate = source_layout[well_state]["source_wells"][well_counter]["plate"]
-                        transferee_vol = volume
+                        try:
+                            source_layout[well_state]["source_wells"][well_counter]["well_id"]
+                        except KeyError:
+                            source_well = "Missing_Vol"
+                            source_plate = "Missing_Vol"
+                        else:
+                            source_layout[well_state]["source_wells"][well_counter]["vol"] -= transferee_vol
+                            source_well = source_layout[well_state]["source_wells"][well_counter]["well_id"]
+                            source_plate = source_layout[well_state]["source_wells"][well_counter]["plate"]
                         temp_compound_id = well_state
                     else:
                         continue
@@ -435,7 +472,10 @@ class CSVWriter:
                         temp_compound_id = "dmso-filler"
                         csv_writer.writerow([destination_plate, destination_well, transferee_vol,
                                              source_well, source_plate, temp_compound_id])
-
+        for states in missing_vol:
+            missing_vol[states], _, _, _ = unit_converter(missing_vol[states], old_unit_out=False, new_unit_out="u",
+                                                                 as_list=True)
+        print(f"missing_vol - {missing_vol}uL")
         print(file)
 
     @staticmethod
