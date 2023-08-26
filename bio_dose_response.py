@@ -46,7 +46,7 @@ def calculate_dilution_series(stock, max_concentration, min_concentration, dilut
     min_concentration_value = float(unit_converter(min_concentration, new_unit_out=unit_used,
                                                    old_unit_out=False,  as_list=True)[0])
     min_transfer_volume_value = float(unit_converter(min_transfer_volume, new_unit_out=unit_used,
-                                                 old_unit_out=False,  as_list=True)[0])
+                                                     old_unit_out=False,  as_list=True)[0])
     final_volume_value = float(unit_converter(final_vol, new_unit_out=unit_used,
                                               old_unit_out=False,  as_list=True)[0])
 

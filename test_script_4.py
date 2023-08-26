@@ -133,7 +133,8 @@ def _get_state_data(single_plate_data, well_type):
     return temp_state_data
 
 
-def controller(config, plate_reader_files, worklist, plate_layout, save_location, include_id=False, dose_out="uM"):
+def controller(config, plate_reader_files, worklist, plate_layout, save_location, dose_out="uM",
+               include_id=True, include_pic=True):
 
     if include_id:
         well_to_id_dict = _destination_plate_well_to_compound_id(worklist)
@@ -159,7 +160,7 @@ def controller(config, plate_reader_files, worklist, plate_layout, save_location
         all_dose_data[plates] = dose_response_controller(config, dose_response_curveshape, all_dose_readings[plates],
                                                          method_calc_reading_50)
 
-    dose_excel_controller(all_dose_data, plate_group_to_compound_id, include_id, save_location)
+    dose_excel_controller(config, plate_reader_files, all_dose_data, plate_group_to_compound_id, save_location, include_id, include_pic)
 
 
 if __name__ == "__main__":

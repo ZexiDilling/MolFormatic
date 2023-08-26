@@ -294,7 +294,7 @@ def well_compound_list(file):
     return compound_data
 
 
-def insert_structure_NOT_USED_ATM(worksheet):
+def insert_structure(worksheet):
     """
     Inserts a structure for each row in the excel sheet. The smiles needs to be in the sheet, with the headline "smiles"
     :param worksheet: The worksheet where the picture should be insertet
@@ -364,6 +364,7 @@ def sample_layout_to_dict(sample_layout):
                     sample_layout_dict[source_plate][source_well] = compound_id
 
     return sample_layout_dict
+
 
 def get_source_layout(ex_file, source_layout):
     wb = load_workbook(filename=ex_file)
