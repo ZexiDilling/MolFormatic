@@ -308,39 +308,40 @@ def insert_structure(worksheet):
 
             # Finds the headline for the smiles code, and set the smiles index to it.
             for headline_index, headline in enumerate(row):
-                if headline.casefold() == "smiles":
-                    smiles_index = headline_index
+                if headline:
+                    if headline.casefold() == "smiles":
+                        smiles_index = headline_index
+        else:
+            # Grabs the smiles from the table
+            smiles = row[smiles_index]
+            mol = Chem.MolFromSmiles(smiles)
 
-        # Grabs the smiles from the table
-        smiles = row[smiles_index]
+            temp_image = Draw.MolToImage(mol)
 
-        mol = Chem.MolFromSmiles(smiles)
-        temp_image = Draw.MolToImage(mol)
+            # Save the PIL image as a temporary file
+            temp_filename = tempfile.NamedTemporaryFile(suffix=".png", delete=False).name
+            temp_image.save(temp_filename)
 
-        # Save the PIL image as a temporary file
-        temp_filename = tempfile.NamedTemporaryFile(suffix=".png", delete=False).name
-        temp_image.save(temp_filename)
+            # Create an Image object from the temporary file
+            img = XLImage(temp_filename)
 
-        # Create an Image object from the temporary file
-        img = XLImage(temp_filename)
+            # Calculate the image height
+            image_height = img.height
 
-        # Calculate the image height
-        image_height = img.height
+            # Get the cell coordinate for the picture placement
+            cell = ws.cell(row=row_index + 1, column=col_index + 1)
 
-        # Get the cell coordinate for the picture placement
-        cell = ws.cell(row=row_index, column=col_index)
+            # Add the image to the worksheet
+            ws.add_image(img, cell.coordinate)
 
-        # Add the image to the worksheet
-        ws.add_image(img, cell.coordinate)
+            # Calculate the required row height to fit the image
+            required_row_height = int(image_height)
 
-        # Calculate the required row height to fit the image
-        required_row_height = int(image_height)
+            # Set the row height
+            ws.row_dimensions[row_index + 1].height = required_row_height
 
-        # Set the row height
-        ws.row_dimensions[row_index].height = required_row_height
-
-        # Clean up the temporary file
-        temp_image.close()
+            # Clean up the temporary file
+            temp_image.close()
 
 
 def sample_layout_to_dict(sample_layout):

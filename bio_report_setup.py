@@ -550,7 +550,6 @@ def _fetch_smiles_data(config, sample_id):
     dbf = DataBaseFunctions(config)
     table_name = "compound_main"
     headline_name = "compound_id"
-
     row_data = dbf.find_data_single_lookup(table_name, sample_id, headline_name)
     smiles = row_data[0][2]
 

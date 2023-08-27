@@ -144,7 +144,9 @@ def controller(config, plate_reader_files, worklist, plate_layout, save_location
 
     dose_layout = _dose_list()
     all_dose_readings = {}
+    file_list = []
     for file in plate_reader_files:
+        file_list.append(file)
         # Get raw data:
         single_plate_data, well_row_col, well_type, barcode, date = original_data_dict(file, plate_layout)
 
@@ -160,7 +162,7 @@ def controller(config, plate_reader_files, worklist, plate_layout, save_location
         all_dose_data[plates] = dose_response_controller(config, dose_response_curveshape, all_dose_readings[plates],
                                                          method_calc_reading_50)
 
-    dose_excel_controller(config, plate_reader_files, all_dose_data, plate_group_to_compound_id, save_location, include_id, include_pic)
+    dose_excel_controller(config, file_list, all_dose_data, plate_group_to_compound_id, save_location, include_id, include_pic)
 
 
 if __name__ == "__main__":
