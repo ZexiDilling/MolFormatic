@@ -2108,31 +2108,30 @@ def main(config, queue_gui, queue_mol):
                 window["-BIO_EXP_TABLE_ASSAY_LIST_BOX-"].update(values=all_assays)
 
         if event == "-BIO_EXP_TABLE_ASSAY_LIST_BOX-" and values["-BIO_EXP_TABLE_ASSAY_LIST_BOX-"]:
-            # clearing tables
+            # clearing all tables
             window["-BIO_EXP_PLATE_TABLE-"].update(values=[[]])
             window["-BIO_EXP_COMPOUND_TABLE-"].update(values=[[]])
             window["-BIO_EXP_PLATE_NOTE-"].update(value="")
 
-            # updating table
+            # updating run overview table
             bio_exp_assay_runs = update_bio_exp_assay_table(config, sg, window, event, values)
 
         if event == "-BIO_EXP_ASSAY_RUN_TABLE-" and values["-BIO_EXP_ASSAY_RUN_TABLE-"] or \
                 event == "-BIO_EXP_APPROVED_PLATES_ONLY-" and values["-BIO_EXP_ASSAY_RUN_TABLE-"]:
-            # clearing table:
+            # clearing experiment and plate table:
             window["-BIO_EXP_COMPOUND_TABLE-"].update(values=[[]])
             window["-BIO_EXP_PLATE_NOTE-"].update(value="")
 
             approval_check = values["-BIO_EXP_APPROVED_PLATES_ONLY-"]
 
-            # updating table:
+            # updating bio plate table:
             bio_exp_plate_data = update_bio_exp_plate_table(config, sg, window, event, values, bio_exp_assay_runs,
                                                             approval_check=approval_check)
 
         if event == "-BIO_EXP_PLATE_TABLE-" and values["-BIO_EXP_PLATE_TABLE-"] or \
                 event == "-BIO_EXP_APPROVED_COMPOUNDS_ONLY-" and values["-BIO_EXP_PLATE_TABLE-"] or \
-                event == "-REFRESH_BIO_TABLE-" and values["-BIO_EXP_PLATE_TABLE-"] or \
-                event == "-BIO_EXP_APPROVED_COMPOUNDS_ONLY-" and values["-BIO_EXP_PLATE_TABLE-"]:
-
+                event == "-REFRESH_BIO_TABLE-" and values["-BIO_EXP_PLATE_TABLE-"]:
+            print(event)
             approval_check = values["-BIO_EXP_APPROVED_COMPOUNDS_ONLY-"]
             try:
                 float(values["-BIO_EXP_SET_THRESHOLD-"])

@@ -24,10 +24,8 @@ def update_bio_exp_plate_table(config, sg, window, event, values, bio_exp_assay_
     search_list_clm = "assay_run"
 
     selected_headlines = ["plate_name", "z_prime", "approval", "note", "analysed_method", "assay_run"]
-
     bio_exp_plate_data, _ = grab_table_data(config, table_name, bio_exp_selected_runs,
                                             specific_rows=selected_headlines, search_list_clm=search_list_clm)
-
     table_data = []
     for rows, row_data in enumerate(bio_exp_plate_data):
         if approval_check and row_data[2] == "True" or not approval_check:
@@ -43,6 +41,12 @@ def update_bio_exp_plate_table(config, sg, window, event, values, bio_exp_assay_
     window["-BIO_EXP_PLATE_TABLE-"].update(values=table_data)
     # Update the plate counter:
     window["-BIO_EXP_PLATE_COUNTER-"].update(value=len(table_data))
+    temp_plate = bio_exp_selected_runs[0]
+    dbf = DataBaseFunctions(config)
+    temp_data = dbf.find_data_single_lookup("assay_runs", temp_plate, "run_name")
+    note = temp_data[0][7]
+    window["-BIO_EXP_RUN_NOTE-"].update(value=note)
+
 
     return table_data
 

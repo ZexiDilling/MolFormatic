@@ -1522,7 +1522,8 @@ class GUILayout:
                          sg.Button("Refresh", key="-REFRESH_BIO_TABLE-")]
                     ]),
                     sg.Column([
-                        [sg.Checkbox("Only approved", key="-BIO_EXP_APPROVED_COMPOUNDS_ONLY-", default=True)]
+                        [sg.Checkbox("Only approved", key="-BIO_EXP_APPROVED_COMPOUNDS_ONLY-", default=True,
+                                     enable_events=True)]
                     ])
                 ]
             ])
@@ -1535,13 +1536,14 @@ class GUILayout:
             sg.Column([
                 [sg.Table(values=[], headings=assay_run_headings, key="-BIO_EXP_ASSAY_RUN_TABLE-",
                           auto_size_columns=False, col_widths=[15, 10, 10, 5], justification="center",
-                          enable_events=True, enable_click_events=True),
-                 sg.Listbox("", key="-BIO_EXP_TABLE_ASSAY_LIST_BOX-", enable_events=True, size=(10, 10),
+                          enable_events=True, enable_click_events=True, num_rows=5),
+                 sg.Listbox("", key="-BIO_EXP_TABLE_ASSAY_LIST_BOX-", enable_events=True, size=(10, 5),
                             select_mode=sg.LISTBOX_SELECT_MODE_MULTIPLE)
                  ],
+                [sg.T("Note: "), sg.T("", key="-BIO_EXP_RUN_NOTE-")],
                 [sg.Table(values=plate_table_data, headings=plate_table_headings, key="-BIO_EXP_PLATE_TABLE-",
                           auto_size_columns=False, col_widths=[12, 10, 8, 5, 8, 15], justification="center",
-                          enable_events=True, enable_click_events=True)],
+                          enable_events=True, enable_click_events=True, num_rows=5)],
                 [sg.T("Amount of Plates: "), sg.T("0", key="-BIO_EXP_PLATE_COUNTER-"),
                  sg.T("Note: "), sg.T("", key="-BIO_EXP_PLATE_NOTE-")],
                 [sg.Checkbox("Only approved Plates", key="-BIO_EXP_APPROVED_PLATES_ONLY-", default=True,
