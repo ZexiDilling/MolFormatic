@@ -845,13 +845,13 @@ class CSVReader:
                         split_indicator += 1
                         headlines = lines.split(splitter[split_indicator])
                         if split_indicator > len(splitter):
-                            return "Not a CSV file", headlines, sample_dict
+                            return "Not a CSV file", headlines, sample_dict, all_destination_plates
 
                     # Check if the headlines for the CSV file is correct, if not sends it back to be corrected
                     if not new_headline:
                         for right_headline in right_headlines:
                             if right_headline not in headlines:
-                                return "Wrong headlines", headlines, sample_dict
+                                return "Wrong headlines", headlines, sample_dict, all_destination_plates
 
                     for headline_index, headline in enumerate(headlines):
                         if new_headline:

@@ -128,6 +128,12 @@ assay_runs = """ CREATE TABLE IF NOT EXISTS assay_runs(
             FOREIGN KEY("assay_name") REFERENCES "assay"("assay_name")
             ); """
 
+assay_plates = """ CREATE TABLE IF NOT EXISTS assay_plates(
+            plate_name	TEXT NOT NULL UNIQUE,
+            assay_run	TEXT NOT NULL,
+            FOREIGN KEY("assay_run") REFERENCES "assay_runs"("run_name")
+            ); """
+
 plate_layout_sub = """CREATE TABLE IF NOT EXISTS plate_layout_sub(
             plate_sub	TEXT NOT NULL UNIQUE,
             plate_main	TEXT NOT NULL,
@@ -148,6 +154,7 @@ bio_experiment_table = """ CREATE TABLE IF NOT EXISTS biological_plate_data(
             approval	TEXT NOT NULL,
             note    TEXT,
             plate_layout	TEXT NOT NULL,
+            skipped_wells   TEXT,
             analysed_method TEXT NOT NULL,
             FOREIGN KEY("assay_run") REFERENCES "assay_runs"("run_name"),
             FOREIGN KEY(plate_layout) REFERENCES plate_layout_sub(plate_sub)
@@ -236,5 +243,7 @@ assay_customers = """ CREATE TABLE IF NOT EXISTS assay_customers(
             FOREIGN KEY (customer) REFERENCES customers(name),
             FOREIGN KEY (assay_name) REFERENCES assay(assay_name)
             ); """
+
+
 
 

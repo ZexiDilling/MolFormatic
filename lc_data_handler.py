@@ -1,14 +1,15 @@
 import numpy as np
 
 from database_handler import DataBaseFunctions
-from data_miner import dm_controller
+from lcms_data_miner import dm_controller
+from lcms_ms_search import mass_search
 from lcms_uv_integration import Integration
 
+
 class LCMSHandler:
-    def __init__(self, database="SCore.db"):
-        self.dbf = DataBaseFunctions(database)
+    def __init__(self, config):
+        self.dbf = DataBaseFunctions(config)
         self.lc_int = Integration()
-        self.lc_ms = MassSearching()
 
     def __str__(self):
         """
@@ -44,15 +45,15 @@ class LCMSHandler:
         """
         compound_info = {}
         for sample in samples:
-            compound_info[sample] = {}
-            compound_info[sample]["compound_id"] = sample
-            compound_info[sample]["experiment"] = int
-            compound_info[sample]["result_max"] = float
-            compound_info[sample]["result_total"] = list
-            compound_info[sample]["mass"] = float
-            compound_info[sample]["Peak_Info"] = list
-            compound_info[sample]["time_date"] = list
-            compound_info[sample]["wavelength"] = float     # if wavelength is added, this can get that info too.
+            compound_info[sample] = {"compound_id": sample,
+                                     "experiment": int,
+                                     "result_max": float,
+                                     "result_total": list,
+                                     "mass": float,
+                                     "Peak_Info": list,
+                                     "time_date": list,
+                                     "wavelength": float}
+
             table = "compound_main"
 
             item_id_1 = sample
@@ -69,21 +70,20 @@ class LCMSHandler:
 
         return compound_info
 
-    def _integration_operator(self, data, batch_dict, samples, compound_info, uv_tensor, uv_one, uv_same_wavelength,
-                             wavelength, uv_threshold, rt_solvent_peak):
+    def _integration_operator(self, all_data, uv_one, uv_same_wavelength, wavelength, uv_threshold, rt_solvent_peak):
         """
         Integrate UV data to get a peaktable out. with peak number, retention times and area.
 
-        :param data: All data for the samples/compounds
-        :type data: dict
-        :param batch_dict: A dict with keys as batch/plates and values as a list of samples/compounds
-        :type batch_dict: dict
-        :param samples: A list of samples/compounds
-        :type samples: list
-        :param compound_info: A dict with information data for each sample/compound
-        :type compound_info: dict
-        :param uv_tensor: the uv-tensors for all the samples/compounds
-        :type uv_tensor: dict
+        :param all_data: All data for the samples/compounds
+        :type all_data: dict
+        # :param batch_dict: A dict with keys as batch/plates and values as a list of samples/compounds
+        # :type batch_dict: dict
+        # :param samples: A list of samples/compounds
+        # :type samples: list
+        # :param compound_info: A dict with information data for each sample/compound
+        # :type compound_info: dict
+        # :param uv_tensor: the uv-tensors for all the samples/compounds
+        # :type uv_tensor: dict
         :param uv_one: if the integration needs to use a single wavelenght to analyse the data or multiple
         :type uv_one: bool
         :param uv_same_wavelength: If it uses a single one, then looks at if it is the same wavelength for all the
@@ -104,18 +104,18 @@ class LCMSHandler:
 
         # setup for running all wavelength
         if not uv_one:
-            for _ in samples:
+            for sample in all_data:
                 temp_wavelength.append("all")
         else:
             # setting wavelength for all the sample to the same.
             if uv_same_wavelength:
-                for _ in samples:
+                for sample in all_data:
                     temp_wavelength.append(uv_same_wavelength)
             else:
-                for sample in samples:
+                for sample in all_data:
 
                     try:
-                        temp_wavelength.append(compound_info[sample]["wavelength"])
+                        temp_wavelength.append(all_data[sample]["wavelength"])
                     except KeyError:
                         temp_wavelength.append(254)
 
@@ -173,7 +173,7 @@ class LCMSHandler:
         mass_hit = {}
         for batch in batch_dict:
             for sample in batch_dict[batch]:
-                peak_hit = self.lc_ms.mass_search(batch, sample, compound_info[sample]["mass"], mz_delta, temp_ms_mode,
+                peak_hit = mass_search(batch, sample, compound_info[sample]["mass"], mz_delta, temp_ms_mode,
                                                   uv_peak_information, temp_ms_tensor, mz_threshold, data)
 
                 if not peak_hit:
@@ -240,17 +240,19 @@ class LCMSHandler:
         :return: The information for each compound if the mass have been found and the purity of the compound
         :rtype: dict
         """
+        sample_id = False
+        # data, batch_dict, uv_tensor, ms_pos_tensor, ms_neg_tensor, sample_date = dm_controller(file_list)
+        all_data, failed_samples = dm_controller(file_list)
+        samples = [data for data in all_data]
+        if sample_id:
+            compound_info = self._compound_info_generator(samples, all_data) # TODO re-write all of this
 
-        data, batch_dict, uv_tensor, ms_pos_tensor, ms_neg_tensor, sample_date = self.dm.dm_controller(file_list)
-        samples = self._temp_sample_setup(batch_dict)
-        compound_info = self._compound_info_generator(samples, sample_date)
+        uv_peak_information = self._integration_operator(all_data, uv_one, uv_same_wavelength, wavelength,
+                                                         uv_threshold, rt_solvent_peak)
+        #
+        # mass_hit = self._ms_search(data, batch_dict, ms_pos_tensor, ms_neg_tensor, mz_delta, ms_mode, mz_threshold,
+        #                            uv_peak_information, compound_info)
+        #
+        # compound_info = self._purity_mass(batch_dict, uv_peak_information, mass_hit, compound_info)
 
-        uv_peak_information = self._integration_operator(data, batch_dict, samples, compound_info, uv_tensor, uv_one,
-                                                         uv_same_wavelength, wavelength, uv_threshold, rt_solvent_peak)
-
-        mass_hit = self._ms_search(data, batch_dict, ms_pos_tensor, ms_neg_tensor, mz_delta, ms_mode, mz_threshold,
-                                   uv_peak_information, compound_info)
-
-        compound_info = self._purity_mass(batch_dict, uv_peak_information, mass_hit, compound_info)
-
-        return compound_info
+        # return compound_info

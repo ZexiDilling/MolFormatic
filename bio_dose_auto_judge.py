@@ -2,7 +2,7 @@ import configparser
 
 import numpy as np
 
-from dose_functions import hill_eq
+from bio_dose_functions import hill_eq
 
 
 class JudgeFit:

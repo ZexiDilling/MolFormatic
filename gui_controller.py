@@ -878,7 +878,8 @@ def main(config, queue_gui, queue_mol):
             plate_size = archive_plates_dict[values["-BIO_PLATE_LAYOUT-"]]["plate_type"]
             archive = True
             gui_tab = "bio"
-            sample_type = values["-BIO_SAMPLE_TYPE-"]
+            sample_type = values["-BIO_SAMPLE_TYPE-"]       # ToDo figure out why this is needed
+
             draw_plate(config, graph_bio, plate_size, well_dict, gui_tab, archive, sample_layout=sample_type)
 
         if event == "-BIO_SAMPLE_TYPE-":
@@ -1033,7 +1034,7 @@ def main(config, queue_gui, queue_mol):
                         try:
                             float(values["-BIO_FINAL_REPORT_CONCENTRATION_NUMBER-"])
                         except ValueError:
-                            temp_concentration = float(sg.popup_get_text("Please provide a concentration"
+                            temp_concentration = float(sg.popup_get_text("Please provide a concentration in uM ?? "
                                                                          "\n numbers only"))
                         else:
                             temp_concentration = float(values["-BIO_FINAL_REPORT_CONCENTRATION_NUMBER-"])
@@ -2129,7 +2130,7 @@ def main(config, queue_gui, queue_mol):
 
         if event == "-BIO_EXP_PLATE_TABLE-" and values["-BIO_EXP_PLATE_TABLE-"] or \
                 event == "-BIO_EXP_APPROVED_COMPOUNDS_ONLY-" and values["-BIO_EXP_PLATE_TABLE-"] or \
-                event == "-INIT_BIO_TABLE-" and values["-BIO_EXP_PLATE_TABLE-"] or \
+                event == "-REFRESH_BIO_TABLE-" and values["-BIO_EXP_PLATE_TABLE-"] or \
                 event == "-BIO_EXP_APPROVED_COMPOUNDS_ONLY-" and values["-BIO_EXP_PLATE_TABLE-"]:
 
             approval_check = values["-BIO_EXP_APPROVED_COMPOUNDS_ONLY-"]
@@ -2354,8 +2355,7 @@ def main(config, queue_gui, queue_mol):
                 window["-BIO_INFO_HIT_MAP_HIGH_COLOUR_BOX-"]. \
                     update(background_color=values["-BIO_INFO_HIT_MAP_HIGH_COLOUR_TARGET-"])
         if event == "-BIO_INFO_BOUNDS_BUTTON-":
-            sg.PopupError(
-                "This is not working")
+            sg.PopupError("This is not working")
             # ToDo make this button work. Should get a small popup, to choose all the bins for the bio analysis.
 
         if event == "-BIO_INFO_SUB_SETTINGS_TABS-" and values["-BIO_INFO_SUB_SETTINGS_TABS-"] == "Plate Overview" \

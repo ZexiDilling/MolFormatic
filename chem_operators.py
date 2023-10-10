@@ -6,6 +6,7 @@ from rdkit.Chem.Draw import rdMolDraw2D
 from rdkit import DataStructs
 from rdkit.Chem.Fingerprints import FingerprintMols
 from rdkit.Chem.AtomPairs import Pairs
+from rdkit.DataStructs import TanimotoSimilarity
 
 
 class ChemOperators:
@@ -58,7 +59,7 @@ class ChemOperators:
         data.FinishDrawing()
         return data.GetDrawingText()
 
-    def structure_search(self, methode, threshold, rows, smiles_search, morgan_values=None):
+    def structure_search(self, methode, threshold, rows, smiles_search, morgan_values=None, remove_data=True):
         """
         Compare molecules with a main smiles code, to see how similar they are.
 
@@ -82,10 +83,19 @@ class ChemOperators:
             smiles_2 = rows[compound]["smiles"]
             smiles_temp = (smiles_1, smiles_2)
             score = sub_search(smiles_temp)
-            if score >= threshold:
-                rows[compound]["match_score"] = round(score, 2)
+
+            if type(score) == tuple:
+                check_score = score[-1]
             else:
-                compound_to_delete.append(compound)
+                check_score = score
+
+            if remove_data:
+                if check_score >= threshold:
+                    rows[compound]["match_score"] = round(check_score, 2)
+                else:
+                    compound_to_delete.append(compound)
+            else:
+                rows[compound]["match_score"] = round(check_score, 2)
 
         for compound in compound_to_delete:
             rows.pop(compound)
@@ -125,7 +135,7 @@ class ChemOperators:
         match_score = DataStructs.FingerprintSimilarity(fp1, fp2) * 100
         return match_score
 
-    def match_morgan(self, smiles, bonds, n_bits, chirality, features):
+    def match_morgan(self, smiles, bonds=None, n_bits=None, chirality=None, features=None):
         """
         Using Morgan search to find out how similar two compounds are
         NEEDS TO READ UP ON THIS! ! !
@@ -144,9 +154,11 @@ class ChemOperators:
         :rtype: int
         """
         mols = [self.get_mol(smile) for smile in smiles]
-        fp1, fp2 = [AllChem.GetMorganFingerprintAsBitVect(mol, radius=bonds, nBits=n_bits,
-                                                          useChirality=chirality, useFeatures=features)
+        fp1, fp2 = [AllChem.GetMorganFingerprintAsBitVect(mol, 2)
                     for mol in mols]
+        # fp1, fp2 = [AllChem.GetMorganFingerprintAsBitVect(mol, radius=bonds, nBits=n_bits,
+        #                                                   useChirality=chirality, useFeatures=features)
+        #             for mol in mols]
 
         match_score_1 = DataStructs.FingerprintSimilarity(fp1, fp2) * 100
         match_score_2 = DataStructs.TanimotoSimilarity(fp1, fp2) * 100

@@ -10,6 +10,10 @@ import natsort
 from natsort import natsorted
 from os import mkdir
 
+from bio_dose_response import calculate_dilution_series
+from bio_dose_controller import dose_response_controller
+from bio_dose_excle_handler import dose_excel_controller
+from extra_functions import unit_converter
 from gui_popup import new_headlines_popup, plate_layout_chooser, assay_run_naming, bio_data_approval_table
 from csv_handler import CSVWriter, CSVConverter, CSVReader
 from lc_data_handler import LCMSHandler
@@ -26,7 +30,7 @@ from config_writer import ConfigWriter
 from plate_formatting import plate_layout_to_well_ditc, daughter_plate_generator, plate_layout_re_formate
 from excel_handler import export_plate_layout, plate_dilution_write_vol_well_amount, plate_dilution_excel, \
     well_compound_list
-from data_miner import dm_controller
+from lcms_data_miner import dm_controller
 from plate_dilution import PlateDilution
 from visualization import *
 from lcms_uv_integration import Integration
@@ -153,8 +157,8 @@ def _compound_list(config, mp_amount, min_mp, samples_per_plate, ignore_active, 
                             fd.data_search(config["Tables"]["compound_mp_table"], None).items()]
 
     # Gets a list of compounds, based on search criteria
-    items = fd.list_limiter(sample_amount, min_mp, samples_per_plate, source_table, sub_search, sub_search_methode, smiles,
-                            threshold, ignore_active, plated_compounds, search_limiter)
+    items = fd.list_limiter(sample_amount, min_mp, samples_per_plate, source_table, sub_search, sub_search_methode,
+                            smiles, threshold, ignore_active, plated_compounds, search_limiter)
 
     return items
 
@@ -340,7 +344,7 @@ def purity_handler(folder, uv_one, uv_same_wavelength, wavelength, uv_threshold,
 
 
 def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate=False, sample_layout=None, mapping=None
-               , state_dict=None):
+               , state_dict=None, skipped_well=None):
     """
     Draws different plate type in on a canvas/graph.
 
@@ -365,6 +369,8 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
     :type mapping: dict
     :param state_dict: A dict over what state each sample is in
     :type state_dict: dict
+    :param skipped_well: A list of wells that should be skipped
+    :type skipped_well: list
     :return:
         - well_dict: a dict over the wells, name, state, colour and number.
         - min_x: coordinate boundaries for the plate on the canvas
@@ -430,55 +436,59 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
             top_right = (bottom_left[0] - size[plate_type],
                          bottom_left[1] - size[plate_type])
             well_id = f"{well_id_col[column]}{row+1}"
-
-            if archive_plate:
-                counter += 1
-                well_state = well_data_dict[well_id]["state"]
-                if sample_layout == "single point":
-                    fill_colour = config["plate_colouring"][well_state]
-                else:
-                    fill_colour = well_data_dict[well_id]["colour"]
-                group = well_data_dict[well_id]["group"]
-
-            elif sample_layout and sample_layout.casefold() != "single point":
-                group = 1
-                if well_state == "sample":
-                    sample_counter += 1
-                    temp_colour = group % 200
-                    if group % 2 == 0:
-                        fill_colour = f"#FFFF{format(temp_colour, '02x')}"
-                    else:
-                        fill_colour = f"#FF{format(temp_colour, '02x')}FF"
-                    if sample_counter % sample_layout_dict[sample_layout] == 0:
-                        group += 1
-            else:
+            if well_id in skipped_well:
+                fill_colour = "#FFFFFF"
                 group = 0
+                well_state = "Blank"
+            else:
+                if archive_plate:
+                    counter += 1
+                    well_state = well_data_dict[well_id]["state"]
+                    if sample_layout == "single point":
+                        fill_colour = config["plate_colouring"][well_state]
+                    else:
+                        fill_colour = well_data_dict[well_id]["colour"]
+                    group = well_data_dict[well_id]["group"]
 
-            if mapping:
-                try:
-                    well_data_dict["value"][well_id]
-                except KeyError:
-                    map_well = False
+                elif sample_layout and sample_layout.casefold() != "single point":
+                    group = 1
+                    if well_state == "sample":
+                        sample_counter += 1
+                        temp_colour = group % 200
+                        if group % 2 == 0:
+                            fill_colour = f"#FFFF{format(temp_colour, '02x')}"
+                        else:
+                            fill_colour = f"#FF{format(temp_colour, '02x')}FF"
+                        if sample_counter % sample_layout_dict[sample_layout] == 0:
+                            group += 1
                 else:
-                    map_well = True
-                if mapping["mapping"] == "Heatmap":
-                    if map_well:
-                        try:
-                            fill_colour = heatmap.get_well_colour(colour_dict, well_percentile, well_id)
-                        except ZeroDivisionError:
-                            fill_colour = "#FFFFFF"
-                    else:
-                        fill_colour = "#FFFFFF"
-                elif mapping["mapping"] == "Hit Map":
+                    group = 0
 
-                    if map_well:
-                        for _, params in mapping["bins"].items():
-                            if params["use"] and params["min"] <= well_data_dict["value"][well_id] <= params["max"]:
-                                fill_colour = params["colour"]
-                            else:
-                                fill_colour = "#FFFFFF"
+                if mapping:
+                    try:
+                        well_data_dict["value"][well_id]
+                    except KeyError:
+                        map_well = False
                     else:
-                        fill_colour = "#FFFFFF"
+                        map_well = True
+                    if mapping["mapping"] == "Heatmap":
+                        if map_well:
+                            try:
+                                fill_colour = heatmap.get_well_colour(colour_dict, well_percentile, well_id)
+                            except ZeroDivisionError:
+                                fill_colour = "#FFFFFF"
+                        else:
+                            fill_colour = "#FFFFFF"
+                    elif mapping["mapping"] == "Hit Map":
+                        if map_well:
+                            for _, params in mapping["bins"].items():
+
+                                if params["use"] and params["min"] <= well_data_dict["value"][well_id] <= params["max"]:
+                                    fill_colour = params["colour"]
+                                else:
+                                    fill_colour = "black"
+                        else:
+                            fill_colour = "#FFFFFF"
 
             temp_well = graph.DrawRectangle(bottom_left, top_right, line_color=line_colour, fill_color=fill_colour)
             well_dict[temp_well] = {}
@@ -770,6 +780,7 @@ def bio_experiment_to_database(config, assay_data, used_plates, all_plates_data,
             plate_note = f"{all_plates_data[plates]['note']}"
             assay_run = f"{all_plates_data[plates]['run_name']}"
             analysis_method = f"{all_plates_data[plates]['analysis_method']}"
+            skipped_wells = f"{all_plates_data[plates]['skipped_wells']}"
         elif plates in dead_plates:
             print(f"dead_plate: {all_plates_data[plates]}")
             plate_raw_data = "None"
@@ -779,6 +790,7 @@ def bio_experiment_to_database(config, assay_data, used_plates, all_plates_data,
             plate_note = "Dead Plate - See Run note"
             assay_run = f"{all_plates_data[plates]['run_name']}"
             analysis_method = f"{all_plates_data[plates]['analysis_method']}"
+            skipped_wells = f"{all_plates_data[plates]['skipped_wells']}"
         else:
             print(f"Good: {all_plates_data[plates]}")
             plate_raw_data = f"{all_plates_data[plates]['plates'][plate_analyse_methods[0]]['wells']}"
@@ -788,6 +800,7 @@ def bio_experiment_to_database(config, assay_data, used_plates, all_plates_data,
             plate_note = f"{all_plates_data[plates]['note']}"
             assay_run = f"{all_plates_data[plates]['run_name']}"
             analysis_method = f"{all_plates_data[plates]['analysis_method']}"
+            skipped_wells = f"{all_plates_data[plates]['skipped_wells']}"
 
         if sub_layouts[plates]["new"]:
             temp_plate_layout = sub_layouts[plates]["name"]
@@ -805,6 +818,7 @@ def bio_experiment_to_database(config, assay_data, used_plates, all_plates_data,
             "approval": plate_approval,
             "note": plate_note,
             "plate_layout": temp_plate_layout,
+            "skipped_wells": skipped_wells,
             "analysis_method": analysis_method
         }
 
@@ -855,7 +869,7 @@ def bio_experiment_to_database(config, assay_data, used_plates, all_plates_data,
                         compound_raw_data = 0
 
                     # gets the concentration
-                    if type(concentration) == str:
+                    if type(concentration) == str or type(concentration) == float:
                         temp_concentration = concentration
                     else:
                         temp_concentration = concentration[wells]
@@ -1366,7 +1380,8 @@ def get_peak_information(purity_data, slope_threshold, uv_threshold, rt_solvent_
     if wavelength_data.endswith("xlsx"):
         wavelength_data = _get_sample_data(wavelength_data)
 
-    peak_information = ms_int.calculate_uv_integrals(purity_data, slope_threshold, uv_threshold, rt_solvent_peak, sample_data, wavelength_data, sample)
+    peak_information = ms_int.calculate_uv_integrals(purity_data, slope_threshold, uv_threshold, rt_solvent_peak,
+                                                     sample_data, wavelength_data, sample)
 
     peak_table_data = {}
     for samples in peak_information:
@@ -1387,7 +1402,11 @@ def get_peak_information(purity_data, slope_threshold, uv_threshold, rt_solvent_
 
 def import_ms_data(folder):
 
-    file_list = get_file_list(folder)
+    if type(folder) == str:
+        file_list = get_file_list(folder)
+    else:
+        file_list = folder.glob("*/**")
+
     data = dm_controller(file_list)
 
     if isinstance(data, str):
@@ -1542,6 +1561,13 @@ def _purity_mass(purity_data, uv_peak_information, mass_hit):
     """uses area data combined with mass to find purity"""
 
     for sample in purity_data:
+        if "blank" in sample.casefold():
+            continue
+
+        try:
+            mass_hit[sample]
+        except KeyError:
+            continue
 
         if mass_hit[sample] == "No Hits":
             pass
@@ -1561,10 +1587,19 @@ def _purity_overview_table_data_creation(purity_data, sample_data):
     :param sample_data:
     :return:
     """
+
     purity_overview_table_data = []
     no_hits = False
     purity_peak_list_table_data = {}
     for sample in purity_data:
+        if "blank" in sample.casefold():
+            continue
+
+        try:
+            purity_data[sample]["peak_hits"]
+        except KeyError:
+            continue
+
         purity_peak_list_table_data[sample] = []
         temp_sample_info = []
         temp_purity = []
@@ -1592,13 +1627,19 @@ def _purity_overview_table_data_creation(purity_data, sample_data):
                     temp_sample_info.append(ion)
                     temp_sample_info.append(temp_ion[index_hits][ion])
                     temp_sample_info.append(peaks)
+                    sample_data[sample]["max_hit"] = {"ion": list(temp_ion[index_hits])[0],
+                                                      "ion_mass": temp_ion[index_hits][ion],
+                                                      "peak_id": peaks,
+                                                      "purity": temp_purity}
             temp_sample_info.append(sum(temp_purity))
         else:
+            sample_data[sample]["max_hit"] = False
             temp_sample_info.append("No Hits")
             temp_sample_info.append("No Hits")
             temp_sample_info.append("No Hits")
             temp_sample_info.append("No Hits")
             no_hits = False
+
         purity_overview_table_data.append(temp_sample_info)
 
     return purity_overview_table_data, purity_peak_list_table_data
@@ -1610,9 +1651,10 @@ def _get_sample_data(sample_data_file):
     :param sample_data_file:
     :return:
     """
+
     if sample_data_file.endswith(".csv"):
         sample_data = CSVReader.compound_plates(sample_data_file)
-    elif sample_data_file.endswith(".xslx"):
+    elif sample_data_file.endswith(".xlsx"):
         sample_data = pd.read_excel(sample_data_file, index_col=0)
         sample_data = sample_data.to_dict("index")
     else:
@@ -1627,6 +1669,7 @@ def add_start_end_time(purity_peak_list_table_data, sample_peak_dict):
     :param sample_peak_dict:
     :return:
     """
+
     for samples in purity_peak_list_table_data:
         for index, peak_data in enumerate(purity_peak_list_table_data[samples]):
             purity_peak_list_table_data[samples][index].append(sample_peak_dict[samples][peak_data[0]]["start"])
@@ -1696,7 +1739,7 @@ def grab_compound_table_data(config, table, sample):
     return dbf.return_table_data(table, Search_limiter)
 
 
-def name_changer(new_names, raw_data_dict, excel_data_dict, peak_information, sample_peak_dict):
+def name_changer(new_names, raw_data_dict, sample_data, peak_information, sample_peak_dict):
 
     for names in new_names:
         if names != new_names[names]["raw"]:
@@ -1704,7 +1747,7 @@ def name_changer(new_names, raw_data_dict, excel_data_dict, peak_information, sa
             peak_information[names] = peak_information.pop(new_names[names]["raw"])
             sample_peak_dict[names] = sample_peak_dict.pop(new_names[names]["raw"])
         elif names != new_names[names]["excel"]:
-            excel_data_dict[names] = excel_data_dict.pop(new_names[names]["excel"])
+            sample_data[names] = sample_data.pop(new_names[names]["excel"])
 
 
 def compound_info_table_data(config, sample):
@@ -2120,6 +2163,157 @@ def bio_exp_compound_list(config, event, values, bio_exp_compound_data):
         bio_list.append(row_data[0])
         if compound_amount and rows + 1 >= compound_amount:
             break
+    print("testing!!! ")
+
+#ToDo Write information for the whole dose-response module!!!
+
+
+def _dr_destination_plate_well_to_compound_id(worklist):
+    """
+    Gets compound id for each well in the destination plate from a worklist in csv format
+    :param file:
+    :return:
+    """
+
+    well_to_id_dict = {}
+    with open(worklist) as f:
+        for row_index, line in enumerate(f):
+            values = line.split(";")
+            for value_index, value in enumerate(values):
+                value = value.strip()
+                if row_index == 0:
+                    if value == "destination_plates":
+                        destination_plate_index = value_index
+                    elif value == "destination_well":
+                        destination_well_index = value_index
+                    elif value == "compound_id":
+                        compound_id_index = value_index
+
+                else:
+                    if value_index == destination_plate_index:
+                        temp_destination_plate = value
+                    elif value_index == destination_well_index:
+                        temp_destination_well = value
+                    elif value_index == compound_id_index:
+                        temp_compound_id = value
+
+            if row_index != 0 and "filler" not in temp_compound_id:
+                try:
+                    well_to_id_dict[temp_destination_plate]
+                except KeyError:
+                    well_to_id_dict[temp_destination_plate] = {temp_destination_well: temp_compound_id}
+                else:
+                    well_to_id_dict[temp_destination_plate][temp_destination_well] = temp_compound_id
+
+    return well_to_id_dict
+
+
+def _dr_destination_well_to_group(well_to_id_dict, plate_layout):
+    plate_group_to_compound_id = {}
+    for plates in well_to_id_dict:
+        for counter in plate_layout:
+            if plate_layout[counter]["group"] != 0:
+                temp_name = f"{plates}_{plate_layout[counter]['group']}_{plate_layout[counter]['replicate']}"
+                temp_well = plate_layout[counter]["well_id"]
+                try:
+                    well_to_id_dict[plates][temp_well]
+                except KeyError:
+                    continue
+                else:
+                    plate_group_to_compound_id[temp_name] = well_to_id_dict[plates][temp_well]
+
+    return plate_group_to_compound_id
+
+
+def _dr_dose_list():
+    stock = "10mM"
+    max_concentration = "90uM"
+    min_concentration = "4nM"
+    echo_min = "2.5nL"
+    final_vol = "12uL"
+    # Test the function
+    dilution_steps = 10
+    dilution_factor = 3
+    stock_dilution = 100
+    max_solvent_concentration = 1
+    vol_needed_pure = calculate_dilution_series(stock, max_concentration, min_concentration, dilution_steps,
+                              dilution_factor, echo_min, final_vol, stock_dilution, max_solvent_concentration)
+    dose_layout = []
+    for counter in vol_needed_pure:
+        dose_layout.append(vol_needed_pure[counter]["new_conc"])
+
+    return dose_layout
+
+
+def _dr_dose_data_to_dict(temp_dose_data, plate_layout, all_data, barcode, dose_layout, dose_out):
+
+    for counter in plate_layout:
+        if plate_layout[counter]["group"] != 0:
+            temp_name = f"{barcode}_{plate_layout[counter]['group']}_{plate_layout[counter]['replicate']}"
+            temp_well = plate_layout[counter]["well_id"]
+            well_value = all_data["plates"]["original"]["wells"][temp_well]
+            temp_concentration = plate_layout[counter]["concentration"] - 1
+            temp_dose = dose_layout[temp_concentration]
+            temp_dose = round(float(unit_converter(temp_dose, old_unit_out=False, new_unit_out=dose_out, as_list=True)[0]), 4)
+            try:
+                temp_dose_data[temp_name]
+            except KeyError:
+                temp_dose_data[temp_name] = {"reading": {"raw": [well_value]},
+                                             "dose": {"raw": [temp_dose], "unit": dose_out}}
+            else:
+                temp_dose_data[temp_name]["reading"]["raw"].append(well_value)
+                temp_dose_data[temp_name]["dose"]["raw"].append(temp_dose)
+
+    return temp_dose_data
+
+
+def _dr_get_state_data(single_plate_data, well_type):
+    temp_state_data = {}
+    for states in well_type:
+        if states != "sample" and states != "empty":
+            for wells in well_type[states]:
+
+                temp_well_value = single_plate_data["plates"]["original"]["wells"][wells]
+                try:
+                    temp_state_data[states]
+                except KeyError:
+                    temp_state_data[states] = [temp_well_value]
+                else:
+                    temp_state_data[states].append(temp_well_value)
+
+    return temp_state_data
+
+
+def dose_response(config, plate_reader_files, worklist, plate_layout, save_location, dose_out="uM",
+                  include_id=True, include_pic=True):
+
+    if include_id:
+        well_to_id_dict = _dr_destination_plate_well_to_compound_id(worklist)
+        plate_group_to_compound_id = _dr_destination_well_to_group(well_to_id_dict, plate_layout)
+    else:
+        plate_group_to_compound_id = None
+
+    dose_layout = _dr_dose_list()
+    all_dose_readings = {}
+    file_list = []
+    for file in plate_reader_files:
+        file_list.append(file)
+        # Get raw data:
+        single_plate_data, well_row_col, well_type, barcode, date = original_data_dict(file, plate_layout)
+
+        temp_dose_readings = {}
+        all_dose_readings[barcode] = _dr_dose_data_to_dict(temp_dose_readings, plate_layout, single_plate_data, barcode, dose_layout, dose_out)
+
+        all_dose_readings[barcode]["state_data"] = _dr_get_state_data(single_plate_data, well_type)
+
+    all_dose_data = {}
+    for plates in all_dose_readings:
+        dose_response_curveshape = "Z"
+        method_calc_reading_50 = "ec50 = (curve_max - curve_min)*0.5 + curve_min"
+        all_dose_data[plates] = dose_response_controller(config, dose_response_curveshape, all_dose_readings[plates],
+                                                         method_calc_reading_50)
+
+    dose_excel_controller(config, file_list, all_dose_data, plate_group_to_compound_id, save_location, include_id, include_pic)
 
 
 

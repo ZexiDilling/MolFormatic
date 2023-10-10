@@ -722,10 +722,6 @@ def _handle_echo_data(echo_files_string, worklist_echo_data, run_name, transfer_
     return echo_data, transfer_dict
 
 
-def _add_assay_run_to_database(dbf, assay_run_data):
-    dbf.add_records_controller("assay_runs", assay_run_data)
-
-
 def _update_assay_run_database_data(dbf, current_run_name, batch, worklist, echo_data, date, note):
     source_table = "assay_runs"
     table_data = {
@@ -784,16 +780,24 @@ def assay_run_naming(config, all_plates_data, analysis_method, used_plates, assa
             return False, None, None
 
         if event == "-ASSAY_RUN_DONE-":
+            can_close = True
             if len(plates_checked) == len(plate_listed):
                 for plates in all_plates_data:
-                    all_plates_data[plates]["transferred_wells"] = []
-                    for wells in transfer_dict[plates]["transferred_wells"]:
-                        all_plates_data[plates]["transferred_wells"].append(wells)
-                        if plates in dismissed_plates:
-                            dismissed_plates[plates].append(wells)
+                    try:
+                        transfer_dict[plates]
+                    except KeyError:
+                        sg.PopupError(f"{plates} is missing echo data")
+                        can_close = False
+                    else:
+                        all_plates_data[plates]["transferred_wells"] = []
+                        for wells in transfer_dict[plates]["transferred_wells"]:
+                            all_plates_data[plates]["transferred_wells"].append(wells)
+                            if plates in dismissed_plates:
+                                dismissed_plates[plates].append(wells)
 
-                window.close()
-                return True, transfer_dict, dismissed_plates
+                if can_close:
+                    window.close()
+                    return True, transfer_dict, dismissed_plates
             else:
                 sg.PopupError("Not all plates have gotten an assay run assigned to them")
 
@@ -826,9 +830,13 @@ def assay_run_naming(config, all_plates_data, analysis_method, used_plates, assa
             plate_table_index = values["-ASSAY_RUN_USED_PLATES_TABLE-"]
             run = "assay_run_1"
             temp_plate_data = []
-            for index in plate_table_index:
-                temp_plate_data.append(used_plates_table_data[index][0])
-                used_plates_table_data[index][1] = run
+            if event == "-ASSAY_RUN_APPLY_ALL-":
+                for plates in used_plates_table_data:
+                    temp_plate_data.append(plates[0])
+            else:
+                for index in plate_table_index:
+                    temp_plate_data.append(used_plates_table_data[index][0])
+                    used_plates_table_data[index][1] = run
 
             window["-ASSAY_RUN_USED_PLATES_TABLE-"].update(values=used_plates_table_data)
 
@@ -857,7 +865,13 @@ def assay_run_naming(config, all_plates_data, analysis_method, used_plates, assa
                                       "date": values["-ASSAY_RUN_DATE_TARGET-"],
                                       "note": values["-ASSAY_RUN_NOTES-"]}
 
-                    _add_assay_run_to_database(dbf, assay_run_data)
+                    dbf.add_records_controller("assay_runs", assay_run_data)
+                    # add the plates to assay_plates
+                    print("ARE WE HERE ? ")
+                    for plates in temp_plate_data:
+                        print(plates)
+                        assay_plate_data = {"plate_name": plates, "assay_run": assay_run_name}
+                        dbf.add_records_controller("assay_plates", assay_plate_data)
 
                     # Add the new run to the list of old runs,
                     # and updates the dropdown to include it, and the value to it
@@ -886,6 +900,16 @@ def assay_run_naming(config, all_plates_data, analysis_method, used_plates, assa
                     all_plates_data[plates]["analysis_method"] = analysis_method
                     if plates not in plates_checked:        # Make sure that already checked plates are not added
                         plates_checked.append(plates)
+
+                # Reset all the info, and count up one for the name:
+                assay_run_name = increment_text_string(assay_run_name)
+                window["-ASSAY_RUN_NAME-"].update(value=assay_run_name)
+                window["-ASSAY_RUN_DATE_TARGET-"].update(value="Choose date")
+                window["-ASSAY_RUN_WORKLIST_INDICATOR-"].update(value="No Worklist")
+                window["-ASSAY_RUN_ECHO_INDICATOR-"].update(value="No Echo Data")
+                window["-ASSAY_RUN_NOTES-"].update(value="")
+                window["-ASSAY_RUN_WORKLIST_DATA-"].update(value="")
+                window["-ASSAY_RUN_ECHO_DATA-"].update(value="")
 
         if event == "-ASSAY_RUN_UPDATE-":
             current_assay_name = values["-ASSAY_RUN_NAME-"]
@@ -1234,7 +1258,8 @@ def _generate_well_dict(config, plate_type, plate_data, analysed_method, show_st
 
 
 def _draw_plate_on_graph(draw_plate, config, plate_data, analysed_method, graph, plate_size, graph_placement,
-                         show_state_list, draw_option):
+                         show_state_list, draw_option, skipped_wells):
+
     well_dict, all_states = _generate_well_dict(config, plate_size, plate_data, analysed_method, show_state_list)
     if draw_option == "heatmap":
         mapping = {
@@ -1306,7 +1331,8 @@ def _draw_plate_on_graph(draw_plate, config, plate_data, analysed_method, graph,
     else:
         mapping = None
     well_dict, min_x, min_y, max_x, max_y = \
-        draw_plate(config, graph, plate_size, well_dict, graph_placement, archive_plate=True, mapping=mapping)
+        draw_plate(config, graph, plate_size, well_dict, graph_placement, archive_plate=True, mapping=mapping,
+                   skipped_well=skipped_wells)
 
     return well_dict, min_x, min_y, max_x, max_y
 
@@ -1400,6 +1426,10 @@ def _get_well_type(plate_layout, selected_wells):
 
 
 def _update_plate_calculations(window, values, temp_plate_dict, temp_analysed_method):
+
+    print(temp_plate_dict)
+    print(temp_analysed_method)
+    print(temp_plate_dict["calculations"][temp_analysed_method])
     states = values["-BIO_APPROVAL_TABLE_DROPDOWN_CALCULATIONS-"]
     all_calc = temp_plate_dict["calculations"][temp_analysed_method][states]
     window["-BIO_APPROVAL_TABLE_CALC_AVG-"].update(value=all_calc["avg"])
@@ -1418,31 +1448,31 @@ def _update_plate_calculations(window, values, temp_plate_dict, temp_analysed_me
 
     return draw_options
 
-
-def __change_plate_layout_naming(dbf, default_plate_layout_name):
-    table = "plate_layout_sub"
-    data_value = default_plate_layout_name
-    headline = "plate_main"
-    rows = dbf.find_data_single_lookup(table, data_value, headline)
-
-    # Generate name for the new sub layout
-    highest_sub_name = rows[-1][1]
-
-    temp_name_list = highest_sub_name.split("_")
-    temp_counter = temp_name_list[-1]
-
-    try:
-        int(temp_counter)
-    except ValueError:
-        temp_name = highest_sub_name
-        temp_counter = "_1"
-    else:
-        temp_counter = int(temp_counter) + 1
-        temp_name = highest_sub_name.removesuffix(temp_counter)
-
-    new_sub_name = f"{temp_name}{temp_counter}"
-
-    return new_sub_name
+#
+# def __change_plate_layout_naming(dbf, default_plate_layout_name):
+#     table = "plate_layout_sub"
+#     data_value = default_plate_layout_name
+#     headline = "plate_main"
+#     print(data_value)
+#     rows = dbf.find_data_single_lookup(table, data_value, headline)
+#     # Generate name for the new sub layout
+#     print(rows)
+#     highest_sub_name = rows[-1][1]
+#     temp_name_list = highest_sub_name.split("_")
+#     temp_counter = temp_name_list[-1]
+#
+#     try:
+#         int(temp_counter)
+#     except ValueError:
+#         temp_name = highest_sub_name
+#         temp_counter = "1"
+#     else:
+#         temp_counter = int(temp_counter) + 1
+#         temp_name = highest_sub_name.removesuffix(str(temp_counter))
+#
+#     new_sub_name = f"{temp_name}_{temp_counter}"
+#
+#     return new_sub_name
 
 
 def __change_plate_layout_dict(well_dict, worklist_echo_data, current_plate_name):
@@ -1458,36 +1488,44 @@ def __change_plate_layout_dict(well_dict, worklist_echo_data, current_plate_name
     return well_dict
 
 
-def _change_plata_layout_archive_plate_update(temp_archive_plates_dict, new_sub_name, well_dict, current_layout):
-    # Generates the dict
-    plate_type = temp_archive_plates_dict[current_layout]["plate_type"]
-    temp_archive_plates_dict[new_sub_name] = {"well_layout": well_dict,
-                                              "plate_type": plate_type,
-                                              "sample": [],
-                                              "blank": [],
-                                              "max": [],
-                                              "minimum": [],
-                                              "positive": [],
-                                              "negative": [],
-                                              "empty": []}
+# def _change_plata_layout_archive_plate_update(temp_archive_plates_dict, new_sub_name, well_dict, current_layout):
+#     # Generates the dict
+#     plate_type = temp_archive_plates_dict[current_layout]["plate_type"]
+#     temp_archive_plates_dict[new_sub_name] = {"well_layout": well_dict,
+#                                               "plate_type": plate_type,
+#                                               "sample": [],
+#                                               "blank": [],
+#                                               "max": [],
+#                                               "minimum": [],
+#                                               "positive": [],
+#                                               "negative": [],
+#                                               "empty": []}
+#
+#     # Makes list of the different well-types and adds them
+#     temp_well_dict = well_dict
+#     for counter in temp_well_dict:
+#         well_id = temp_well_dict[counter]["well_id"]
+#         temp_state = temp_well_dict[counter]["state"]
+#         temp_archive_plates_dict[new_sub_name][temp_state].append(well_id)
+#
+#     return temp_archive_plates_dict
 
-    # Makes list of the different well-types and adds them
-    temp_well_dict = well_dict
-    for counter in temp_well_dict:
-        well_id = temp_well_dict[counter]["well_id"]
-        temp_state = temp_well_dict[counter]["state"]
-        temp_archive_plates_dict[new_sub_name][temp_state].append(well_id)
 
-    return temp_archive_plates_dict
-
-
-def _change_plate_layout(dbf, well_dict, worklist_echo_data, current_plate_name, default_plate_layout_name):
+def _change_plate_layout(dbf, well_dict, current_plate_name, default_plate_layout_name):
     # Get sub plate outs to add a new
-    new_sub_name = __change_plate_layout_naming(dbf, default_plate_layout_name)
+    # new_sub_name = __change_plate_layout_naming(dbf, default_plate_layout_name)
+    # get the assay_run for the current plate and fetch the echo_data for that plate to make a plate_layout from.
+    rows = dbf.find_data_single_lookup(table="assay_plates", data_value=current_plate_name, headline="plate_name")
+
+    assay_run = rows[0][2]
+    rows = dbf.find_data_single_lookup(table="assay_runs", data_value=assay_run, headline="run_name")
+    worklist_echo_data = eval(rows[0][4])
+
     # Make a new plate layout dict
     new_well_dict = __change_plate_layout_dict(well_dict, worklist_echo_data, current_plate_name)
 
-    return new_sub_name, new_well_dict
+    # return new_sub_name, new_well_dict
+    return new_well_dict
 
 
 def _get_well_dict_data(dbf, plate_layout_name):
@@ -1527,8 +1565,8 @@ def _update_compound_table(compound_data_dict, temp_archive_plates_dict, current
     return new_compound_table_data
 
 
-def _plate_layout_controller(dbf, temp_archive_plates_dict, plate_layout_check, worklist_echo_data,
-                             current_plate_name, plate_to_layout, all_plates_data):
+def _plate_layout_controller(dbf, temp_archive_plates_dict, plate_layout_check, current_plate_name, plate_to_layout,
+                             all_plates_data):
     temp_plate_layout = plate_to_layout[current_plate_name]
 
     try:
@@ -1538,15 +1576,17 @@ def _plate_layout_controller(dbf, temp_archive_plates_dict, plate_layout_check, 
     else:
         well_dict = copy.deepcopy(temp_archive_plates_dict[temp_plate_layout]["well_layout"])
 
-    if plate_layout_check.casefold() == "changed":
-        new_sub_name, well_dict = _change_plate_layout(dbf, well_dict, worklist_echo_data,
-                                                       current_plate_name, temp_plate_layout)
-        # update temp_archive_plates_dict
-        temp_archive_plates_dict = _change_plata_layout_archive_plate_update(temp_archive_plates_dict,
-                                                                             new_sub_name, well_dict,
-                                                                             temp_plate_layout)
+        if plate_layout_check.casefold() == "changed":
+            well_dict = _change_plate_layout(dbf, well_dict, current_plate_name, temp_plate_layout)
 
-        plate_to_layout[current_plate_name] = new_sub_name
+    # Old version where there was made a lot of sub plate layouts
+    # if plate_layout_check.casefold() == "changed":
+        # new_sub_name, well_dict = _change_plate_layout(dbf, well_dict, current_plate_name, temp_plate_layout)
+        # # update temp_archive_plates_dict
+        # temp_archive_plates_dict = _change_plata_layout_archive_plate_update(temp_archive_plates_dict,
+        #                                                                      new_sub_name, well_dict,
+        #                                                                      temp_plate_layout)
+        # plate_to_layout[current_plate_name] = new_sub_name
 
     temp_plate_dict = copy.deepcopy(all_plates_data[current_plate_name])
 
@@ -1701,6 +1741,13 @@ def bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, pla
                         note = transfer_dict[plate]["skipped_wells"][well]["reason"]
                         well_approval = BLANK_BOX
                         transferred = False
+                        print(f"no plate {well} - {plate}")
+                        try:
+                            all_plates_data[plate]["skipped_wells"]
+                        except KeyError:
+                            all_plates_data[plate]["skipped_wells"] = [well]
+                        else:
+                            all_plates_data[plate]["skipped_wells"].append(well)
                     else:
                         well_score = 0
                         note = "No transfer data"
@@ -1726,19 +1773,32 @@ def bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, pla
 
                 for status in all_plates_data[plate]["plates"][analysed_methods]:
                     if status == "wells":
-                        for well in all_plates_data[plate]["plates"][analysed_methods][status]:
-
-                            if transfer_dict[plate]["skipped_wells"]:
-                                well_score = 0
-                                note = transfer_dict[plate]["skipped_wells"][well]["reason"]
-                                well_approval = BLANK_BOX
-                                transferred = False
-                            else:
+                        for well_index, well in enumerate(all_plates_data[plate]["plates"][analysed_methods][status]):
+                            try:
+                                transfer_dict[plate]["skipped_wells"][well]
+                            except KeyError:
                                 well_score = round(float(all_plates_data[plate]["plates"][analysed_methods]["wells"]
                                                          [well]), 2)
                                 note = ""
                                 well_approval = temp_approval
                                 transferred = True
+                            else:
+                                print(f"Plate {well} - {plate}")
+                                well_score = 0
+                                try:
+                                    transfer_dict[plate]["skipped_wells"][well]["reason"]
+                                except KeyError:
+                                    note = "Missing reason"
+                                else:
+                                    note = transfer_dict[plate]["skipped_wells"][well]["reason"]
+                                well_approval = BLANK_BOX
+                                transferred = False
+                                try:
+                                    all_plates_data[plate]["skipped_wells"]
+                                except KeyError:
+                                    all_plates_data[plate]["skipped_wells"] = [well]
+                                else:
+                                    all_plates_data[plate]["skipped_wells"].append(well)
                             if plate not in dismissed_plates:
                                 temp_well_data = [plate, well, well_score, note, well_approval, transferred]
                             else:
@@ -1863,9 +1923,10 @@ def bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, pla
                     histogram_canvas, toolbar = _draw_histogram(window, temp_hist_data, histogram_canvas, toolbar)
 
                 # Re-draw the plate map with the newly selected well-states
+                skipped_wells = all_plates_data[current_plate_name]["skipped_wells"]
                 _draw_plate_on_graph(draw_plate, config, temp_plate_dict["plates"],
                                      temp_analysed_method, graph, plate_size, graph_placement, show_state_list,
-                                     draw_options)
+                                     draw_options, skipped_wells)
 
             if event == "-BIO_APPROVAL_TABLE_APPLY-" and current_plate_name:
 
@@ -1890,7 +1951,7 @@ def bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, pla
 
                 temp_plate_dict.clear()
                 temp_plate_dict, well_dict, temp_archive_plates_dict, current_layout_name = \
-                    _plate_layout_controller(dbf, temp_archive_plates_dict, plate_layout_check, worklist_echo_data,
+                    _plate_layout_controller(dbf, temp_archive_plates_dict, plate_layout_check,
                                              current_plate_name, plate_to_layout, all_plates_data)
 
                 new_sub_name = plate_to_layout[current_plate_name]
@@ -2014,8 +2075,9 @@ def bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, pla
                         temp_plate_dict.clear()
 
                         temp_plate_dict, well_dict, temp_archive_plates_dict, current_layout_name = \
-                            _plate_layout_controller(dbf, temp_archive_plates_dict, plate_layout_check, worklist_echo_data,
-                                                     current_plate_name, plate_to_layout, all_plates_data)
+                            _plate_layout_controller(dbf, temp_archive_plates_dict, plate_layout_check,
+                                                     current_plate_name, plate_to_layout,
+                                                     all_plates_data)
 
                         # Gets what well states should be included in the mapping.
                         show_state_list = {"sample": values["-BIO_APPROVAL_TABLE_SAMPLE-"],
@@ -2048,10 +2110,11 @@ def bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, pla
                             sg.PopupError("Please select states to include in the graph")
                         else:
                             # Updates the plate map with selected values
+                            skipped_wells = all_plates_data[current_plate_name]["skipped_wells"]
                             _, min_x, min_y, max_x, max_y = \
                                 _draw_plate_on_graph(draw_plate, config, temp_plate_dict["plates"],
-                                                     temp_analysed_method, graph, plate_size, graph_placement, show_state_list,
-                                                     draw_options)
+                                                     temp_analysed_method, graph, plate_size, graph_placement,
+                                                     show_state_list, draw_options, skipped_wells)
 
             if event == "-BIO_APPROVAL_TABLE_SAMPLE-" or \
                     event == "-BIO_APPROVAL_TABLE_BLANK-" or event == "-BIO_APPROVAL_TABLE_MAX-" or \
@@ -2084,10 +2147,11 @@ def bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, pla
                         sg.PopupError("Please select states to include in the graph")
                     else:
                         # Updates the plate map with selected values
+                        skipped_wells = all_plates_data[temp_plate_name]["skipped_wells"]
                         _, min_x, min_y, max_x, max_y = \
                             _draw_plate_on_graph(draw_plate, config, temp_plate_dict["plates"],
-                                                 temp_analysed_method, graph, plate_size, graph_placement, show_state_list,
-                                                 draw_options)
+                                                 temp_analysed_method, graph, plate_size, graph_placement,
+                                                 show_state_list, draw_options, skipped_wells)
 
             # update drawing tool
             if event in draw_tool_chooser:
@@ -2246,4 +2310,15 @@ def bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, pla
 
 
 if __name__ == "__main__":
-    ...
+    import configparser
+    config = configparser.ConfigParser()
+    config.read("config.ini")
+
+    dbf = DataBaseFunctions(config)
+    current_plate_name = "alpha_so1"
+
+    rows = dbf.find_data_single_lookup(table="assay_plates", data_value=current_plate_name, headline="plate_name")
+    assay_run = rows[0][2]
+    rows = dbf.find_data_single_lookup(table="assay_runs", data_value=assay_run, headline="run_name")
+
+    worklist_echo_data = eval(rows[0][4])

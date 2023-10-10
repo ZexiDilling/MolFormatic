@@ -4,10 +4,10 @@ from pathlib import Path
 import numpy as np
 from scipy.optimize import leastsq
 
-from dose_excle_handler import dose_excel_controller
-from dose_functions import denormalise_0_1, _calc_EC50_brent_eq, _cal_ec50_normalized, _calc_residuals_mean, \
+from bio_dose_excle_handler import dose_excel_controller
+from bio_dose_functions import denormalise_0_1, _calc_EC50_brent_eq, _cal_ec50_normalized, _calc_residuals_mean, \
     _calc_rsquared, normalise_0_1, residuals, hill_eq
-from dose_plotting import PlottingDose
+from bio_dose_plotting import PlottingDose
 
 
 def _set_up(temp_data, hill_constants_guess):

@@ -1,8 +1,8 @@
-import pandas as pd
-import numpy as np
-import scipy.optimize as opt
-import matplotlib.pyplot as plt
-import seaborn as sns
+# import pandas as pd
+# import numpy as np
+# import scipy.optimize as opt
+# import matplotlib.pyplot as plt
+# import seaborn as sns
 
 
 def ll4(x,b,c,d,e):
@@ -75,4 +75,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    min = 1
+    max_amouint = 100
+    current = 1.4
+
+    if min < current < max_amouint:
+        print("HEY")

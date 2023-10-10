@@ -70,18 +70,32 @@ def mass_search(data, peak_information, ms_mode, sample_data, delta_mass, mz_thr
     :return: A dict of peaks for ms-data
     :rtype: dict
     """
+
+
     peak_hit = {}
     for sample in data:
+
+        if "blank" in sample.casefold():
+            continue
+
+        try:
+            sample_data[sample]["mass"]
+        except KeyError:
+            continue
+
         try:
             mass = sample_data[sample]["mass"]
         except ValueError:
             mass = compound_mass
-
         # Guard for mass written with ',' instead of '.'
         try:
             mass = float(mass)
         except ValueError:
-            mass = float(mass.replace(",", "."))
+            try:
+                mass = float(mass.replace(",", "."))
+            except:
+                print(sample)
+                print(sample_data[sample])
 
         ms_mz = data[sample][ms_mode].columns
         ms_rt = data[sample][ms_mode].index
@@ -98,6 +112,8 @@ def mass_search(data, peak_information, ms_mode, sample_data, delta_mass, mz_thr
             # Find UV RT's (converted to seconds)
             uv_peak_start_rt = peak_table_t[i][2]*60
             uv_peak_end_rt = peak_table_t[i][3]*60
+            if type(uv_peak_end_rt) == str:
+                continue
             # MS peaks appears later than the corresponding UV peaks in the spectrum
             # Add 12 seconds (0.2 min) to UV_peak_end_RT to correct for the above
             uv_peak_end_rt = uv_peak_end_rt+12

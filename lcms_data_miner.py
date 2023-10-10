@@ -38,15 +38,16 @@ def _uv_date(file, all_data, row_id):
         - file
         - str
     """
-    print(file)
-
     with open(file) as f:
         uv_txt = f.read()
     uv_txt = uv_txt.split('\n\n')
 
     # Loop over strings in UV_file
     K = np.arange(0, len(uv_txt), 1)
-
+    peak_table_headings = "None"
+    peak_table = "None"
+    peak_Wavelength = "None"
+    peak_Bandwidth = "None"
     for k in K:
 
         x = uv_txt[k]
@@ -70,7 +71,8 @@ def _uv_date(file, all_data, row_id):
             try:
                 peak_table_headings = x[2].split("\t")
             except IndexError:
-                return all_data
+                # return all_data
+                peak_table_headings = "None"
 
         if x[0].startswith("1"):
             peak_table = []
@@ -121,16 +123,26 @@ def _uv_date(file, all_data, row_id):
     temp_uv_data = pd.DataFrame(UV, columns=UV_wavelengths, index=UV_retention_times)
 
     # Setting up the data ditch for each sample for later use
-    all_data[temp_sample] = {"row_id": "", "compound_id": "", "sample": "", "batch": "", "uv": "", "ms_pos": "",
-                             "ms_neg": "", "method": "", "file_name": "", "date": "", "peak_info": ""}
-    all_data[temp_sample]["row_id"] = row_id
-    all_data[temp_sample]["sample"] = temp_sample
-    all_data[temp_sample]["method"] = temp_method
-    all_data[temp_sample]["batch"] = temp_batch
-    all_data[temp_sample]["uv"] = temp_uv_data
-    all_data[temp_sample]["date"] = temp_date
-    all_data[temp_sample]["scan_speed"] = scan_speed
-    all_data[temp_sample]["peak_table_raw"] = [peak_table_headings, peak_table, peak_Wavelength, peak_Bandwidth]
+
+    temp_sample = temp_sample.split("_")
+    temp_sample = f"{temp_sample[0]}_{temp_sample[1]}"
+
+    try:
+        all_data[temp_sample]
+
+    except KeyError:
+        all_data[temp_sample] = {"row_id": row_id, "sample": temp_sample, "batch": temp_batch, "uv": temp_uv_data,
+                                 "method": temp_method, "date": temp_date, "scan_speed": scan_speed,
+                                 "peak_table_raw": [peak_table_headings, peak_table, peak_Wavelength, peak_Bandwidth]}
+    else:
+        all_data[temp_sample]["row_id"] = row_id
+        all_data[temp_sample]["sample"] = temp_sample
+        all_data[temp_sample]["batch"] = temp_batch
+        all_data[temp_sample]["uv"] = temp_uv_data
+        all_data[temp_sample]["method"] = temp_method
+        all_data[temp_sample]["date"] = temp_date
+        all_data[temp_sample]["scan_speed"] = scan_speed
+        all_data[temp_sample]["peak_table_raw"] = [peak_table_headings, peak_table, peak_Wavelength, peak_Bandwidth]
 
     return all_data
 
@@ -215,7 +227,6 @@ def _ms_post(file, all_data):
     :return: ms_pos_files (MS data)
     :rtype: list
     """
-    print(file)
     with open(file) as f:
         JDXfile = f.read()
 
@@ -292,33 +303,36 @@ def _file_handler(file_list):
     all_data = {}
     failed_samples = []
 
-    # for file in file_list:
-    #     # uv files
-    #     if file.endswith('.txt'):
-    #         row_id += 1
-    #         all_data = _uv_date(file, all_data, row_id)
-
-    # if all_data:
-        # for file in file_list:
-        #     # ms negativ files
-        #     if file.endswith('Ev2.JDX'):
-        #         sample = os.path.basename(file).removesuffix("_Seg1Ev2.JDX")
-        #         try:
-        #             all_data[sample] = _ms_neg(file, all_data[sample])
-        #         except KeyError:
-        #             failed_samples.append(f"{sample}_MS_NEG")
-
     for file in file_list:
-        # ms positive files
-        if file.endswith('Ev1.JDX'):
-            sample = os.path.basename(file).removesuffix("_Seg1Ev1.JDX")
+
+        temp_file = str(file)
+        if temp_file.endswith('.txt'):
+            row_id += 1
+            all_data = _uv_date(file, all_data, row_id)
+        elif temp_file.endswith('Ev2.JDX'):
+            sample = os.path.basename(file).removesuffix("_Seg1Ev2.JDX")
+            sample = sample.split("_")
+            sample = f"{sample[0]}_{sample[1]}"
             try:
                 all_data[sample]
             except KeyError:
                 all_data[sample] = {}
-                all_data[sample] = _ms_post(file, all_data[sample])
-                failed_samples.append(f"{sample}_MS_POS")
 
+            all_data[sample] = _ms_neg(file, all_data[sample])
+
+                # failed_samples.append(f"{sample}_MS_NEG")
+
+        elif temp_file.endswith('Ev1.JDX'):
+            sample = os.path.basename(file).removesuffix("_Seg1Ev1.JDX")
+            sample = sample.split("_")
+            sample = f"{sample[0]}_{sample[1]}"
+            try:
+                all_data[sample]
+            except KeyError:
+                all_data[sample] = {}
+
+            all_data[sample] = _ms_post(file, all_data[sample])
+                # failed_samples.append(f"{sample}_MS_POS")
 
     data = [all_data, failed_samples]
 

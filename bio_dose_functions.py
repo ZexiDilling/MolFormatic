@@ -402,7 +402,6 @@ def _cal_ec50_normalized(temp_data, dose_response_curveshape, method_calc_readin
     temp_data["EC50_norm_bq"] = {}
     temp_data["EC50_norm_bq"]["value"], temp_data["EC50_calculable"] = brentq_out_tuple
 
-
     # add if the EC50 was calculable to the summary dataframe "okay" column
     if temp_data["EC50_calculable"]:
         temp_data["EC50_norm_bq"]["check"] = True

@@ -196,7 +196,7 @@ class GUILayout:
                 [sg.Text("Plate Layout", size=self.standard_size),
                  sg.DropDown(sorted(self.plate_list), key="-BIO_PLATE_LAYOUT-", enable_events=True,
                              size=self.standard_size)],
-                [sg.Text("Sample Type (Not working)", size=self.standard_size),
+                [sg.Text("Sample Type", size=self.standard_size),
                  sg.DropDown(self.sample_style, key="-BIO_SAMPLE_TYPE-", default_value=self.sample_style[0],
                              size=self.standard_size, enable_events=True,
                              tooltip="This indicates how many times each sample is on the plate. "
@@ -1519,7 +1519,7 @@ class GUILayout:
                         [sg.T("Amount:", size=8),
                          sg.Input(key="-BIO_EXP_SET_COMPOUND_AMOUNT-", size=5)],
                         [sg.Button("Export Compound List", key="-BIO_EXP_EXPORT_COMPOUNDS-"),
-                         sg.Button("Init", key="-INIT_BIO_TABLE-")]
+                         sg.Button("Refresh", key="-REFRESH_BIO_TABLE-")]
                     ]),
                     sg.Column([
                         [sg.Checkbox("Only approved", key="-BIO_EXP_APPROVED_COMPOUNDS_ONLY-", default=True)]

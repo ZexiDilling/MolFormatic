@@ -41,8 +41,12 @@ class Integration:
             time.
         :rtype: pandas.core.frame.DataFrame
         """
+        try:
 
-        uv_tensor = np.array(data[sample]["uv"])
+            uv_tensor = np.array(data[sample]["uv"])
+        except KeyError:
+            print(sample)
+            print(data[sample])
         points = 5
         # Save both slope values and the corresponding retentions times
         slope = []
@@ -203,9 +207,11 @@ class Integration:
         for samples in sample_list:
             peak_information[samples] = {}
             try:
-                wavelength = sample_data[samples]["wavelength"]
-            except TypeError or KeyError:
+                sample_data[samples]["wavelength"]
+            except KeyError:
                 wavelength = wavelength_data
+            else:
+                wavelength = sample_data[samples]["wavelength"]
             temp_data_frame = self._integration_uv_wavelength(samples, wavelength, slope_threshold, uv_threshold,
                                                               data, solvent_peak)
 
