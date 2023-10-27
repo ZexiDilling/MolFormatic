@@ -896,6 +896,18 @@ class CSVReader:
 
         return "done", headlines, sample_dict, all_destination_plates
 
+    @staticmethod
+    def echo_grab_plate_names(csv_file):
+        plate_list = []
+        with open(csv_file) as file:
+            for index, line in enumerate(file):
+                if index != 0:
+                    line_data = line.split(";")
+
+                    if line_data[0] not in plate_list:
+                        plate_list.append(line_data[0])
+
+        return plate_list
 
 class CSVConverter:
 
@@ -924,5 +936,10 @@ class CSVConverter:
 
 
 if __name__ == "__main__":
-    ...
+    file = r"C:\Users\phch\OneDrive - Danmarks Tekniske Universitet\Mapper\Python_data\alpha_SO\all_worklist\25-34.txt"
+    c = CSVReader
+    plates = c.echo_grab_plate_names(file)
+    print(plates)
+    for plate in plates:
+        print(plate)
 

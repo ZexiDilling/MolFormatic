@@ -14,7 +14,8 @@ from bio_dose_response import calculate_dilution_series
 from bio_dose_controller import dose_response_controller
 from bio_dose_excle_handler import dose_excel_controller
 from extra_functions import unit_converter
-from gui_popup import new_headlines_popup, plate_layout_chooser, assay_run_naming, bio_data_approval_table
+from gui_popup import new_headlines_popup, plate_layout_chooser, assay_run_naming, bio_data_approval_table, \
+    dead_run_naming
 from csv_handler import CSVWriter, CSVConverter, CSVReader
 from lc_data_handler import LCMSHandler
 from database_handler import DataBaseFunctions
@@ -976,6 +977,76 @@ def bio_import_report_handler(config, bio_import_folder, plate_to_layout, archiv
                                            dismissed_plates, dead_plates)
 
     return
+
+
+def _bio_add_dead_plates_to_db(dbf, assay_data, assay_run_name, plate_list, analysis_method, responsible,
+                               plate_table="biological_plate_data"):
+    for plate_index, plates in enumerate(plate_list):
+
+        # A guard to check if the plate is already in the database. If this is the case it skips to the next plate
+        guard = dbf.find_data_single_lookup(plate_table, plates, "plate_name")
+        if guard:
+            print(plates)
+            print("skipping plate")
+            continue
+
+        # Set up for the import of each plate:
+        exp_id = get_number_of_rows(config, plate_table) + 1
+        plate_raw_data = "None"
+        process_data = "Null"
+        z_prime = "Null"
+        plate_approval = f"False"
+        plate_note = "Dead Plate - See Run note"
+        assay_run = assay_run_name
+        analysis_method = analysis_method
+        skipped_wells = f"All"
+        temp_plate_layout = assay_data["plate_layout"]
+
+        temp_plate_data = {
+            "exp_id": exp_id,
+            "assay_run": assay_run,
+            "plate_name": plates,
+            "raw_data": plate_raw_data,
+            "process_data": process_data,
+            "z_prime": z_prime,
+            "responsible": responsible,
+            "approval": plate_approval,
+            "note": plate_note,
+            "plate_layout": temp_plate_layout,
+            "skipped_wells": skipped_wells,
+            "analysis_method": analysis_method
+        }
+
+        # Adds the plate to the database
+        dbf.add_records_controller(plate_table, temp_plate_data)
+
+
+def bio_dead_plate_handler(config, assay_name, worklist, analysis_method, responsible):
+
+    # Grab list of plates from the CSV file
+    csv_reader = CSVReader
+    plate_list = csv_reader.echo_grab_plate_names(worklist)
+
+    # Popup to set-up the data for the plates. Date for the run, notes and so on.
+    check, assay_run_name = dead_run_naming(config, assay_name, plate_list, worklist, bio_compound_info_from_worklist)
+
+    if check:
+        # # Grabs the value for the assay from the database
+        assay_data_row = grab_table_data(config, table_name="assay", single_row=True,
+                                         data_value=assay_name, headline="assay_name")
+        plate_layout = assay_data_row[0][4]
+        plate_data = grab_table_data(config, table_name="plate_layout", single_row=True, data_value=plate_layout,
+                                     headline="plate_name")
+        plate_size = plate_data[0][2]
+        assay_data = {"assay_name": assay_data_row[0][2],
+                      "plate_layout": plate_layout,
+                      "z_prime_threshold": assay_data_row[0][5],
+                      "hit_threshold": assay_data_row[0][6],
+                      "plate_size": plate_size}
+
+        dbf = DataBaseFunctions(config)
+
+        _bio_add_dead_plates_to_db(dbf, assay_data, assay_run_name, plate_list, analysis_method, responsible)
 
 
 def mp_production_2d_to_pb_simulate(folder_output, barcodes_2d, mp_name, trans_vol):
@@ -2318,5 +2389,9 @@ def dose_response(config, plate_reader_files, worklist, plate_layout, save_locat
 
 
 if __name__ == "__main__":
-    ...
+    config = configparser.ConfigParser()
+    config.read("config.ini")
+    assay_name = "Alpha_so"
+    worklist = r"C:\Users\phch\OneDrive - Danmarks Tekniske Universitet\Mapper\Python_data\alpha_SO\all_worklist\25-34.txt"
+    bio_dead_plate_handler(config, assay_name, worklist, None)
 

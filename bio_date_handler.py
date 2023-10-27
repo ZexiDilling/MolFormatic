@@ -570,6 +570,9 @@ class BIOAnalyser:
         if write_to_excel:
             self._excel_controller(all_data, well_row_col, pw_dict, bio_sample_dict, save_location, add_compound_ids)
 
+        # Making sure that there info is here for later
+        all_data["skipped_wells"] = []
+
         return all_data
 
 

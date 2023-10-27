@@ -56,18 +56,13 @@ def fp_search(config):
     wb.save(output_file)
     #
 
-
-
 if __name__ == "__main__":
-
-    import configparser
-    config = configparser.ConfigParser()
-    config.read("config.ini")
-
-    fp_search(config)
-
-
-
+    pass
+    # import configparser
+    # config = configparser.ConfigParser()
+    # config.read("config.ini")
+    #
+    # fp_search(config)
 
     # compound_search =
     # smiles =

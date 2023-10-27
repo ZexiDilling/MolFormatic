@@ -828,7 +828,7 @@ def assay_run_naming(config, all_plates_data, analysis_method, used_plates, assa
 
         if event == "-ASSAY_RUN_APPLY_SELECTED-" or event == "-ASSAY_RUN_APPLY_ALL-":
             plate_table_index = values["-ASSAY_RUN_USED_PLATES_TABLE-"]
-            run = "assay_run_1"
+            run = values["-ASSAY_RUN_NAME-"]
             temp_plate_data = []
             if event == "-ASSAY_RUN_APPLY_ALL-":
                 for plates in used_plates_table_data:
@@ -898,6 +898,266 @@ def assay_run_naming(config, all_plates_data, analysis_method, used_plates, assa
                 for plates in temp_plate_list:
                     all_plates_data[plates]["run_name"] = assay_run_name     # Update the dict with the run_name
                     all_plates_data[plates]["analysis_method"] = analysis_method
+                    if plates not in plates_checked:        # Make sure that already checked plates are not added
+                        plates_checked.append(plates)
+
+                # Reset all the info, and count up one for the name:
+                assay_run_name = increment_text_string(assay_run_name)
+                window["-ASSAY_RUN_NAME-"].update(value=assay_run_name)
+                window["-ASSAY_RUN_DATE_TARGET-"].update(value="Choose date")
+                window["-ASSAY_RUN_WORKLIST_INDICATOR-"].update(value="No Worklist")
+                window["-ASSAY_RUN_ECHO_INDICATOR-"].update(value="No Echo Data")
+                window["-ASSAY_RUN_NOTES-"].update(value="")
+                window["-ASSAY_RUN_WORKLIST_DATA-"].update(value="")
+                window["-ASSAY_RUN_ECHO_DATA-"].update(value="")
+
+        if event == "-ASSAY_RUN_UPDATE-":
+            current_assay_name = values["-ASSAY_RUN_NAME-"]
+            if current_assay_name not in previous_runs:
+                sg.popup_error(f"{current_assay_name} is not in the Database. "
+                               f"Please either select plates or add it to all ")
+            else:
+
+                current_run_name = values["-ASSAY_RUN_NAME-"]
+                batch = values["-ASSAY_RUN_ALL_BATCHES-"]
+                worklist = values["-ASSAY_RUN_WORKLIST_DATA-"]
+                echo_data = values["-ASSAY_RUN_ECHO_DATA-"]
+                date = values["-ASSAY_RUN_DATE_TARGET-"]
+                note = values["-ASSAY_RUN_NOTES-"]
+
+                _update_assay_run_database_data(dbf, current_run_name, batch, worklist, echo_data, date, note)
+
+        if event == "-ASSAY_RUN_WORKLIST-":
+            worklist_file = sg.popup_get_file("Please select worklist")
+            # ToDo add guard for wrong file-format
+            if worklist_file:
+                temp_run_name = values["-ASSAY_RUN_NAME-"]
+                worklist_txt_data = _handle_worklist(config, worklist_file, bio_compound_info_from_worklist,
+                                                     worklist_echo_data, temp_run_name)
+                window["-ASSAY_RUN_WORKLIST_DATA-"].update(value=worklist_txt_data)
+                window["-ASSAY_RUN_WORKLIST_INDICATOR-"].update(value="Got Worklist")
+
+        if event == "-ASSAY_RUN_ECHO-":
+            echo_files_string = sg.popup_get_file("Please Select the files with the Echo Data", multiple_files=True)
+            # ToDo add guard for wrong file-format
+            if echo_files_string:
+                temp_run_name = values["-ASSAY_RUN_NAME-"]
+                echo_txt_data, transfer_dict = _handle_echo_data(echo_files_string, worklist_echo_data, temp_run_name,
+                                                                 transfer_dict)
+                window["-ASSAY_RUN_ECHO_DATA-"].update(value=echo_txt_data)
+                window["-ASSAY_RUN_ECHO_INDICATOR-"].update(value="Got ECHO DATA")
+
+        if event == "-ASSAY_RUN_PREVIOUS-":
+            run_name = values["-ASSAY_RUN_PREVIOUS-"]
+            if run_name.casefold() == "new":
+                worklist = ""
+                date = ""
+                note = ""
+            else:
+                worklist, echo_data, date, note = _previous_single_run_data(dbf, assay_name, run_name)
+                if transfer_dict:
+                    for plates in eval(echo_data):
+                        transfer_dict[plates] = echo_data[plates]
+                else:
+                    transfer_dict = copy.deepcopy(eval(echo_data))
+
+            window["-ASSAY_RUN_NAME-"].update(value=run_name)
+            window["-ASSAY_RUN_DATE_TARGET-"].update(value=date)
+            if worklist:
+                window["-ASSAY_RUN_WORKLIST_INDICATOR-"].update(value="Got Worklist")
+            window["-ASSAY_RUN_WORKLIST_DATA-"].update(value=worklist)
+            if echo_data:
+                window["-ASSAY_RUN_ECHO_INDICATOR-"].update(value="Got Echo Data")
+            window["-ASSAY_RUN_ECHO_DATA-"].update(value=worklist)
+            window["-ASSAY_RUN_NOTES-"].update(value=note)
+
+        if event == "-ASSAY_RUN_NEW_BATCH-":
+            new_batch_name = increment_text_string(all_batch_numbers[-1])
+            all_batch_numbers.append(new_batch_name)
+            window["-ASSAY_RUN_ALL_BATCHES-"].update(values=all_batch_numbers)
+            window["-ASSAY_RUN_CURRENT_BATCH-"].update(value=new_batch_name)
+
+        if event == "-ASSAY_RUN_ALL_BATCHES-":
+            selected_batch = values["-ASSAY_RUN_ALL_BATCHES-"]
+            window["-ASSAY_RUN_CURRENT_BATCH-"].update(value=selected_batch)
+
+
+def _dead_run_naming_layout(plate_table_headline, run_name, previous_runs, assay_name, used_plates_table_data,
+                            all_batch_numbers, batch_number, worklist):
+    text_size = 15
+    button_size = 15
+    input_size = 15
+    if worklist:
+        temp_worklist = worklist
+    else:
+        temp_worklist = "No Worklist"
+
+    previous_runs.append("New")
+    top_layout = sg.Column([
+        [sg.T("Run Name", size=text_size),
+         sg.Input(run_name, key="-ASSAY_RUN_NAME-", size=input_size)],
+        [sg.T("Chose old Run", size=text_size),
+         sg.DropDown(previous_runs, key="-ASSAY_RUN_PREVIOUS-",
+                     size=input_size, enable_events=True, default_value=previous_runs[-1])],
+        [sg.B("New batch", key="-ASSAY_RUN_NEW_BATCH-", size=button_size),
+         sg.T(batch_number, key="-ASSAY_RUN_CURRENT_BATCH-", size=text_size, visible=False),
+         sg.DropDown(values=all_batch_numbers, key="-ASSAY_RUN_ALL_BATCHES-", size=text_size,
+                     default_value=batch_number, enable_events=True,
+                     tooltip="A way to split up data, "
+                             "if there are changes to the data that are specific to some run.")],
+        [sg.CalendarButton("Start date", key="-ASSAY_RUN_DATE-", format="%Y-%m-%d", enable_events=True,
+                           target="-ASSAY_RUN_DATE_TARGET-", size=(button_size, 1)),
+         sg.Input(key="-ASSAY_RUN_DATE_TARGET-", enable_events=True, size=text_size)],
+        [sg.B("Worklist", key="-ASSAY_RUN_WORKLIST-", size=button_size),
+         sg.T(temp_worklist, key="-ASSAY_RUN_WORKLIST_INDICATOR-", relief="sunken", size=text_size),
+         sg.Multiline(visible=False, key="-ASSAY_RUN_WORKLIST_DATA-")],
+        [sg.B("Echo Data", key="-ASSAY_RUN_ECHO-", size=button_size),
+         sg.T("No Echo Data", key="-ASSAY_RUN_ECHO_INDICATOR-", relief="sunken", size=text_size),
+         sg.Multiline(visible=False, key="-ASSAY_RUN_ECHO_DATA-")],
+
+        [sg.HorizontalSeparator()]
+    ])
+    bottom_layer = sg.vtop([
+        sg.Column([
+            [sg.T("Notes")],
+            [sg.Multiline(default_text="Dead Plates - ", key="-ASSAY_RUN_NOTES-", size=(18, 15))],
+            [sg.Button("Update Run", key="-ASSAY_RUN_UPDATE-", size=text_size)]
+        ]),
+        sg.Column([
+            [sg.T("All Plates")],
+            [sg.Table(values=used_plates_table_data, size=(18, 25), headings=plate_table_headline,
+                      key="-ASSAY_RUN_USED_PLATES_TABLE-")],
+            [sg.B("Selected", key="-ASSAY_RUN_APPLY_SELECTED-", size=10,
+                  tooltip="Apply the Run name to the selected plates"),
+             sg.B("All", key="-ASSAY_RUN_APPLY_ALL-", size=7,
+                  tooltip="Apply the Run name to all plates")]
+        ])
+    ])
+
+    assay_layout = sg.Frame(f"New Run for {assay_name}", [
+        [top_layout],
+        bottom_layer
+    ])
+
+    layout = [
+        [assay_layout],
+        [sg.Button("Apply", key="-ASSAY_RUN_DONE-", expand_x=text_size,
+                   tooltip="Apply the assay_run name to all plates, and continue with importing the data"),
+         # sg.Button("Dismiss Runs", key="-ASSAY_RUN_DISMISS-", expand_x=text_size,
+         #           tooltip="Will ask for assay_run name for witch plates to dismiss,"
+         #                   "if there is more than one run name"
+         #                   "Notes needs to be filled in for the assay_run"),
+         sg.Button("Cancel", key="-WINDOW_TWO_CANCEL-", expand_x=text_size)]
+    ]
+
+    return sg.Window("Assay Run", layout, finalize=True, resizable=True)
+
+
+def dead_run_naming(config, assay_name, all_destination_plates, worklist, bio_compound_info_from_worklist):
+    dbf = DataBaseFunctions(config)
+    previous_runs, run_name, all_batch_numbers, batch_number = _previous_runs_data(dbf, assay_name)
+    plate_table_headline = ["Plate", "Run", "Data"]
+    plates_table_data = []
+    all_plates_data = {}
+    for plates in all_destination_plates:
+        all_plates_data[plates] = {}
+        data_check = "No Data"
+        temp_data = [plates, "", data_check]
+
+        plates_table_data.append(temp_data)
+
+    window = _dead_run_naming_layout(plate_table_headline, run_name, previous_runs, assay_name, plates_table_data,
+                                     all_batch_numbers, batch_number, "Got Worklist")
+
+    worklist_txt_data = _handle_worklist(config, worklist, bio_compound_info_from_worklist,
+                                         worklist_echo_data, run_name)
+    window["-ASSAY_RUN_WORKLIST_DATA-"].update(value=worklist_txt_data)
+    different_assay_runs = []
+    plates_checked = []
+
+    while True:
+        event, values = window.read()
+
+        if event == sg.WIN_CLOSED or event == "-WINDOW_TWO_CANCEL-":
+            window.close()
+            return False
+
+        if event == "-ASSAY_RUN_DONE-":
+            can_close = True
+            if len(plates_checked) == len(all_destination_plates):
+
+                if can_close:
+                    window.close()
+                    return True
+            else:
+                sg.PopupError("Not all plates have gotten an assay run assigned to them")
+
+        if event == "-ASSAY_RUN_APPLY_SELECTED-" or event == "-ASSAY_RUN_APPLY_ALL-":
+            plate_table_index = values["-ASSAY_RUN_USED_PLATES_TABLE-"]
+            run = values["-ASSAY_RUN_NAME-"]
+            temp_plate_data = []
+            if event == "-ASSAY_RUN_APPLY_ALL-":
+                for plates in plates_table_data:
+                    temp_plate_data.append(plates[0])
+            else:
+                for index in plate_table_index:
+                    temp_plate_data.append(plates_table_data[index][0])
+                    plates_table_data[index][1] = run
+
+            window["-ASSAY_RUN_USED_PLATES_TABLE-"].update(values=plates_table_data)
+
+            temp_event = event
+            if not values["-ASSAY_RUN_NAME-"]:
+                sg.popup_error("Please select a name for the run")
+            elif not values["-ASSAY_RUN_DATE_TARGET-"]:
+                sg.popup_error("Please select a date for the run")
+            elif not values["-ASSAY_RUN_WORKLIST_DATA-"]:
+                sg.popup_error("Please provide the worklist used for the run")
+            # ToDo have a check to see if the echo data fit with the plate
+            else:
+                assay_run_name = values["-ASSAY_RUN_NAME-"]
+                if assay_run_name not in different_assay_runs:
+                    different_assay_runs.append(assay_run_name)
+                # Test if the run name is in the database already, if it isn't add the name to the run data
+                if assay_run_name not in previous_runs or len(previous_runs) == 1:
+                    assay_run_data = {"run_name": assay_run_name,
+                                      "assay_name": assay_name,
+                                      "batch": values["-ASSAY_RUN_ALL_BATCHES-"],
+                                      "worklist": values["-ASSAY_RUN_WORKLIST_DATA-"],
+                                      "echo_data": values["-ASSAY_RUN_ECHO_DATA-"],
+                                      "date": values["-ASSAY_RUN_DATE_TARGET-"],
+                                      "note": values["-ASSAY_RUN_NOTES-"]}
+
+                    dbf.add_records_controller("assay_runs", assay_run_data)
+                    # add the plates to assay_plates
+                    for plates in temp_plate_data:
+                        assay_plate_data = {"plate_name": plates, "assay_run": assay_run_name}
+                        dbf.add_records_controller("assay_plates", assay_plate_data)
+
+                    # Add the new run to the list of old runs,
+                    # and updates the dropdown to include it, and the value to it
+                    if len(previous_runs) != 1:
+                        previous_runs.append(assay_run_name)
+                        window["-ASSAY_RUN_PREVIOUS-"].update(values=previous_runs, value=assay_run_name)
+
+                if temp_event == "-ASSAY_RUN_APPLY_SELECTED-":
+                    temp_plate_list = []
+                    for index in values["-ASSAY_RUN_USED_PLATES_TABLE-"]:
+                        temp_plate_list.append(plates_table_data[index][0])
+                        plates_table_data[index][1] = run
+
+                    # Update the table with the assay run next to the plate name
+                    window["-ASSAY_RUN_USED_PLATES_TABLE-"].update(values=plates_table_data)
+                else:
+                    temp_plate_list = plates_table_data
+                    for index, _ in enumerate(plates_table_data):
+                        plates_table_data[index][1] = run
+
+                    # Update the table with the assay run next to the plate name
+                    window["-ASSAY_RUN_USED_PLATES_TABLE-"].update(values=plates_table_data)
+
+                for plates in temp_plate_list:
+                    all_plates_data[plates]["run_name"] = assay_run_name     # Update the dict with the run_name
                     if plates not in plates_checked:        # Make sure that already checked plates are not added
                         plates_checked.append(plates)
 
@@ -1632,6 +1892,13 @@ def _sort_compound_data(compound_data_dict):
     return all_compound_data
 
 
+def __update_compounds_approval(table_data, selected_plate, plate_status):
+
+    for row_data in table_data:
+        if row_data[5] and row_data[0] == selected_plate:
+            row_data[4] = plate_status
+
+
 def bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, plate_to_layout, archive_plates_dict,
                             bio_plate_report_setup, transfer_dict, dismissed_plates,
                             all_plates_are_dismissed, dead_plates):
@@ -1892,7 +2159,7 @@ def bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, pla
 
         # Initialize the Database-functions
         dbf = DataBaseFunctions(config)
-
+        new_compound_table = []
         while True:
             event, values = window.read()
 
@@ -2042,16 +2309,42 @@ def bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, pla
             # Makes it possible to check and un-check a checkbox.
             if event[0] == "-BIO_APPROVAL_PLATE_TABLE-" and event[2][1] == 5:
                 row_data = event[2][0]
+                selected_plate = plate_table_data[row_data][0]
+
                 if plate_table_data[row_data][3].casefold() == "dismissed":
                     sg.popup_error("This plate have been dismissed, and can't be approved")
                 else:
                     if plate_table_data[row_data][5] == CHECKED_BOX:
 
                         plate_table_data[row_data][5] = BLANK_BOX
+                        __update_compounds_approval(compound_table_data, selected_plate, BLANK_BOX)
                     else:
                         plate_table_data[row_data][5] = CHECKED_BOX
+                        __update_compounds_approval(compound_table_data, selected_plate, CHECKED_BOX)
 
                     window['-BIO_APPROVAL_PLATE_TABLE-'].update(values=plate_table_data)
+                    if new_compound_table:
+                        window['-BIO_APPROVAL_COMPOUND_TABLE-'].update(values=new_compound_table)
+                    else:
+                        window['-BIO_APPROVAL_COMPOUND_TABLE-'].update(values=compound_table_data)
+
+            if event[0] == "-BIO_APPROVAL_COMPOUND_TABLE-" and event[2][1] == 4:
+                print(event[2])
+                row_data = event[2][0]
+                print(compound_table_data[row_data][4])
+                if new_compound_table:
+                    if new_compound_table[row_data][4] == CHECKED_BOX:
+                        new_compound_table[row_data][4] = BLANK_BOX
+                    else:
+                        new_compound_table[row_data][4] = CHECKED_BOX
+
+                    window['-BIO_APPROVAL_COMPOUND_TABLE-'].update(values=new_compound_table)
+                else:
+                    if compound_table_data[row_data][4] == CHECKED_BOX:
+                        compound_table_data[row_data][4] = BLANK_BOX
+                    else:
+                        compound_table_data[row_data][4] = CHECKED_BOX
+                    window['-BIO_APPROVAL_COMPOUND_TABLE-'].update(values=compound_table_data)
 
             # updates the window, when double-clicking the plate table, or changing what data to look at
             if event == "-BIO_APPROVAL_PLATE_TABLE-+-double click-" or event == "-BIO_APPROVAL_TABLE_RESET-":

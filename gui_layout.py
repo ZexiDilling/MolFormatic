@@ -223,7 +223,12 @@ class GUILayout:
                 # [sg.Checkbox("State colours", key="-BIO_STATE-")],
                 [sg.Button("Calculate", key="-BIO_CALCULATE-",
                            tooltip="Will do calculations on all the files in the chosen folder. "
-                                   "Data can be exported to Excel and/or imported to the Database"), sg.Push(),
+                                   "Data can be exported to Excel and/or imported to the Database"),
+                 sg.Button("Blank", key="-BIO_BLANK_RUN-",
+                           tooltip="Will generate a blank run for the database, to show that a run was attempted, "
+                                   "keep track of thawed compounds, and days spend using the platform. Incase a "
+                                   "run fails before it generates data."),
+                 sg.Push(),
                  sg.Button("Send to Info", key="-BIO_SEND_TO_INFO-")]
             ])
         ]])

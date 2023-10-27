@@ -20,7 +20,7 @@ from gui_functions import get_plate_layout, grab_table_data, config_update, draw
     update_database, generate_worklist, plate_dilution, database_to_table, get_number_of_rows, \
     compound_freezer_to_2d_simulate, mp_production_2d_to_pb_simulate, compound_info_table_data, table_update_tree, \
     compound_export, dp_creator, bio_exp_compound_list, update_bio_info_values, sub_settings_plate_overview, \
-    sub_settings_overview, sub_settings_z_prime, sub_settings_hit_list, purity_plotting
+    sub_settings_overview, sub_settings_z_prime, sub_settings_hit_list, purity_plotting, bio_dead_plate_handler
 from gui_guards import guard_purity_data_wavelength
 from gui_layout import GUILayout
 from gui_settings_control import GUISettingsController
@@ -1053,6 +1053,37 @@ def main(config, queue_gui, queue_mol):
                                                   import_to_database_check, bio_final_report_setup, final_report_name,
                                                   include_hits, threshold, hit_amount, include_smiles,
                                                   include_structure, assay_name, responsible, temp_concentration)
+                        sg.popup("Done")
+
+        if event == "-BIO_BLANK_RUN-":
+            # Adds data to the database for runs that have died before data have been produced.
+            bio_breaker = False
+            if not values["-BIO_PLATE_LAYOUT-"]:
+                sg.popup_error("Please choose a plate layout")
+            elif not values["-BIO_ASSAY_NAME-"]:
+                sg.popup_error("Please choose an Assay name")
+            elif not values["-BIO_RESPONSIBLE-"]:
+                sg.popup_error("Please choose an Responsible ")
+
+            # Missing setting move moving files after analyse is done.
+            # elif not values["-BIO_ANALYSE_TYPE-"]:
+            #     sg.popup_error("Please choose an analyse type")
+            else:
+                default_plate_layout = values["-BIO_PLATE_LAYOUT-"]
+                bio_sample_list = sg.popup_get_file("Please select worklist files", multiple_files=True)
+                if bio_sample_list is not None:
+                    worklist = bio_sample_list.split(";")
+                else:
+                    worklist = None
+                    bio_breaker = True
+
+                if not bio_breaker:
+                    responsible = values["-BIO_RESPONSIBLE-"]
+                    assay_name = values["-BIO_ASSAY_NAME-"]
+                    analyse_method = values["-BIO_ANALYSE_TYPE-"]
+                    bio_dead_plate_handler(config, assay_name, worklist, analyse_method, responsible)
+
+                    sg.popup("Done")
 
         if event == "-BIO_SEND_TO_INFO-":
             sg.popup_error("Needs to be updated to do something else")
