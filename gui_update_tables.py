@@ -22,31 +22,36 @@ def update_bio_exp_plate_table(config, sg, window, event, values, bio_exp_assay_
     for temp_values in values["-BIO_EXP_ASSAY_RUN_TABLE-"]:
         bio_exp_selected_runs.append(bio_exp_assay_runs[temp_values][0])
     search_list_clm = "assay_run"
-
     selected_headlines = ["plate_name", "z_prime", "approval", "note", "analysed_method", "assay_run"]
     bio_exp_plate_data, _ = grab_table_data(config, table_name, bio_exp_selected_runs,
                                             specific_rows=selected_headlines, search_list_clm=search_list_clm)
+
     table_data = []
-    for rows, row_data in enumerate(bio_exp_plate_data):
-        if approval_check and row_data[2] == "True" or not approval_check:
+    if bio_exp_plate_data:
+        for rows, row_data in enumerate(bio_exp_plate_data):
+            if approval_check and row_data[2] == "True" or not approval_check:
 
-            if type(row_data[1]) == float:
-                row_data[1] = round(bio_exp_plate_data[rows][1], 2)
+                if type(row_data[1]) == float:
+                    row_data[1] = round(bio_exp_plate_data[rows][1], 2)
 
-            if row_data[3] == "Dead Plate - See Run note":
-                row_data[3] = "Dead"
+                if row_data[3] == "Dead Plate - See Run note":
+                    row_data[3] = "Dead"
 
-            table_data.append(row_data)
+                table_data.append(row_data)
 
-    window["-BIO_EXP_PLATE_TABLE-"].update(values=table_data)
-    # Update the plate counter:
-    window["-BIO_EXP_PLATE_COUNTER-"].update(value=len(table_data))
-    temp_plate = bio_exp_selected_runs[0]
-    dbf = DataBaseFunctions(config)
-    temp_data = dbf.find_data_single_lookup("assay_runs", temp_plate, "run_name")
-    note = temp_data[0][7]
-    window["-BIO_EXP_RUN_NOTE-"].update(value=note)
-
+        window["-BIO_EXP_PLATE_TABLE-"].update(values=table_data)
+        # Update the plate counter:
+        window["-BIO_EXP_PLATE_COUNTER-"].update(value=len(table_data))
+        temp_plate = bio_exp_selected_runs[0]
+        dbf = DataBaseFunctions(config)
+        temp_data = dbf.find_data_single_lookup("assay_runs", temp_plate, "run_name")
+        note = temp_data[0][7]
+        window["-BIO_EXP_RUN_NOTE-"].update(value=note)
+    else:
+        table_data = None
+        window["-BIO_EXP_PLATE_TABLE-"].update(values=[[]])
+        window["-BIO_EXP_PLATE_COUNTER-"].update(value="0")
+        bio_exp_plate_data.update(value="No Data")
 
     return table_data
 
@@ -65,38 +70,41 @@ def update_bio_exp_compound_table(config, sg, window, event, values, bio_exp_pla
     bio_exp_compound_data, _ = grab_table_data(config, table_name, bio_exp_selected_plates,
                                                specific_rows=selected_headlines, search_list_clm=search_list_clm)
     # Sort the list based on the score
-    bio_exp_compound_data.sort(key=lambda x: x[1])
-    table_data = []
     if bio_exp_compound_data:
-        for rows, row_data in enumerate(bio_exp_compound_data):
-            if threshold:
-                try:
-                    row_data[1] > threshold
-                except TypeError:
-                    break
-                else:
-                    if row_data[1] > threshold:
+        bio_exp_compound_data.sort(key=lambda x: x[1])
+        table_data = []
+        if bio_exp_compound_data:
+            for rows, row_data in enumerate(bio_exp_compound_data):
+                if threshold:
+                    try:
+                        row_data[1] > threshold
+                    except TypeError:
                         break
+                    else:
+                        if row_data[1] > threshold:
+                            break
 
-            if approval_check and row_data[4] == "1" or not approval_check:
-                if row_data[6] == "No transfer data":
-                    row_data[6] = "Nah"
-                row_data.remove(row_data[4])
+                if approval_check and row_data[4] == "1" or not approval_check:
+                    if row_data[6] == "No transfer data":
+                        row_data[6] = "Nah"
+                    row_data.remove(row_data[4])
 
-                if type(row_data[1]) == float:
-                    row_data[1] = round(row_data[1], 2)
+                    if type(row_data[1]) == float:
+                        row_data[1] = round(row_data[1], 2)
 
-                table_data.append(row_data)
-            if compound_amount and rows + 1 >= compound_amount:
-                break
+                    table_data.append(row_data)
+                if compound_amount and rows + 1 >= compound_amount:
+                    break
 
+        else:
+            print(bio_exp_compound_data)
+
+
+        # Update compound table data and counter:
+        window["-BIO_EXP_COMPOUND_TABLE-"].update(values=table_data)
+        window["-BIO_EXP_COMPOUND_COUNTER-"].update(value=len(table_data))
     else:
-        print(bio_exp_compound_data)
-
-
-    # Update compound table data and counter:
-    window["-BIO_EXP_COMPOUND_TABLE-"].update(values=table_data)
-    window["-BIO_EXP_COMPOUND_COUNTER-"].update(value=len(table_data))
+        table_data = None
 
     # update the note field for the plate table:
     try:

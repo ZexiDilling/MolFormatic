@@ -76,7 +76,7 @@ class DataBaseFunctions:
         try:
             self.cursor.execute(layout, data)
         except sqlite3.IntegrityError as error:
-            print(f"{error}")
+            print(f"{error} - {layout} - {data}")
             #print("ERROR") # NEEDS TO WRITE REPORT OVER ERRORS TO SEE WHY DATA WAS NOT ADDED!!!
             # EITHER DUE TO DUPLICATES OR MISSING REFERENCE(FOREIGN KEY)
         self.conn.commit()

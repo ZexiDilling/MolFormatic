@@ -307,7 +307,7 @@ def draw_layout(config, sg, window, event, values, well_dict, graph_plate, archi
             plate_type = archive_plates_dict[values["-ARCHIVE_PLATES-"]]["plate_type"]
             sample_type = archive_plates_dict[values["-ARCHIVE_PLATES-"]]["sample_type"]
 
-    well_dict, min_x, min_y, max_x, max_y = draw_plate(config, graph, plate_type, well_dict, gui_tab,
+    well_dict, min_x, min_y, max_x, max_y, off_set = draw_plate(config, graph, plate_type, well_dict, gui_tab,
                                                        archive_plates, sample_layout=sample_type)
     plate_active = True
 

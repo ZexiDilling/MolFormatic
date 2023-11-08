@@ -430,6 +430,7 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
     }
     counter = 0
     sample_counter = 0
+    all_wells_draw = {}
     for row in range(rows[plate_type]):
         for column in range(columns[plate_type]):
             bottom_left = (start_x + row * size[plate_type],
@@ -437,10 +438,11 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
             top_right = (bottom_left[0] - size[plate_type],
                          bottom_left[1] - size[plate_type])
             well_id = f"{well_id_col[column]}{row+1}"
+
             if well_id in skipped_well:
                 fill_colour = "#FFFFFF"
                 group = 0
-                well_state = "Blank"
+                well_state = well_data_dict[well_id]["state"]
             else:
                 if archive_plate:
                     counter += 1
@@ -490,8 +492,11 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
                                     fill_colour = "black"
                         else:
                             fill_colour = "#FFFFFF"
-
+            all_wells_draw[well_id] = (bottom_left, top_right)
             temp_well = graph.DrawRectangle(bottom_left, top_right, line_color=line_colour, fill_color=fill_colour)
+            if column == 0 and row == 0:
+                off_set = temp_well - 1
+            temp_well = temp_well - off_set
             well_dict[temp_well] = {}
             if group == "dose":
                 group = well_data_dict[well_id]["group"]
@@ -499,13 +504,12 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
             well_dict[temp_well]["well_id"] = well_id
             well_dict[temp_well]["state"] = well_state
             well_dict[temp_well]["colour"] = fill_colour
-
     min_x = start_x - size[plate_type]
     min_y = start_y - (columns[plate_type] * size[plate_type])
     max_x = start_x + (rows[plate_type] * size[plate_type])-size[plate_type]
     max_y = start_y
 
-    return well_dict, min_x, min_y, max_x, max_y
+    return well_dict, min_x, min_y, max_x, max_y, off_set
 
 
 def bio_compound_info_from_worklist(config, sg, bio_sample_list):
@@ -750,16 +754,16 @@ def bio_experiment_to_database(config, assay_data, used_plates, all_plates_data,
     sub_layout_table = "plate_layout_sub"
 
     # add new sub_layouts to db:
-    for plates in sub_layouts:
-        if sub_layouts[plates]["new"]:
-            temp_plate_sub = sub_layouts[plates]["name"]
-            temp_plate_layout = sub_layouts[plates]["layout"]
-            temp_sub_layout_data = {
-                "plate_sub": temp_plate_sub,
-                "plate_main": assay_data["plate_layout"],
-                "plate_layout": f"{temp_plate_layout['well_layout']}"
-            }
-            dbf.add_records_controller(sub_layout_table, temp_sub_layout_data)
+    # for plates in sub_layouts:
+    #     if sub_layouts[plates]["new"]:
+    #         temp_plate_sub = sub_layouts[plates]["name"]
+    #         temp_plate_layout = sub_layouts[plates]["layout"]
+    #         temp_sub_layout_data = {
+    #             "plate_sub": temp_plate_sub,
+    #             "plate_main": assay_data["plate_layout"],
+    #             "plate_layout": f"{temp_plate_layout['well_layout']}"
+    #         }
+    #         dbf.add_records_controller(sub_layout_table, temp_sub_layout_data)
 
     for plate_index, plates in enumerate(used_plates):
 
@@ -979,7 +983,7 @@ def bio_import_report_handler(config, bio_import_folder, plate_to_layout, archiv
     return
 
 
-def _bio_add_dead_plates_to_db(dbf, assay_data, assay_run_name, plate_list, analysis_method, responsible,
+def _bio_add_dead_plates_to_db(config, dbf, assay_data, assay_run_name, plate_list, analysis_method, responsible,
                                plate_table="biological_plate_data"):
     for plate_index, plates in enumerate(plate_list):
 
@@ -1046,7 +1050,7 @@ def bio_dead_plate_handler(config, assay_name, worklist, analysis_method, respon
 
         dbf = DataBaseFunctions(config)
 
-        _bio_add_dead_plates_to_db(dbf, assay_data, assay_run_name, plate_list, analysis_method, responsible)
+        _bio_add_dead_plates_to_db(config, dbf, assay_data, assay_run_name, plate_list, analysis_method, responsible)
 
 
 def mp_production_2d_to_pb_simulate(folder_output, barcodes_2d, mp_name, trans_vol):

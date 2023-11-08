@@ -1070,9 +1070,9 @@ def main(config, queue_gui, queue_mol):
             #     sg.popup_error("Please choose an analyse type")
             else:
                 default_plate_layout = values["-BIO_PLATE_LAYOUT-"]
-                bio_sample_list = sg.popup_get_file("Please select worklist files", multiple_files=True)
+                bio_sample_list = sg.popup_get_file("Please select worklist files", multiple_files=False)
                 if bio_sample_list is not None:
-                    worklist = bio_sample_list.split(";")
+                    worklist = bio_sample_list
                 else:
                     worklist = None
                     bio_breaker = True
@@ -2182,6 +2182,12 @@ def main(config, queue_gui, queue_mol):
                                                                   threshold=threshold, compound_amount=compound_amount,
                                                                   approval_check=approval_check)
 
+        if event == "-BIO_EXP_ASSAY_RUN_TABLE-+-double click-":
+            print("we are double clicking - runs")
+
+        if event == "-BIO_EXP_PLATE_TABLE-+-double click-":
+            print("we are double clicking - plates")
+
         if event == "-BIO_EXP_COMPOUND_TABLE-+-double click-":
             try:
                 table_row = values["-BIO_EXP_COMPOUND_TABLE-"][0]
@@ -2505,7 +2511,7 @@ def main(config, queue_gui, queue_mol):
                     gui_tab = "bio_exp"
                     archive = True
 
-                    well_dict_bio_info, bio_info_min_x, bio_info_min_y, bio_info_max_x, bio_info_max_y \
+                    well_dict_bio_info, bio_info_min_x, bio_info_min_y, bio_info_max_x, bio_info_max_y, off_set \
                         = draw_plate(config, graph_bio_exp, bio_info_plate_size, bio_info_state_dict, gui_tab, archive)
 
                 if values["-BIO_INFO_MAPPING-"] == "Heatmap":
@@ -2526,7 +2532,7 @@ def main(config, queue_gui, queue_mol):
                     analyse_method = values["-BIO_INFO_ANALYSE_METHOD-"]
 
                     temp_plate_bio_info = plate_bio_info[plate]["plates"][analyse_method]["wells"]
-                    well_dict_bio_info, bio_info_min_x, bio_info_min_y, bio_info_max_x, bio_info_max_y \
+                    well_dict_bio_info, bio_info_min_x, bio_info_min_y, bio_info_max_x, bio_info_max_y, off_set \
                         = draw_plate(config, graph_bio_exp, bio_info_plate_size, temp_plate_bio_info, gui_tab,
                                      mapping=mapping, state_dict=bio_info_state_dict)
 
@@ -2550,7 +2556,7 @@ def main(config, queue_gui, queue_mol):
                     gui_tab = "bio_exp"
 
                     temp_plate_bio_info = plate_bio_info[plate]["plates"][analyse_method]["wells"]
-                    well_dict_bio_info, bio_info_min_x, bio_info_min_y, bio_info_max_x, bio_info_max_y \
+                    well_dict_bio_info, bio_info_min_x, bio_info_min_y, bio_info_max_x, bio_info_max_y, off_set \
                         = draw_plate(config, graph_bio_exp, bio_info_plate_size, temp_plate_bio_info, gui_tab,
                                      mapping=mapping, state_dict=bio_info_state_dict)
 
