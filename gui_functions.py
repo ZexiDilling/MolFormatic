@@ -860,12 +860,15 @@ def bio_experiment_to_database(config, assay_data, used_plates, all_plates_data,
                         score = all_plates_data[plates]["plates"][plate_analyse_methods[-1]]["wells"][wells]
                     except KeyError:
                         score = ""
-                        hit = False
-                    else:
-                        if score <= assay_data["hit_threshold"]:
-                            hit = True
-                        else:
-                            hit = False
+                    #     hit = False
+                    # else:
+
+                        # if score <= assay_data["hit_threshold"]:
+                        #     hit = True
+                        # else:
+                        #     hit = False
+                    # Hit should always be False. The Hits need to be chosen manually.
+                    hit = False
 
                     # The raw data is the initial value before any calculations have been done.
                     try:
@@ -910,11 +913,11 @@ def bio_experiment_to_database(config, assay_data, used_plates, all_plates_data,
         print(f"{plate_index + 1} / {total_plate_amount} have been uploaded to the database - last plate was: {plates}")
 
 
-def bio_import_report_handler(config, bio_import_folder, plate_to_layout, archive_plates_dict, bio_plate_report_setup,
-                              analyse_method, bio_sample_dict, bio_export_folder, add_compound_ids, export_to_excel,
-                              all_destination_plates, combined_report_check, import_to_database_check,
-                              bio_final_report_setup, final_report_name, include_hits, threshold, hit_amount,
-                              include_smiles, include_structure, assay_name, responsible, concentration):
+def bio_import_handler_single_point(config, bio_import_folder, plate_to_layout, archive_plates_dict, bio_plate_report_setup,
+                                    analyse_method, bio_sample_dict, bio_export_folder, add_compound_ids, export_to_excel,
+                                    all_destination_plates, combined_report_check, import_to_database_check,
+                                    bio_final_report_setup, final_report_name, include_hits, threshold, hit_amount,
+                                    include_smiles, include_structure, assay_name, responsible, concentration):
 
     worked, all_plates_data, date, used_plates, plate_to_layout = \
         bio_data(config, bio_import_folder, plate_to_layout, archive_plates_dict,

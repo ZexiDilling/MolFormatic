@@ -123,17 +123,17 @@ class DataBaseFunctions:
         table_row = f"UPDATE {source_table} SET volume = volume - {vol} WHERE {row_id} = {barcode_source} "
         self.submit_update(table_row)
 
-    def update_database_items(self, source_table, table_data, table_index_value, headline):
+    def update_database_items(self, source_table, table_data, index_key_data, index_key_headline):
         """
         Updates a row in the database
         :param source_table: The table
         :type source_table: str
         :param table_data: A dict of clm headlines and their values
         :type table_data: dict
-        :param table_index_value: The index value, as to what row to update
-        :type table_index_value: str or int
-        :param headline: The headline for the index value
-        :type headline: str
+        :param index_key_data: The index value, as to what row to update
+        :type index_key_data: str or int
+        :param index_key_headline: The headline for the index value
+        :type index_key_headline: str
         :return:
         """
         # table_row_string = f"UPDATE {source_table} SET"
@@ -147,7 +147,7 @@ class DataBaseFunctions:
             formatted_value = value.replace("'", "''") if isinstance(value, str) else value
             table_row_string += f"{column} = '{formatted_value}', "
         table_row_string = table_row_string.removesuffix(", ")
-        table_row_string += f" WHERE {headline} = '{table_index_value}'"
+        table_row_string += f" WHERE {index_key_headline} = {index_key_data}"
 
         print(table_row_string)
 
@@ -202,7 +202,10 @@ class DataBaseFunctions:
         :return: Data from the database
         :rtype: dict
         """
-        find = f"SELECT rowid, * FROM '{table}' WHERE {headline} = '{data_value}' "
+        if type(data_value) == str:
+            find = f"SELECT rowid, * FROM '{table}' WHERE {headline} = '{data_value}' "
+        else:
+            find = f"SELECT rowid, * FROM '{table}' WHERE {headline} = {data_value} "
         return self.fetch(find)
 
     def delete_records(self, table, headline, data_value):

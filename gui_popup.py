@@ -1998,7 +1998,14 @@ def bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, pla
                 temp_layout = "Changed"
                 temp_approval = BLANK_BOX
             else:
-                temp_layout = plate_to_layout[temp_plate_name]
+                try:
+
+                    temp_layout = plate_to_layout[temp_plate_name]
+                except KeyError:
+
+                    print(plate_to_layout)
+                    print(temp_plate_name)
+                    temp_layout = list(plate_to_layout())[0]
 
         try:
             all_plates_data[plate]["plates"]
@@ -2266,7 +2273,7 @@ def bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, pla
                         temp_note = sg.PopupGetText("Note:")
 
                     if temp_note:
-                        plate_table_data[table_row][2] = "Note"
+                        plate_table_data[table_row][3] = "Note"
                         all_plates_data[selected_plate]["note"] = temp_note
 
                         window["-BIO_APPROVAL_PLATE_TABLE-"].update(values=plate_table_data)

@@ -56,11 +56,45 @@ def fp_search(config):
     wb.save(output_file)
     #
 
+
+def temp_change(config):
+
+    dbf = DataBaseFunctions(config)
+
+    table = "biological_compound_data"
+    hit = 0
+    data_value = 1
+    headline = "hit"
+    # data_value = "alpha_so84"
+    # headline = "assay_plate"
+
+    data = dbf.find_data_single_lookup(table, data_value, headline)
+    for counter, rows in enumerate(data):
+        # if counter == 0:
+        #     print(rows)
+        key_value = rows[1]
+        key_headline = "bio_data_id"
+        table_data = {"bio_data_id": rows[1],
+                      "compound_id": rows[2],
+                      "assay_plate": rows[3],
+                      "assay_well": rows[4],
+                      "score": rows[5],
+                      "hit": 0,
+                      "concentration": rows[7],
+                      "raw_data": rows[8],
+                      "approved": rows[9],
+                      "note": rows[10],
+                      "transferred": rows[11]}
+
+        dbf.update_database_items(table, table_data, key_value, key_headline)
+
+
 if __name__ == "__main__":
-    pass
-    # import configparser
-    # config = configparser.ConfigParser()
-    # config.read("config.ini")
+
+    import configparser
+    config = configparser.ConfigParser()
+    config.read("config.ini")
+
     #
     # fp_search(config)
 

@@ -15,7 +15,7 @@ from bio_dose_response import calculate_dilution_series
 from database_controller import FetchData
 from excel_handler import purity_sample_layout_import, purity_sample_layout_export, well_compound_list
 from gui_functions import get_plate_layout, grab_table_data, config_update, draw_plate, set_colours, plate_layout_setup, \
-    bio_compound_info_from_worklist, bio_import_report_handler, import_ms_data, sort_table, purity_data_to_db, \
+    bio_compound_info_from_worklist, bio_import_handler_single_point, import_ms_data, sort_table, purity_data_to_db, \
     get_peak_information, grab_sample_data, name_changer, purity_ops, add_start_end_time, purity_data_compounds_to_db, \
     update_database, generate_worklist, plate_dilution, database_to_table, get_number_of_rows, \
     compound_freezer_to_2d_simulate, mp_production_2d_to_pb_simulate, compound_info_table_data, table_update_tree, \
@@ -1019,7 +1019,8 @@ def main(config, queue_gui, queue_mol):
                     # that can be used for finding sample info in the database.
                     if values["-BIO_COMPOUND_DATA-"]:
                         bio_sample_list = sg.popup_get_file("Please select worklist files", multiple_files=True)
-                        if bio_sample_list is not None:
+
+                        if bio_sample_list:
                             bio_sample_list = bio_sample_list.split(";")
                             bio_sample_dict, all_destination_plates = bio_compound_info_from_worklist(config, sg,
                                                                                                       bio_sample_list)
@@ -1031,28 +1032,36 @@ def main(config, queue_gui, queue_mol):
                         all_destination_plates = None
                         bio_sample_dict = None
                     if not bio_breaker:
-                        try:
-                            float(values["-BIO_FINAL_REPORT_CONCENTRATION_NUMBER-"])
-                        except ValueError:
-                            temp_concentration = float(sg.popup_get_text("Please provide a concentration in uM ?? "
-                                                                         "\n numbers only"))
-                        else:
-                            temp_concentration = float(values["-BIO_FINAL_REPORT_CONCENTRATION_NUMBER-"])
 
-                        analyse_method = values["-BIO_ANALYSE_TYPE-"]     # not used atm...
+                        analyse_method = values["-BIO_ANALYSE_TYPE-"]
                         add_compound_ids = values["-BIO_REPORT_ADD_COMPOUND_IDS-"]
                         combined_report_check = values["-BIO_COMBINED_REPORT-"]
                         import_to_database_check = values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"]
                         responsible = values["-BIO_RESPONSIBLE-"]
                         assay_name = values["-BIO_ASSAY_NAME-"]
 
-                        bio_import_report_handler(config, bio_import_folder, plate_to_layout, archive_plates_dict,
-                                                  bio_plate_report_setup, analyse_method, bio_sample_dict,
-                                                  bio_export_folder, add_compound_ids, export_to_excel,
-                                                  all_destination_plates, combined_report_check,
-                                                  import_to_database_check, bio_final_report_setup, final_report_name,
-                                                  include_hits, threshold, hit_amount, include_smiles,
-                                                  include_structure, assay_name, responsible, temp_concentration)
+                        if analyse_method.casefold() == "single":
+                            # Get concentration for the samples
+                            try:
+                                float(values["-BIO_FINAL_REPORT_CONCENTRATION_NUMBER-"])
+                            except ValueError:
+                                temp_concentration = float(sg.popup_get_text("Please provide a concentration in uM ?? "
+                                                                             "\n numbers only"))
+                            else:
+                                temp_concentration = float(values["-BIO_FINAL_REPORT_CONCENTRATION_NUMBER-"])
+
+                            bio_import_handler_single_point(config, bio_import_folder, plate_to_layout,
+                                                            archive_plates_dict, bio_plate_report_setup, analyse_method,
+                                                            bio_sample_dict, bio_export_folder, add_compound_ids,
+                                                            export_to_excel, all_destination_plates,
+                                                            combined_report_check, import_to_database_check,
+                                                            bio_final_report_setup, final_report_name, include_hits,
+                                                            threshold, hit_amount, include_smiles, include_structure,
+                                                            assay_name, responsible, temp_concentration)
+
+                        elif analyse_method.casefold() == "dose response":
+                            print("HEY!!! ")
+
                         sg.popup("Done")
 
         if event == "-BIO_BLANK_RUN-":
