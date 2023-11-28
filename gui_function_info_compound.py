@@ -1,7 +1,11 @@
-from gui_functions import grab_table_data
+from PySimpleGUI import PopupError
+
+from database_functions import grab_table_data
 
 
-def update_overview_compound(config, sg, window, event, values, compound_id):
+def update_overview_compound(config, window, values, compound_id):
+    if not compound_id:
+        compound_id = values["-COMPOUND_INFO_ID-"]
 
     sample_row = grab_table_data(config, "compound_main", single_row=True, data_value=compound_id,
                                  headline="compound_id")
@@ -131,4 +135,4 @@ def update_overview_compound(config, sg, window, event, values, compound_id):
         window["-COMPOUND_INFO_INFO_PURITY_USED_TABLE-"].update(values=updated_purify_table_data)
 
     else:
-        sg.PopupError(f'No compound data for:\n "{compound_id}"')
+        PopupError(f'No compound data for:\n "{compound_id}"')

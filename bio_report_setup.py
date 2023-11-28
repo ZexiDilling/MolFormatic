@@ -8,6 +8,7 @@ from rdkit.Chem import Draw
 from openpyxl.drawing.image import Image as XLImage
 import tempfile
 
+from config_dictionary import bio_final_report_setup_fetch
 from database_handler import DataBaseFunctions
 from openpyxl_fix_functions import *
 from bio_data_functions import bar_chart, frequency_writer
@@ -692,7 +693,9 @@ def _write_hits(config, ws, hit_data, threshold, hit_amount, include_hit, includ
             temp_image.close()
 
 
-def bio_final_report_controller(config, analyse_method, all_plate_data, output_file, final_report_setup,
+
+
+def bio_final_report_controller(config, analyse_method, all_plate_data, output_file,
                                 include_hits, threshold, hit_amount, include_smiles, bio_sample_dict, plate_to_layout,
                                 archive_plates_dict, include_structure):
     """
@@ -705,8 +708,6 @@ def bio_final_report_controller(config, analyse_method, all_plate_data, output_f
     :type all_plate_data: dict
     :param output_file: The name and path for the final report
     :type output_file: str
-    :param final_report_setup: The settings for the final report.
-    :type final_report_setup: dict
     :param include_hits: If the final reports should include hits
     :type include_hits: bool
     :param threshold: If the report should include hits, then this is the threshold for what is consideret as hits
@@ -736,6 +737,7 @@ def bio_final_report_controller(config, analyse_method, all_plate_data, output_f
     init_col = 2
     row = init_row
     col = init_col
+    final_report_setup = bio_final_report_setup_fetch(config)
     # calc overview:
     # for plates in all_plate_data:
     #     print(plates)

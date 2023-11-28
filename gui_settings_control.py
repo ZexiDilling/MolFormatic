@@ -1,7 +1,9 @@
 import PySimpleGUI as sg
+
+from config_dictionary import bio_final_report_setup_fetch, bio_plate_report_setup_fetch, ms_settings_fetch, plate_colouring_fetch
 from config_writer import ConfigWriter
 
-from bio_data_functions import org, norm, pora, pora_internal
+from bio_data_functions import org, norm, pora
 from gui_settings_layout import GUISettingsLayout
 
 
@@ -12,11 +14,11 @@ class GUISettingsController:
     :type config: configparser.ConfigParser
     """
 
-    def __init__(self, config, bio_final_report_setup, bio_plate_report_setup, ms_settings, simple_settings):
-        self.final_setup_default = bio_final_report_setup
-        self.plate_setup_default = bio_plate_report_setup
-        self.ms_settings_default = ms_settings
-        self.simple_settings = simple_settings
+    def __init__(self, config):
+        self.final_setup_default = bio_final_report_setup_fetch(config)
+        self.plate_setup_default = bio_plate_report_setup_fetch(config)
+        self.ms_settings_default = ms_settings_fetch(config)
+        self.simple_settings = plate_colouring_fetch(config)
         self.cofig = config
         self.cw = ConfigWriter(config)
         self.gls = GUISettingsLayout(config)
@@ -377,14 +379,14 @@ class GUISettingsController:
         reports = bio_final_report_setup, bio_plate_report_setup, ms_settings, simple_settings
         return reports
 
-    def main_settings_controller(self, bio_final_report_setup, bio_plate_report_setup, ms_settings):
+    def main_settings_controller(self):
         """
         The control modul for the settings menu - for now only bio data
         :return: The data selected from the window
         """
         default_sat = False
 
-        window = self.gls.settings_window(bio_final_report_setup, bio_plate_report_setup, ms_settings)
+        window = self.gls.settings_window(self.final_setup_default, self.plate_setup_default, self.ms_settings_default)
 
         while True:
             event, values = window.read()
@@ -409,6 +411,8 @@ class GUISettingsController:
                     report_counter = 3
 
             if event == "-BIO_SETTINGS_OK-":
+                # ToDO update config files with values.
+                # ToDo add default values somewhere?
                 reports = self._set_reports(values)
 
                 window.close()

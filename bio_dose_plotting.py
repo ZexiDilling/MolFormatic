@@ -295,6 +295,7 @@ class PlottingDose:
         # plt.show()
         return self.all_data
 
+
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     plt.subplots()

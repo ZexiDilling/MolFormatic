@@ -244,6 +244,20 @@ assay_customers = """ CREATE TABLE IF NOT EXISTS assay_customers(
             FOREIGN KEY (assay_name) REFERENCES assay(assay_name)
             ); """
 
+cal_dose_response_setup = """ CREATE TABLE IF NOT EXISTS calc_dose_response_setup(
+                    "name"	TEXT NOT NULL UNIQUE,
+                    "stock"	TEXT NOT NULL,
+                    "stock_dilution"	INTEGER NOT NULL,
+                    "max_procent_solvent_conc"	INTEGER NOT NULL,
+                    "max_conc"	TEXT NOT NULL,
+                    "min_conc"	TEXT NOT NULL,
+                    "final_volume"	TEXT NOT NULL,
+                    "min_trans_volume"	TEXT NOT NULL,
+                    "dilution_factor"	INTEGER NOT NULL
+                    ); """
 
-
+cal_dose_response_method = """ CREATE TABLE IF NOT EXISTS calc_dose_response_method(
+                    "name"	TEXT NOT NULL UNIQUE,
+                    "formula"	TEXT NOT NULL,
+                    ); """
 

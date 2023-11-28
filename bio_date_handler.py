@@ -3,6 +3,7 @@ from statistics import mean, stdev, pstdev, pvariance, variance
 
 
 from bio_data_functions import *
+from config_dictionary import bio_plate_report_setup_fetch
 
 from database_handler import DataBaseFunctions
 
@@ -14,7 +15,7 @@ class BIOAnalyser:
     :param bio_plate_report_setup: dict over what state wells should be in, to be printed on the report sheet.
     :type bio_plate_report_setup: dict
     """
-    def __init__(self, config, bio_plate_report_setup):
+    def __init__(self, config):
         self.config = config
 
         def st_dev_p(avg, stdev):
@@ -22,7 +23,7 @@ class BIOAnalyser:
 
         self.cal_stuff = {"avg": mean, "stdev": stdev, "pstdev": pstdev, "pvariance": pvariance, "variance": variance,
                           "st_dev_%": st_dev_p}
-
+        bio_plate_report_setup = bio_plate_report_setup_fetch(config)
         self.well_states_report_method = bio_plate_report_setup["well_states_report_method"]
         self.well_states_report = bio_plate_report_setup["well_states_report"]
         self.plate_report_calc_dict = bio_plate_report_setup["calc_dict"]

@@ -492,6 +492,4 @@ def dose_excel_controller(config, plate_reader_files, all_dose_data, plate_group
 
 if __name__ == "__main__":
 
-
-
     pass

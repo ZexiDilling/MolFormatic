@@ -9,6 +9,7 @@ class JudgeFit:
     def __init__(self, config):
 
         # (e.g. max_std_resp_highdose_dp).
+        self.temp_data = None
         self.n_neighb = config["dose"].getint("n_neighb")
         # maximum standard deviation of the response datapoints at high dose concentration
         self.max_std_resp_highdose_dp = config["dose"].getfloat("max_std_resp_highdose_dp")
@@ -94,9 +95,6 @@ class JudgeFit:
             self.temp_data["n_lowdose_datapoints"]["colour"] = "r"
 
     def _check_response_bound(self):
-
-
-
 
         # judge whether the standard deviation of the high and lowdose datapoints is acceptable
         if self.temp_data["n_highdose_datapoints"]["value"] > 1:

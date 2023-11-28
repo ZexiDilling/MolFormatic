@@ -74,6 +74,89 @@ def main():
         plt.plot([pDose(i) for i in refDose],[ll4(i,*[fit[i] for i in ['b','c','d','e']]) for i in refDose])
 
 
+def testing():
+    if event == "-ASSAY_RUN_APPLY_SELECTED-" or event == "-ASSAY_RUN_APPLY_ALL-":
+        plate_table_index = values["-ASSAY_RUN_USED_PLATES_TABLE-"]
+        run = values["-ASSAY_RUN_NAME-"]
+        temp_plate_data = []
+        if event == "-ASSAY_RUN_APPLY_ALL-":
+            for plates in plates_table_data:
+                temp_plate_data.append(plates[0])
+        else:
+            for index in plate_table_index:
+                temp_plate_data.append(plates_table_data[index][0])
+                plates_table_data[index][1] = run
+
+        window["-ASSAY_RUN_USED_PLATES_TABLE-"].update(values=plates_table_data)
+
+        temp_event = event
+        if not values["-ASSAY_RUN_NAME-"]:
+            sg.popup_error("Please select a name for the run")
+        elif not values["-ASSAY_RUN_DATE_TARGET-"]:
+            sg.popup_error("Please select a date for the run")
+        elif not values["-ASSAY_RUN_WORKLIST_DATA-"]:
+            sg.popup_error("Please provide the worklist used for the run")
+        # ToDo have a check to see if the echo data fit with the plate
+        else:
+            assay_run_name = values["-ASSAY_RUN_NAME-"]
+            latest_assay_run_name = assay_run_name
+            if assay_run_name not in different_assay_runs:
+                different_assay_runs.append(assay_run_name)
+            # Test if the run name is in the database already, if it isn't add the name to the run data
+            if assay_run_name not in previous_runs or len(previous_runs) == 1:
+                assay_run_data = {"run_name": assay_run_name,
+                                  "assay_name": assay_name,
+                                  "batch": values["-ASSAY_RUN_ALL_BATCHES-"],
+                                  "worklist": values["-ASSAY_RUN_WORKLIST_DATA-"],
+                                  "echo_data": values["-ASSAY_RUN_ECHO_DATA-"],
+                                  "date": values["-ASSAY_RUN_DATE_TARGET-"],
+                                  "note": values["-ASSAY_RUN_NOTES-"]}
+
+                dbf.add_records_controller("assay_runs", assay_run_data)
+                # add the plates to assay_plates
+                for plates in temp_plate_data:
+                    assay_plate_data = {"plate_name": plates, "assay_run": assay_run_name}
+                    dbf.add_records_controller("assay_plates", assay_plate_data)
+
+                # Add the new run to the list of old runs,
+                # and updates the dropdown to include it, and the value to it
+                if len(previous_runs) != 1:
+                    previous_runs.append(assay_run_name)
+                    window["-ASSAY_RUN_PREVIOUS-"].update(values=previous_runs, value=assay_run_name)
+
+            if temp_event == "-ASSAY_RUN_APPLY_SELECTED-":
+                temp_plate_list = []
+                for index in values["-ASSAY_RUN_USED_PLATES_TABLE-"]:
+                    temp_plate_list.append(plates_table_data[index][0])
+                    plates_table_data[index][1] = run
+
+                # Update the table with the assay run next to the plate name
+                window["-ASSAY_RUN_USED_PLATES_TABLE-"].update(values=plates_table_data)
+            else:
+                temp_plate_list = plates_table_data
+                for index, _ in enumerate(plates_table_data):
+                    plates_table_data[index][1] = run
+
+                # Update the table with the assay run next to the plate name
+                window["-ASSAY_RUN_USED_PLATES_TABLE-"].update(values=plates_table_data)
+
+            for rows in temp_plate_list:
+                plate = rows[0]
+                all_plates_data[plate]["run_name"] = assay_run_name  # Update the dict with the run_name
+                if plate not in plates_checked:  # Make sure that already checked plates are not added
+                    plates_checked.append(plate)
+
+            # Reset all the info, and count up one for the name:
+            assay_run_name = increment_text_string(assay_run_name)
+            window["-ASSAY_RUN_NAME-"].update(value=assay_run_name)
+            window["-ASSAY_RUN_DATE_TARGET-"].update(value="Choose date")
+            window["-ASSAY_RUN_WORKLIST_INDICATOR-"].update(value="No Worklist")
+            window["-ASSAY_RUN_ECHO_INDICATOR-"].update(value="No Echo Data")
+            window["-ASSAY_RUN_NOTES-"].update(value="")
+            window["-ASSAY_RUN_WORKLIST_DATA-"].update(value="")
+            window["-ASSAY_RUN_ECHO_DATA-"].update(value="")
+
+
 if __name__ == "__main__":
     # main()
     min = 1
@@ -82,3 +165,5 @@ if __name__ == "__main__":
 
     if min < current < max_amouint:
         print("HEY")
+
+

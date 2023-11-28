@@ -2,7 +2,7 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 import PySimpleGUI as sg
 
-from gui_functions import bio_compound_info_from_worklist
+from bio_functions import bio_compound_info_from_worklist
 
 
 def getting_echo_data(folder, bio_sample_dict):

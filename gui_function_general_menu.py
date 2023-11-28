@@ -1,8 +1,30 @@
-import configparser
 
-import PySimpleGUI as sg
+from PySimpleGUI import PopupGetFile, popup_error, Popup, WIN_CLOSED
+from helpter_functions import config_update, sort_table
 from gui_help_info_layout import info_help_window
 from gui_help_info_text import TextForInfo
+from upstarts_values import all_table_data
+
+
+def menu_open(config, config_writer, window, gui_layout):
+    db = PopupGetFile("Choose database", file_types=(("Database", ".db"),))
+    setting_dict = {"Database": {"database": db}}
+    config_writer.run(setting_dict, "simple_settings", True)
+    config_update(config)
+    window.close()
+    return gui_layout.full_layout()
+
+
+def menu_save():
+    popup_error("Not working - Will never work... as all data is written to the DB... "
+                   "unless I want to add a temp DB...")
+
+
+def menu_about():
+    with open("README.txt") as file:
+        info = file.read()
+
+    Popup(info)
 
 
 def help_info_controller(config):
@@ -13,7 +35,7 @@ def help_info_controller(config):
 
     while True:
         event, values = window.read()
-        if event == sg.WIN_CLOSED:
+        if event == WIN_CLOSED:
             break
 
         if event == "-HELP_INFO_TAB_GROUPS-" and values["-HELP_INFO_TAB_GROUPS-"] == "          Search          " \
@@ -57,7 +79,25 @@ def help_info_controller(config):
             tfi.glossary()
 
 
-if __name__ == "__main__":
-    config = configparser.ConfigParser()
-    config.read("config.ini")
-    help_info_controller(config)
+def sorting_the_tables(window, event, search_reverse):
+    # TABLE CLICKED Event has value in format ('-TABLE=', '+CLICKED+', (row,col))
+    # You can also call Table.get_last_clicked_position to get the cell clicked
+    if event[0] in all_table_data and all_table_data[event[0]]:
+        clicked_table = event[0]
+        try:
+            search_reverse[clicked_table]
+        except KeyError:
+            search_reverse[clicked_table] = {}
+        if event[2][0] == -1 and event[2][1] != -1:  # Header was clicked and wasn't the "row" column
+            col_num_clicked = event[2][1]
+            try:
+                search_reverse[clicked_table][col_num_clicked]
+            except KeyError:
+                search_reverse[clicked_table][col_num_clicked] = False
+
+            new_table, search_reverse[clicked_table][col_num_clicked] = \
+                sort_table(all_table_data[clicked_table][0:][:], (col_num_clicked, 0),
+                           search_reverse[clicked_table][col_num_clicked])
+            window[clicked_table].update(new_table)
+            # all_table_data[clicked_table] = [all_table_data[clicked_table][0]] + new_table
+            all_table_data[clicked_table] = new_table
