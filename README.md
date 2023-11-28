@@ -10,7 +10,7 @@ Compound database tool, for storing, analyzing and handling bio-assay data and c
 - Contributing
 - License
 
-##Installation
+## Installation
 
 Missing description
 
@@ -20,18 +20,18 @@ git clone https://github.com/ZexiDilling/structure_search.git
 cd structure_search
 pip install -r requirements.txt
 
-##Usage
+## Usage
 
 The tool comes with a GUI.
 Run main.py
 
 
-##Examples
+## Examples
 
 missing description
 
 
-##Contributing
+## Contributing
 
 1. Clone repo and create a new branch: $ git checkout https://github.com/ZexiDilling/structure_search -b name_for_new_branch.
 2. Make changes and test
