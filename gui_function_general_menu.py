@@ -3,7 +3,7 @@ from PySimpleGUI import PopupGetFile, popup_error, Popup, WIN_CLOSED
 from helpter_functions import config_update, sort_table
 from gui_help_info_layout import info_help_window
 from gui_help_info_text import TextForInfo
-from upstarts_values import all_table_data
+from start_up_values import all_table_data
 
 
 def menu_open(config, config_writer, window, gui_layout):

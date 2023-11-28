@@ -1,7 +1,7 @@
 from natsort import natsorted
 
 from database_functions import grab_table_data
-from upstarts_values import plate_table_table_heading_mp, plate_table_table_heading_dp, all_table_data
+from start_up_values import plate_table_table_heading_mp, plate_table_table_heading_dp, all_table_data
 
 
 def table_group_tables(config, window, values):

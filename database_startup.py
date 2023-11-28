@@ -1,7 +1,7 @@
 import configparser
 
-import table_layouts
-from table_layouts import *
+import start_up_table_layouts
+from start_up_table_layouts import *
 from database_handler import DataBaseFunctions
 from config_writer import ConfigWriter
 
@@ -32,7 +32,7 @@ class DatabaseSetUp:
 
     def _fetch_default_tables(self):
         """
-        Gets all layouts from the table_layouts.py
+        Gets all layouts from the start_up_table_layouts.py
 
         :return: a list of tables that needs to be created.
         :rtype; list
@@ -41,7 +41,7 @@ class DatabaseSetUp:
         simple_setting_ditch = {headline: {}}
         tables = []
 
-        for index, method in enumerate(dir(table_layouts)):
+        for index, method in enumerate(dir(start_up_table_layouts)):
             if index > 7:
                 temp_str = eval(method)
                 temp_str = temp_str.split(" ")
@@ -54,7 +54,7 @@ class DatabaseSetUp:
 
     def controller(self):
         """
-        Create all tables from table_layouts.py in the main database.
+        Create all tables from start_up_table_layouts.py in the main database.
 
         :return: A Database with tables
         """

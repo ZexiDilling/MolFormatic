@@ -5,7 +5,7 @@ from openpyxl import load_workbook, Workbook
 from openpyxl.utils.exceptions import InvalidFileException
 import pandas as pd
 import re
-from openpyxl_fix_functions import ex_cell
+from import_openpyxl_handler import ex_cell
 import datetime
 from numpy import histogram, arange
 from openpyxl.chart import BarChart, Reference

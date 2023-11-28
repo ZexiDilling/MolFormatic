@@ -2,13 +2,13 @@ from chem_operators import ChemOperators
 from math import ceil
 
 from database_handler import DataBaseFunctions
-from sdf_handler import SDFReader
+from file_sdf_handler import SDFReader
 from csv_handler import CSVReader
 from random import sample
 from operator import countOf
 from file_handler import get_file_list, file_list_distributor, move_files
-from xml_handler import xml_controller
-from lc_data_handler import LCMSHandler
+from file_xml_handler import xml_controller
+from lcms_data_handler import LCMSHandler
 
 
 class FetchData:

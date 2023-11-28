@@ -1,9 +1,9 @@
 from math import floor
 
 
-from heatmap import Heatmap
+from bio_heatmap import Heatmap
 from helpter_functions import int_guard
-from upstarts_values import window_1_plate_layout
+from start_up_values import window_1_plate_layout
 
 
 def colour_target_update(window, values):

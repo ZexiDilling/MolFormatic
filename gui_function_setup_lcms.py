@@ -7,7 +7,7 @@ from lcms_functions import get_peak_information, import_ms_data, purity_data_to_
     grab_sample_data, purity_data_compounds_to_db, name_changer
 from gui_guards import guard_purity_data_wavelength
 from gui_popup import sample_to_compound_name_controller, ms_raw_name_guard
-from upstarts_values import all_table_data, window_1_lcms, ms_mode_selector
+from start_up_values import all_table_data, window_1_lcms, ms_mode_selector
 
 
 def lcms_importer(config, window, values):

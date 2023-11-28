@@ -12,13 +12,13 @@ from database_functions import get_number_of_rows, update_database, grab_compoun
 from database_handler import DataBaseFunctions
 from excel_handler import export_plate_layout
 from file_handler import get_file_list
-from lc_data_handler import LCMSHandler
+from lcms_data_handler import LCMSHandler
 from lcms_data_miner import dm_controller
 from lcms_ms_search import mass_search
 from lcms_uv_integration import Integration
-from pickle_handler import df_writer
-from plate_formatting import plate_layout_to_well_ditc, daughter_plate_generator, plate_layout_re_formate
-from visualization import uv_chromatogram, ms_chromatogram, ms_spectrum, ms_spectrum_range, heatmap_uv_sample, \
+from import_pickle_handler import df_writer
+from compound_plate_formatting import plate_layout_to_well_ditc, daughter_plate_generator, plate_layout_re_formate
+from lcms_visualization import uv_chromatogram, ms_chromatogram, ms_spectrum, ms_spectrum_range, heatmap_uv_sample, \
     heatmap_uv_rt, heatmap_uv_wavelength, heatmap_ms_sample_binned, heatmap_ms_rt_binned, heatmap_ms_mz
 
 

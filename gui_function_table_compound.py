@@ -3,7 +3,7 @@ from PySimpleGUI import Popup, PopupError, PopupGetText, TreeData
 from lcms_functions import table_update_tree, compound_export, dp_creator, compound_info_table_data
 from database_functions import grab_table_data
 from info import vol_converter
-from upstarts_values import window_1_search, all_table_data
+from start_up_values import window_1_search, all_table_data
 
 
 def tree_database_update(config, window, values, compound_data):

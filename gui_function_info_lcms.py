@@ -2,7 +2,7 @@ from PySimpleGUI import LISTBOX_SELECT_MODE_SINGLE, LISTBOX_SELECT_MODE_MULTIPLE
 from matplotlib import pyplot as plt
 
 from lcms_functions import get_peak_information, purity_plotting, add_start_end_time, purity_ops, grab_sample_data
-from upstarts_values import window_1_lcms, all_table_data
+from start_up_values import window_1_lcms, all_table_data
 
 
 def sample_selection_mode_update(window, values):

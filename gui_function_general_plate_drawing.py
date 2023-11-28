@@ -5,8 +5,8 @@ from gui_functions import draw_plate
 from lcms_functions import plate_layout_to_excel
 from database_functions import update_database, delete_records_from_database, rename_record_in_the_database
 from helpter_functions import int_guard
-from plate_formatting import plate_layout_re_formate
-from upstarts_values import window_1_plate_layout, draw_tool_values, clm_to_row_converter, plate_type_count, \
+from compound_plate_formatting import plate_layout_re_formate
+from start_up_values import window_1_plate_layout, draw_tool_values, clm_to_row_converter, plate_type_count, \
     get_plate_layout, window_tables
 
 

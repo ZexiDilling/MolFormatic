@@ -4,7 +4,7 @@ from database_handler import DataBaseFunctions
 from gui_function_info_compound import update_overview_compound
 from database_functions import grab_table_data
 
-from upstarts_values import window_tables
+from start_up_values import window_tables
 
 
 def table_tab_group_pressed_update(config, window, values):

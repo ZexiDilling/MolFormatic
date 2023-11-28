@@ -7,11 +7,11 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from bio_dose_response import calculate_dilution_series
 from extra_functions import increment_text_string
-from xml_handler import convert_echo_to_db
+from file_xml_handler import convert_echo_to_db
 from bio_date_handler import BIOAnalyser
 from database_handler import DataBaseFunctions
 from info import plate_384_row, plate_96_row
-from visualization import Toolbar
+from lcms_visualization import Toolbar
 from gui_popup_layout import matrix_popup_layout, plate_layout_chooser_layout, dead_run_naming_layout, \
     assay_run_naming_layout, bio_dose_response_set_up_layout, bio_data_approval_table_layout, sample_checker_layout, \
     new_headlines_layout, assay_generator_layout

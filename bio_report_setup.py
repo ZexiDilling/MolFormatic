@@ -10,7 +10,7 @@ import tempfile
 
 from config_dictionary import bio_final_report_setup_fetch
 from database_handler import DataBaseFunctions
-from openpyxl_fix_functions import *
+from import_openpyxl_handler import *
 from bio_data_functions import bar_chart, frequency_writer
 
 

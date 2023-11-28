@@ -1,4 +1,4 @@
-from heatmap import Heatmap
+from bio_heatmap import Heatmap
 
 
 def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate=False, sample_layout=None, mapping=None

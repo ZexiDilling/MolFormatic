@@ -10,7 +10,7 @@ from gui_function_info_bio import update_bio_info_values, heatmap_low_colour_upd
     heatmap_high_colour_update, hit_low_colour_update, hit_mid_colour_update, hit_high_colour_update
 from gui_function_info_calculations import calculate_dose
 from gui_function_info_lcms import sample_selection_mode_update, lcms_calculation, lcms_drawing
-from upstarts_values import database_guard, gui_data_fetcher, all_table_data, plate_table_table_heading_mp, \
+from start_up_values import database_guard, gui_data_fetcher, all_table_data, plate_table_table_heading_mp, \
     window_tables, window_1_lcms, window_1_plate_layout
 
 from gui_function_setup_extra import method_do_update, add_source_wells_update, execute_button_pressed, database_tab_pressed, \

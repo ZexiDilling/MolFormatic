@@ -7,7 +7,7 @@ from bio_functions import bio_compound_info_from_worklist, bio_import_handler_si
 from database_functions import grab_table_data
 from gui_popup import assay_generator
 from gui_settings_control import GUISettingsController
-from plate_formatting import plate_layout_re_formate
+from compound_plate_formatting import plate_layout_re_formate
 
 
 def bio_report_update(window, values):

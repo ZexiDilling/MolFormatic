@@ -3,9 +3,9 @@ from PySimpleGUI import PopupError, Popup
 from csv_handler import CSVWriter
 from database_functions import get_number_of_rows, update_database, database_to_table
 from excel_handler import plate_dilution_write_vol_well_amount, plate_dilution_excel
-from plate_dilution import PlateDilution
-from plate_formatting import plate_layout_re_formate
-from upstarts_values import window_1_extra
+from bio_plate_dilution import PlateDilution
+from compound_plate_formatting import plate_layout_re_formate
+from start_up_values import window_1_extra
 
 
 def method_do_update(window, values):
