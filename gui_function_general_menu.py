@@ -21,7 +21,7 @@ def menu_save():
 
 
 def menu_about():
-    with open("README.txt") as file:
+    with open("README.md") as file:
         info = file.read()
 
     Popup(info)
