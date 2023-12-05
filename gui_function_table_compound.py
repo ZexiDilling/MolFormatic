@@ -169,7 +169,7 @@ def compound_table_refreshed(config, window, values):
         return None, None, None, None
 
 
-def compound_table_export(config, window, values, all_data, archive_plates_dict):
+def compound_table_export(dbf, config, window, values, all_data):
     if not all_data:
         PopupError("Missing table data")
     elif not values["-SEARCH_OUTPUT_FOLDER-"]:
@@ -192,7 +192,8 @@ def compound_table_export(config, window, values, all_data, archive_plates_dict)
                 PopupError("Please select a plate Layout for the DP production")
             dp_name = PopupGetText("Dp name? ")
             if dp_name:
-                plate_layout = archive_plates_dict[values["-SEARCH_PLATE_LAYOUT-"]]
+
+                plate_layout = eval(dbf.find_data_single_lookup("plate_layout", "testing", "layout_name")[0][5])
                 temp_sample_amount = int(values["-SEARCH_PLATE_LAYOUT_SAMPLE_AMOUNT-"])
                 vol_converter = {"mL": 1000000, "uL": 10000, "nL": 1}
 

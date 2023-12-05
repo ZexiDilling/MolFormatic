@@ -104,7 +104,7 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
                 if archive_plate:
                     counter += 1
                     well_state = well_data_dict[well_id]["state"]
-                    if sample_layout == "single point":
+                    if sample_layout and sample_layout.casefold() == "single point":
                         fill_colour = config["plate_colouring"][well_state]
                     else:
                         fill_colour = well_data_dict[well_id]["colour"]

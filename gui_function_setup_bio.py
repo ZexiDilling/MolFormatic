@@ -1,6 +1,8 @@
 import copy
 from PySimpleGUI import popup, popup_get_text, popup_error, popup_get_file
 
+
+from database_functions import _get_list_of_names_from_database
 from draw_basic import draw_plate
 from bio_functions import bio_compound_info_from_worklist, bio_import_handler_single_point, bio_dead_plate_handler, \
     plate_layout_setup, set_colours
@@ -8,6 +10,12 @@ from database_functions import grab_table_data
 from gui_popup import assay_generator
 from gui_settings_control import GUISettingsController
 from compound_plate_formatting import plate_layout_re_formate
+
+
+def assay_drop_down_updates(dbf, window):
+    table_data = dbf.find_column_data("assay", "assay_name")
+    assay_list = [assays for assays in table_data]
+    window["-BIO_ASSAY_NAME-"].update(values=assay_list)
 
 
 def bio_report_update(window, values):
@@ -111,22 +119,27 @@ def bio_settings(config, window):
         set_colours(window, reports)
 
 
-def bio_plate_layout(config, window, values, well_dict, archive_plates_dict):
-    well_dict.clear()
-    well_dict = copy.deepcopy(archive_plates_dict[values["-BIO_PLATE_LAYOUT-"]]["well_layout"])
-    well_dict = plate_layout_re_formate(config, well_dict)
-    plate_size = archive_plates_dict[values["-BIO_PLATE_LAYOUT-"]]["plate_type"]
-    archive = True
-    gui_tab = "bio"
-    graph_bio = window["-BIO_CANVAS-"]
-    sample_type = values["-BIO_SAMPLE_TYPE-"]  # ToDo figure out why this is needed
+def bio_plate_layout(dbf, config, window, values, well_dict):
+    if values["-BIO_PLATE_LAYOUT-"]:
+        well_dict.clear()
+        plate_data = dbf.find_data_single_lookup("plate_layout", values["-BIO_PLATE_LAYOUT-"], "layout_name")[0]
+        plate_layout = eval(plate_data[5])
+        well_dict = copy.deepcopy(plate_layout)
+        well_dict = plate_layout_re_formate(config, well_dict)
+        plate_size = plate_data[1]
+        archive = True
+        gui_tab = "bio"
+        graph_bio = window["-BIO_CANVAS-"]
+        sample_type = values["-BIO_SAMPLE_TYPE-"]  # ToDo figure out why this is needed
 
-    if sample_type != "Custom":
-        try:
-            draw_plate(config, graph_bio, plate_size, well_dict, gui_tab, archive, sample_layout=sample_type)
-        except KeyError:
-            print(f"There is no place layout for {sample_type}")
-    return well_dict
+        if sample_type != "Custom":
+            try:
+                draw_plate(config, graph_bio, plate_size, well_dict, gui_tab, archive)
+            except KeyError:
+                print(f"There is no place layout for {sample_type}")
+        return well_dict
+    else:
+        return well_dict
 
 
 def assay_name_update(config, window, values):
@@ -135,7 +148,8 @@ def assay_name_update(config, window, values):
     window["-BIO_PLATE_LAYOUT-"].update(value=temp_assay_data[0][4])
 
 
-def new_assay(config, window, plate_list):
+def new_assay(config, dbf, window):
+    plate_list = _get_list_of_names_from_database(dbf, "plate_layout", "plate_name")
     assay_check = assay_generator(config, plate_list)
 
     if assay_check:
@@ -147,15 +161,11 @@ def new_assay(config, window, plate_list):
         window["-BIO_ASSAY_NAME-"].update(values=assay_list)
 
 
-def bio_analyse_type(window, values):
+def bio_finaL_report_multi_conc(window, values):
     popup("This functions does nothing ATM ")
 
 
-def bio_fina_report_multi_conc(window, values):
-    popup("This functions does nothing ATM ")
-
-
-def bio_calculate(config, window, values, plate_list, archive_plates_dict):
+def bio_calculate(dbf, config, values):
     bio_breaker = False
     if not values["-BIO_PLATE_LAYOUT-"]:
         popup_error("Please choose a plate layout")
@@ -206,7 +216,7 @@ def bio_calculate(config, window, values, plate_list, archive_plates_dict):
         if not same_layout:
             # If there are difference between what layout each plate is using, or if you know some data needs
             # to be dismissed, you can choose different plate layout for each plate.
-            plate_to_layout = plate_layout_setup(bio_import_folder, values["-BIO_PLATE_LAYOUT-"], plate_list)
+            plate_to_layout = plate_layout_setup(dbf, bio_import_folder, values["-BIO_PLATE_LAYOUT-"])
             if plate_to_layout is None:
                 bio_breaker = True
         else:
@@ -247,8 +257,7 @@ def bio_calculate(config, window, values, plate_list, archive_plates_dict):
                     else:
                         temp_concentration = float(values["-BIO_FINAL_REPORT_CONCENTRATION_NUMBER-"])
 
-                    bio_import_handler_single_point(config, bio_import_folder, plate_to_layout,
-                                                    archive_plates_dict, analyse_method,
+                    bio_import_handler_single_point(dbf, config, bio_import_folder, plate_to_layout, analyse_method,
                                                     bio_sample_dict, bio_export_folder, add_compound_ids,
                                                     export_to_excel, all_destination_plates,
                                                     combined_report_check, import_to_database_check,

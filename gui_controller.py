@@ -4,41 +4,41 @@ import multiprocessing as mp
 from multiprocessing import Queue
 import PySimpleGUI as sg
 
-
 from config_writer import ConfigWriter
-from gui_function_info_bio import update_bio_info_values, heatmap_low_colour_update, heatmap_mid_colour_update, \
-    heatmap_high_colour_update, hit_low_colour_update, hit_mid_colour_update, hit_high_colour_update
+from database_handler import DataBaseFunctions
+from gui_function_info_bio import colour_chooser_update, bio_info_window_update, \
+    bio_info_plate_list_update, bio_info_plate_update
 from gui_function_info_calculations import calculate_dose
 from gui_function_info_lcms import sample_selection_mode_update, lcms_calculation, lcms_drawing
-from start_up_values import database_guard, gui_data_fetcher, all_table_data, plate_table_table_heading_mp, \
-    window_tables, window_1_lcms, window_1_plate_layout
-
-from gui_function_setup_extra import method_do_update, add_source_wells_update, execute_button_pressed, database_tab_pressed, \
+from gui_popup import popup_table
+from start_up_values import database_guard, all_table_data, compound_info_tables, window_1_lcms, \
+    start_up_gui, search_reverse, colour_chooser_buttons, bio_info_tables, assay_updater_list
+from gui_function_setup_extra import method_do_update, add_source_wells_update, execute_button_pressed, \
+    database_tab_pressed, \
     database_responsible_import, database_customers_import, database_vendors_import, database_academia_company_import, \
     database_place_type_import, database_location_import
-
 from gui_function_general_startup import start_up_database
 from gui_function_setup_lcms import lcms_importer, lcms_info_overview, lcms_reporting
 from gui_function_table_lcms import table_group_lcms, date_set_update, batch_list_box_update
 from gui_function_general_menu import menu_open, menu_save, menu_about, help_info_controller, sorting_the_tables
 from gui_function_setup_plate_layout import plate_layout_draw_groups, colour_target_update, plate_archive, \
-    sample_type_update, dose_sample_amount, dose_dilution_replicates, dose_colouring
+    plate_list_updater, dose_sample_amount, dose_dilution_replicates, dose_colouring
 from gui_function_table_plate import plate_chooser_update, barcode_list_box_update, table_limiter_update, \
     table_group_tables, clear_plate_table_update
 from gui_function_setup_search import search_compound, sub_search_method_update_values, \
-    search_daughter_plates_update_values, search_mother_plates_update_values, search_plate_layout
+    search_daughter_plates_update_values, search_mother_plates_update_values, search_sample_counter_update
 from gui_function_setup_bio import bio_report_update, bio_report_hits_update, bio_report_smiles_update, \
     bio_report_threshold_update, bio_report_amount_update, bio_plate_layout, bio_compound_data_update, \
     bio_report_compound_id_update, bio_experiment_add_to_database_update, bio_combined_report_update, bio_settings, \
-    bio_analyse_type, new_assay, assay_name_update, bio_fina_report_multi_conc, bio_calculate, bio_blank_run, \
-    send_to_info_window
+    new_assay, assay_name_update, bio_finaL_report_multi_conc, bio_calculate, bio_blank_run, \
+    send_to_info_window, assay_drop_down_updates
 from gui_function_setup_database import update_compound, update_plates
 from gui_function_setup_simulation import simulation_input_update, simulation_run
 from gui_function_table_compound import tree_database_update, compound_table_refreshed, compound_table_export
 from gui_function_table_bio import table_tab_group_pressed_update, experiment_table_assay_list_update, \
     experiment_table_assay_run_update, \
-    experiment_table_plate_update, assay_table_double_click, compound_table_double_click, plate_table_double_click, \
-    update_overview_compound, bio_exp_compound_list
+    experiment_table_plate_update, compound_table_double_click, \
+    update_overview_compound, bio_exp_compound_list, bio_tables_double_clicked
 from gui_function_setup_worklist import worklist_tab_clicked, worklist_control_layout_update, worklist_generator
 from gui_layout import GUILayout
 from gui_function_general_plate_drawing import on_up, save_layout, delete_layout, rename_layout, draw_layout, on_move, \
@@ -53,60 +53,19 @@ def main(config, queue_gui, queue_mol):
     :type config: configparser.ConfigParser
     :return: This is a gui control modul. Returns depending on what is being done in the GUI
     """
-
     # importing config writer, to write data to the config file
-    global worklist_mp_plates_list
     config_writer = ConfigWriter(config)
     db_active = database_guard(config, config_writer)
-    # The archive could be removed from here, but then there would be a call to the DB everytime a layout is used...
-    # Grabs the updated data from the database
-
-    plate_list, assay_list, archive_plates_dict = gui_data_fetcher(db_active, config) # TODO move archive_plates_dict to the database
-
-    gui_layout = GUILayout(config, plate_list)
-
+    dbf = DataBaseFunctions(config)
+    gui_layout = GUILayout(config, dbf)
     window = gui_layout.full_layout()
     window.maximize()
 
-    window["-BIO_ASSAY_NAME-"].update(values=assay_list)
-
-    # temp_wave_test = True
-
-    #   WINDOW 1 - PLATE LAYOUT #
-    dose_colour_dict = {}
-    well_dict = {}
-    well_dict_bio_info = {}
-
-    #   WINDOW 2 - BIO EXP  #
-    graph_bio_exp = window["-BIO_INFO_CANVAS-"]
-    window_1_plate_layout["graph_plate"] = window["-RECT_BIO_CANVAS-"]
-
-    #   WINDOW 2 - PURITY INFO  #
-    lc_graph_showing = [keys for keys in list(config["lc_mapping"].keys())]
-    colour_select = {}
-    for keys in list(config["plate_colouring"].keys()):
-        colour_select[keys] = config["plate_colouring"][keys]
-
-    # COMPOUND TABLE CONSTANTS #
-    all_data = None
-    compound_info_tables = {"-COMPOUND_INFO_INFO_MP-": "-COMPOUND_INFO_INFO_MP_TABLE-",
-                            "-COMPOUND_INFO_INFO_DP-": "-COMPOUND_INFO_INFO_DP_TABLE-",
-                            "-COMPOUND_INFO_INFO_ASSAY-": "-COMPOUND_INFO_INFO_ASSAY_TABLE-",
-                            "-COMPOUND_INFO_INFO_HITS-": "-COMPOUND_INFO_INFO_HITS_TABLE-",
-                            "-COMPOUND_INFO_INFO_TRANSFERS-": "-COMPOUND_INFO_INFO_TRANSFERS_TABLE-",
-                            "-COMPOUND_INFO_INFO_PURITY-": "-COMPOUND_INFO_INFO_PURITY_USED_TABLE-"}
-
-
-    # Makes it possible to double-click on the table
-    window["-BIO_EXP_COMPOUND_TABLE-"].bind('<Double-Button-1>', "+-double click-")
-
-    # Table stuff
-    window.Element("-BIO_INFO_MATRIX_TABLE-").Widget.configure(displaycolumns=[])
-    window.Element("-PLATE_TABLE_TABLE-").Widget.configure(displaycolumns=plate_table_table_heading_mp)
-    search_reverse = {}
+    well_dict_bio_info, well_dict, dose_colour_dict, colour_select, graph_bio_exp, lc_graph_showing = start_up_gui(config, window)
 
     while True:
         event, values = window.read(timeout=100)
+
         if event == sg.WIN_CLOSED or event == "Exit":
             queue_mol.put(("close", None))
             break
@@ -148,12 +107,15 @@ def main(config, queue_gui, queue_mol):
             search_mother_plates_update_values(window)
 
         if event == "-SEARCH_PLATE_LAYOUT-":
-            search_plate_layout(window, values, archive_plates_dict)
+            search_sample_counter_update(dbf, window, values)
 
         if event == "-SUB_SEARCH_DRAW_MOL-":
             queue_mol.put(("start_draw_tool", values["-SUB_SEARCH_SMILES-"]))
 
         #     WINDOW 1 - BIO DATA         ###
+        if event == "-TAB_GROUP_ONE-" and values["-TAB_GROUP_ONE-"] == "Bio Data":
+            assay_drop_down_updates(dbf, window)
+
         if event == "-BIO_COMBINED_REPORT-":
             bio_report_update(window, values)
 
@@ -179,32 +141,29 @@ def main(config, queue_gui, queue_mol):
             bio_experiment_add_to_database_update(window, values)
 
         if event == "-BIO_PLATE_LAYOUT-":
-            well_dict = bio_plate_layout(config, window, values, well_dict, archive_plates_dict)
-
-        if event == "-BIO_SAMPLE_TYPE-":
-            well_dict = bio_plate_layout(config, window, values, well_dict, archive_plates_dict)
+            well_dict = bio_plate_layout(dbf, config, window, values, well_dict)
 
         if event == "-BIO_COMBINED_REPORT-":
             bio_combined_report_update(window, values)
 
         if event == "-BIO_REPORT_SETTINGS-" or event == "-PURITY_ADVANCED_SETTINGS-":
-            bio_settings(config, window)     #TODO fix
+            bio_settings(config, window)     #TODO fix ??
 
         if event == "-BIO_ANALYSE_TYPE-":
-            bio_analyse_type(window, values)
+            print("Needs to change plate-layout notes depending on the choose... ")
+            plate_list_updater(dbf, window, values, event)
 
-        # Add a new assay to the database
         if event == "-BIO_NEW_ASSAY-":
-            new_assay(config, window, plate_list)
+            new_assay(config, dbf, window)
 
         if event == "-BIO_ASSAY_NAME-":
             assay_name_update(config, window, values)
 
         if event == "-BIO_FINAL_REPORT_CONCENTRATION_MULTIPLE-":
-            bio_fina_report_multi_conc(window, values)
+            bio_finaL_report_multi_conc(window, values)
 
         if event == "-BIO_CALCULATE-":
-            bio_calculate(config, window, values, plate_list, archive_plates_dict)
+            bio_calculate(dbf, config, values)
 
         if event == "-BIO_BLANK_RUN-":
             bio_blank_run(config, window, values)
@@ -241,26 +200,23 @@ def main(config, queue_gui, queue_mol):
             colour_target_update(window, values)
 
         # Plate Layout functions:
-        if event == "-ARCHIVE_PLATES-":
-            plate_archive(window, values)
-
         if event == "-RECT_SAMPLE_TYPE-":
-            sample_type_update(window, values)
+            plate_list_updater(dbf, window, values, event)
 
         if event == "-DRAW-":
-            well_dict = draw_layout(config, window, values, well_dict, archive_plates_dict)
+            well_dict = draw_layout(dbf, config, window, values, well_dict)
 
         if event == "-EXPORT_LAYOUT-":
             export_layout(config, window, values, well_dict)
 
         if event == "-SAVE_LAYOUT-":
-            save_layout(config, window, values, well_dict, archive_plates_dict)
+            save_layout(dbf, config, window, values, well_dict)
 
         if event == "-DELETE_LAYOUT-":
-            delete_layout(config, window, values)
+            delete_layout(dbf, window, values)
 
         if event == "-RENAME_LAYOUT-":
-            rename_layout(config, window, values)
+            rename_layout(dbf, window, values)
 
         # Used both for Plate layout and Bio Info
         # prints coordinate and well under the plate layout
@@ -272,7 +228,7 @@ def main(config, queue_gui, queue_mol):
 
         else:
             if event.endswith("+MOVE") and type(event) != tuple:
-                on_move(window, values, graph_bio_exp, well_dict_bio_info, well_dict)
+                on_move(window, values, graph_bio_exp, well_dict, well_dict_bio_info)
 
         if event == "-RECT_BIO_CANVAS-":
             bio_canvas(values)
@@ -293,17 +249,9 @@ def main(config, queue_gui, queue_mol):
         if event == "-UPDATE_MP-" or event == "-UPDATE_DP-":
             update_plates(config, window, values, event)
 
-        if event == "-UPDATE_BIO-":
-            pass
-            # THIS SHOULD BE DELETED !!
-
-        if event == "-UPDATE_AUTO-":
-            pass
-            # THIS SHOULD BE DELETED !!
-
         #     WINDOW 1 - Worklist     ###
-        if event == "-TAB_GROUP_ONE-":
-            temp_assay_list, worklist_mp_plates_list = worklist_tab_clicked(config, window, values)
+        if event == "-TAB_GROUP_ONE-" and values["-TAB_GROUP_ONE-"] == "Worklist":
+            temp_assay_list, worklist_mp_plates_list = worklist_tab_clicked(config, window)
 
         if event == "-WORKLIST_CONTROL_LAYOUT-":
             worklist_control_layout_update(window, values)
@@ -318,7 +266,7 @@ def main(config, queue_gui, queue_mol):
             window["-WORKLIST_BONUS_COMPOUND_ID-"].update(disabled=not values["-WORKLIST_USE_BONUS_COMPOUND-"])
 
         if event == "-WORKLIST_GENERATE-":
-            worklist_generator(config, window, values, worklist_mp_plates_list, archive_plates_dict)
+            worklist_generator(dbf, config, window, values, worklist_mp_plates_list)
 
         #       WINDOW 1 - EXTRA            ###
         if event == "-PD_METHOD_DD-":
@@ -328,7 +276,7 @@ def main(config, queue_gui, queue_mol):
             add_source_wells_update(window, values)
 
         if event == "-PD_EXECUTE_BUTTON-":
-            execute_button_pressed(config, window, values, archive_plates_dict)
+            execute_button_pressed(dbf, config, window, values)
 
         if event == "-EXTRA_SUB_TABS-":
             print("WHAT IS THIS???????? ARG???????? NOT WORKING")
@@ -369,34 +317,30 @@ def main(config, queue_gui, queue_mol):
             treedata, all_data, compound_data, counter = compound_table_refreshed(config, window, values)
 
         if event == "-C_TABLE_EXPORT-":
-            compound_table_export(config, window, values, all_data, archive_plates_dict)
+            compound_table_export(dbf, config, window, values, all_data)
 
         #   WINDOW TABLE - BIO EXPERIMENT TABLE     ###
-
         if event == "-TABLE_TAB_GRP-":
             table_tab_group_pressed_update(config, window, values)
 
         if event == "-BIO_EXP_TABLE_ASSAY_LIST_BOX-":
-            bio_exp_assay_runs = experiment_table_assay_list_update(config, window, values)
+            experiment_table_assay_list_update(config, window, values)
 
-        if event == "-BIO_EXP_ASSAY_RUN_TABLE-"  or event == "-BIO_EXP_APPROVED_PLATES_ONLY-":
-            bio_exp_plate_data = experiment_table_assay_run_update(config, window, values, bio_exp_assay_runs)
+        if event == "-BIO_EXP_ASSAY_RUN_TABLE-" or event == "-BIO_EXP_APPROVED_PLATES_ONLY-":
+            experiment_table_assay_run_update(config, window, values)
 
         if event == "-BIO_EXP_PLATE_TABLE-" or event == "-BIO_EXP_APPROVED_COMPOUNDS_ONLY-" or \
                 event == "-REFRESH_BIO_TABLE-":
-            bio_exp_compound_data = experiment_table_plate_update(config, window, values, bio_exp_plate_data)
+            experiment_table_plate_update(config, window, values)
 
-        if event == "-BIO_EXP_ASSAY_RUN_TABLE-+-double click-":
-            assay_table_double_click(window, values)
-
-        if event == "-BIO_EXP_PLATE_TABLE-+-double click-":
-            plate_table_double_click(window, values)
+        if event in bio_info_tables:
+            bio_tables_double_clicked(window, values, event)
 
         if event == "-BIO_EXP_COMPOUND_TABLE-+-double click-":
-            compound_table_double_click(config, window, values, bio_exp_compound_data)
+            compound_table_double_click(config, window, values, event)
 
         if event == "-BIO_EXP_EXPORT_COMPOUNDS-" and values["-BIO_EXP_PLATE_TABLE-"]:
-            bio_exp_compound_list(config, event, values, bio_exp_compound_data)
+            bio_exp_compound_list(config, event, values)
 
         #   WINDOW TABLE - LC EXPERIMENT    ###
         if event == "-TABLE_TAB_GRP-":
@@ -407,6 +351,9 @@ def main(config, queue_gui, queue_mol):
 
         if event == "-LC_MS_TABLE_BATCH_LIST_BOX-":
             batch_list_box_update(config, window, values, all_table_data)
+
+        if event == "-LC_MS_SAMPLE_TABLE-+-double click-":
+            print(f"DOUBLE CLICKING LC SAMPLE TABLE THINGY DATYA !!!!! - {event}")
 
         #   WINDOW TABLE - PLATE TABLE      ###
         if event == "-TABLE_TAB_GRP-":
@@ -425,6 +372,12 @@ def main(config, queue_gui, queue_mol):
         if event == "-PLATE_TABLE_BUTTON_LIMITER-":
             table_limiter_update(config, window, values, temp_mp_plates)
 
+        if event == "-PLATE_TABLE_UPDATE_VOLUME-":
+            sg.PopupError("Missing function - should update the volume of the selected plate's compounds based on ECHO survey file")
+
+        if event == "-PLATE_TABLE_TABLE-+-double click-":
+            compound_table_double_click(config, window, values, event)
+
         #   WINDOW 2 - COMPOUND INFO    ###
         if event == "-COMPOUND_INFO_SEARCH_COMPOUND_ID-":
             update_overview_compound(config, window, values, None)
@@ -435,233 +388,34 @@ def main(config, queue_gui, queue_mol):
         if event == "-COMPOUND_INFO_SEND_TO_SEARCH-":
             window["-SUB_SEARCH_SMILES-"].update(value=values["-COMPOUND_INFO_ID-"])
 
+        if event == "-COMPOUND_INFO_MP-+-double click-":
+            popup_table("-COMPOUND_INFO_INFO_MP_TABLE-")
+
+        if event == "-COMPOUND_INFO_DP-+-double click-":
+            popup_table("-COMPOUND_INFO_INFO_DP_TABLE-")
+
+        if event == "-COMPOUND_INFO_ASSAY-+-double click-":
+            popup_table("-COMPOUND_INFO_INFO_ASSAY_TABLE-")
+
+        if event == "-COMPOUND_INFO_HITS-+-double click-":
+            popup_table("-COMPOUND_INFO_INFO_HITS_TABLE-")
+
+        if event == "-COMPOUND_INFO_PURITY-+-double click-":
+            popup_table("-COMPOUND_INFO_INFO_PURITY_USED_TABLE-")
+
         #   WINDOW 2 - BIO INFO         ###
-        if event == "-BIO_INFO_STATES-" or event == "-BIO_INFO_ANALYSE_METHOD-" or event == "-BIO_INFO_PLATES-":
-            update_bio_info_values(values, window, window_tables["plate_bio_info"])
-
         # Updating Sub setting data
-        if event == "-BIO_INFO_HEATMAP_LOW_COLOUR_TARGET-":
-            heatmap_low_colour_update(window, values)
+        if event in colour_chooser_buttons:
+            colour_chooser_update(window, values, event)
 
-        if event == "-BIO_INFO_HEATMAP_MID_COLOUR_TARGET-":
-            heatmap_mid_colour_update(window, values)
+        if event in assay_updater_list:
+            bio_info_window_update(dbf, window, values)
 
-        if event == "-BIO_INFO_HEATMAP_HIGH_COLOUR_TARGET-":
-            heatmap_high_colour_update(window, values)
+        if event == "-BIO_INFO_RUN_DROPDOWN-":
+            bio_info_plate_list_update(dbf, window, values, None)
 
-        if event == "-BIO_INFO_HIT_MAP_LOW_COLOUR_TARGET-":
-            hit_low_colour_update(window, values)
-
-        if event == "-BIO_INFO_HIT_MAP_MID_COLOUR_TARGET-":
-            hit_mid_colour_update(window, values)
-
-        if event == "-BIO_INFO_HIT_MAP_HIGH_COLOUR_TARGET-":
-            hit_high_colour_update(window, values)
-
-        if event == "-BIO_INFO_BOUNDS_BUTTON-":
-            sg.PopupError("This is not working")
-            # ToDo make this button work. Should get a small popup, to choose all the bins for the bio analysis.
-        # ToDO rethink the whole BIO info stuff
-        # if event == "-BIO_INFO_SUB_SETTINGS_TABS-" and values["-BIO_INFO_SUB_SETTINGS_TABS-"] == "Plate Overview" \
-        #         and bio_info_sub_setting_tab_plate_overview_calc or event == "-BIO_INFO_PLATE_OVERVIEW_METHOD_LIST-" \
-        #         or event == "-BIO_INFO_PLATE_OVERVIEW_STATE_LIST-" or event == "-BIO_INFO_PLATE_OVERVIEW_PLATE-":
-        #     method = values["-BIO_INFO_PLATE_OVERVIEW_METHOD_LIST-"]
-        #     state = values["-BIO_INFO_PLATE_OVERVIEW_STATE_LIST-"]
-        #     plate = values["-BIO_INFO_PLATE_OVERVIEW_PLATE-"]
-        #     all_table_data["-BIO_INFO_OVERVIEW_TABLE-"] = sub_settings_plate_overview(plate_bio_info, method, plate,
-        #                                                                               state)
-        #     window["-BIO_INFO_OVERVIEW_TABLE-"].update(values=all_table_data["-BIO_INFO_OVERVIEW_TABLE-"])
-        #     bio_info_sub_setting_tab_plate_overview_calc = False
-        #
-        # if event == "-BIO_INFO_SUB_SETTINGS_TABS-" and values["-BIO_INFO_SUB_SETTINGS_TABS-"] == "Overview" \
-        #         and bio_info_sub_setting_tab_overview_calc or event == "-BIO_INFO_OVERVIEW_METHOD-" \
-        #         or event == "-BIO_INFO_OVERVIEW_STATE-":
-        #     method = values["-BIO_INFO_OVERVIEW_METHOD-"]
-        #     state = values["-BIO_INFO_OVERVIEW_STATE-"]
-        #     sub_settings_overview_table_data = sub_settings_overview(plate_bio_info, method, state)
-        #     all_table_data["-BIO_INFO_OVERVIEW_AVG_TABLE-"], all_table_data["-BIO_INFO_OVERVIEW_STDEV_TABLE-"], \
-        #     all_table_data["-BIO_INFO_OVERVIEW_Z_PRIME_TABLE-"] = sub_settings_overview_table_data
-        #     window["-BIO_INFO_OVERVIEW_AVG_TABLE-"].update(values=all_table_data["-BIO_INFO_OVERVIEW_AVG_TABLE-"])
-        #     window["-BIO_INFO_OVERVIEW_STDEV_TABLE-"].update(values=all_table_data["-BIO_INFO_OVERVIEW_STDEV_TABLE-"])
-        #     window["-BIO_INFO_OVERVIEW_Z_PRIME_TABLE-"].update(
-        #         values=all_table_data["-BIO_INFO_OVERVIEW_Z_PRIME_TABLE-"])
-        #     bio_info_sub_setting_tab_overview_calc = False
-        #
-        # # if event == "-BIO_INFO_SUB_SETTINGS_TABS-" and values["-BIO_INFO_SUB_SETTINGS_TABS-"] == "List" \
-        # #         and bio_info_sub_setting_tab_list_calc or event == "-BIO_INFO_LIST_METHOD-" \
-        # #         or event == "-BIO_INFO_LIST_STATE-" or event == "-BIO_INFO_LIST_CALC-":
-        # #
-        # #     method = values["-BIO_INFO_LIST_METHOD-"]
-        # #     state = values["-BIO_INFO_LIST_STATE-"]
-        # #     calc = values["-BIO_INFO_LIST_CALC-"]
-        # #     sub_setting_list_table_data = sub_settings_list(plate_bio_info, method, state, calc)
-        # #     window["-BIO_INFO_LIST_TABLE-"].update(values=sub_setting_list_table_data)
-        # #     bio_info_sub_setting_tab_list_calc = False
-        #
-        # if event == "-BIO_INFO_SUB_SETTINGS_TABS-" and values["-BIO_INFO_SUB_SETTINGS_TABS-"] == "Z-Prime" \
-        #         and bio_info_sub_setting_tab_z_prime_calc:
-        #     z_prime_data = sub_settings_z_prime(plate_bio_info)
-        #     all_table_data["-BIO_INFO_Z_PRIME_LIST_TABLE-"], z_prime_max_barcode, z_prime_max_value, z_prime_min_barcode \
-        #         , z_prime_min_value = z_prime_data
-        #     window["-BIO_INFO_Z_PRIME_LIST_TABLE-"].update(values=all_table_data["-BIO_INFO_Z_PRIME_LIST_TABLE-"])
-        #     window["-BIO_INFO_Z_PRIME_MAX_BARCODE-"].update(value=z_prime_max_barcode)
-        #     window["-BIO_INFO_Z_PRIME_MAX_VALUE-"].update(value=z_prime_max_value)
-        #     window["-BIO_INFO_Z_PRIME_MIN_BARCODE-"].update(value=z_prime_min_barcode)
-        #     window["-BIO_INFO_Z_PRIME_MIN_VALUE-"].update(value=z_prime_min_value)
-        #
-        #     bio_info_sub_setting_tab_z_prime_calc = False
-        #
-        # if event == "-BIO_INFO_SUB_SETTINGS_TABS-" and values["-BIO_INFO_SUB_SETTINGS_TABS-"] == "Hit List" \
-        #         and bio_info_sub_setting_tab_hit_list_calc:
-        #     plate = values["-BIO_INFO_HIT_LIST_PLATES-"]
-        #     method = values["-BIO_INFO_HIT_LIST_METHOD-"]
-        #     state = values["-BIO_INFO_HIT_LIST_STATE-"]
-        #
-        #     pora_thresholds = {
-        #         "low": {"min": float(values["-BIO_INFO_PORA_LOW_MIN_HIT_THRESHOLD-"]),
-        #                 "max": float(values["-BIO_INFO_PORA_LOW_MAX_HIT_THRESHOLD-"])},
-        #         "mid": {"min": float(values["-BIO_INFO_PORA_MID_MIN_HIT_THRESHOLD-"]),
-        #                 "max": float(values["-BIO_INFO_PORA_MID_MAX_HIT_THRESHOLD-"])},
-        #         "high": {"min": float(values["-BIO_INFO_PORA_HIGH_MIN_HIT_THRESHOLD-"]),
-        #                  "max": float(values["-BIO_INFO_PORA_HIGH_MAX_HIT_THRESHOLD-"])}
-        #     }
-        #
-        #     sub_settings_hit_list_table_data = sub_settings_hit_list(plate_bio_info, plate, method, state,
-        #                                                              bio_info_state_dict, pora_thresholds)
-        #
-        #     all_table_data["-BIO_INFO_HIT_LIST_LOW_TABLE-"], all_table_data["-BIO_INFO_HIT_LIST_MID_TABLE-"], \
-        #     all_table_data["-BIO_INFO_HIT_LIST_HIGH_TABLE-"] = sub_settings_hit_list_table_data
-        #     window["-BIO_INFO_HIT_LIST_LOW_TABLE-"].update(values=all_table_data["-BIO_INFO_HIT_LIST_LOW_TABLE-"])
-        #     window["-BIO_INFO_HIT_LIST_MID_TABLE-"].update(values=all_table_data["-BIO_INFO_HIT_LIST_MID_TABLE-"])
-        #     window["-BIO_INFO_HIT_LIST_HIGH_TABLE-"].update(values=all_table_data["-BIO_INFO_HIT_LIST_HIGH_TABLE-"])
-        #
-        #     bio_info_sub_setting_tab_hit_list_calc = False
-        #
-        # if event == "-BIO_INFO_PORA_LOW_MIN_HIT_THRESHOLD-" or event == "-BIO_INFO_PORA_LOW_MAX_HIT_THRESHOLD-" or \
-        #         event == "-BIO_INFO_PORA_MID_MIN_HIT_THRESHOLD-" or event == "-BIO_INFO_PORA_MID_MAX_HIT_THRESHOLD-" or \
-        #         event == "-BIO_INFO_PORA_HIGH_MIN_HIT_THRESHOLD-" or event == "-BIO_INFO_PORA_HIGH_MAX_HIT_THRESHOLD-":
-        #
-        #     if not bio_info_sub_setting_tab_hit_list_calc:
-        #         bio_info_sub_setting_tab_hit_list_calc = True
-        #
-        # if event == "-BIO_INFO_MAPPING-" or event == "-BIO_INFO_ANALYSE_METHOD-" or event == "-BIO_INFO_PLATES-" \
-        #         or event == "-BIO_INFO_RE_DRAW-" \
-        #         or event == "-BIO_INFO_SUB_SETTINGS_TABS-" and values["-BIO_INFO_MAPPING-"] == "Hit Map" \
-        #         or event == "-BIO_INFO_HIT_MAP_LOW_COLOUR_TARGET-" and values["-BIO_INFO_MAPPING-"] == "Hit Map" \
-        #         or event == "-BIO_INFO_HIT_MAP_MID_COLOUR_TARGET-" and values["-BIO_INFO_MAPPING-"] == "Hit Map" \
-        #         or event == "-BIO_INFO_HIT_MAP_HIGH_COLOUR_TARGET-" and values["-BIO_INFO_MAPPING-"] == "Hit Map" \
-        #         or event == "-BIO_INFO_PORA_LOW_MIN_HIT_THRESHOLD-" and values["-BIO_INFO_MAPPING-"] == "Hit Map" \
-        #         and values["-BIO_INFO_PORA_LOW_MIN_HIT_THRESHOLD-"] \
-        #         or event == "-BIO_INFO_PORA_LOW_MAX_HIT_THRESHOLD-" and values["-BIO_INFO_MAPPING-"] == "Hit Map" \
-        #         and values["-BIO_INFO_PORA_LOW_MAX_HIT_THRESHOLD-"] \
-        #         or event == "-BIO_INFO_PORA_MID_MIN_HIT_THRESHOLD-" and values["-BIO_INFO_MAPPING-"] == "Hit Map" \
-        #         and values["-BIO_INFO_PORA_MID_MIN_HIT_THRESHOLD-"] \
-        #         or event == "-BIO_INFO_PORA_MID_MAX_HIT_THRESHOLD-" and values["-BIO_INFO_MAPPING-"] == "Hit Map" \
-        #         and values["-BIO_INFO_PORA_MID_MAX_HIT_THRESHOLD-"] \
-        #         or event == "-BIO_INFO_PORA_HIGH_MIN_HIT_THRESHOLD-" and values["-BIO_INFO_MAPPING-"] == "Hit Map" \
-        #         and values["-BIO_INFO_PORA_HIGH_MIN_HIT_THRESHOLD-"] \
-        #         or event == "-BIO_INFO_PORA_HIGH_MAX_HIT_THRESHOLD-" and values["-BIO_INFO_MAPPING-"] == "Hit Map" \
-        #         and values["-BIO_INFO_PORA_HIGH_MAX_HIT_THRESHOLD-"] \
-        #         or event == "-BIO_INFO_STATE_LIST_BOX-" and values["-BIO_INFO_MAPPING-"] == "Hit Map" \
-        #         or event == "-BIO_INFO_STATE_LIST_BOX-" and values["-BIO_INFO_MAPPING-"] == "Heatmap" \
-        #         or event == "-BIO_INFO_HEATMAP_LOW_COLOUR_TARGET-" and values["-BIO_INFO_MAPPING-"] == "Heatmap" \
-        #         or event == "-BIO_INFO_HEATMAP_MID_COLOUR_TARGET-" and values["-BIO_INFO_MAPPING-"] == "Heatmap" \
-        #         or event == "-BIO_INFO_HEATMAP_HIGH_COLOUR_TARGET-" and values["-BIO_INFO_MAPPING-"] == "Heatmap" \
-        #         or event == "-BIO_INFO_HEAT_PERCENTILE_LOW-" and values["-BIO_INFO_MAPPING-"] == "Heatmap" \
-        #         and values["-BIO_INFO_HEAT_PERCENTILE_LOW-"] \
-        #         or event == "-BIO_INFO_HEAT_PERCENTILE_MID-" and values["-BIO_INFO_MAPPING-"] == "Heatmap" \
-        #         and values["-BIO_INFO_HEAT_PERCENTILE_MID-"] \
-        #         or event == "-BIO_INFO_HEAT_PERCENTILE_HIGH-" and values["-BIO_INFO_MAPPING-"] == "Heatmap" \
-        #         and values["-BIO_INFO_HEAT_PERCENTILE_HIGH-"]:
-        #
-        #     if plate_bio_info:
-        #         if values["-BIO_INFO_MAPPING-"] == "State Mapping":
-        #             gui_tab = "bio_exp"
-        #             archive = True
-        #
-        #             well_dict_bio_info, bio_info_min_x, bio_info_min_y, bio_info_max_x, bio_info_max_y, off_set \
-        #                 = draw_plate(config, graph_bio_exp, bio_info_plate_size, bio_info_state_dict, gui_tab, archive)
-        #
-        #         if values["-BIO_INFO_MAPPING-"] == "Heatmap":
-        #             mapping = {
-        #                 "mapping": values["-BIO_INFO_MAPPING-"],
-        #                 "colours": {"low": [values["-BIO_INFO_HEATMAP_LOW_COLOUR_TARGET-"],
-        #                                     values["-BIO_INFO_HEATMAP_MID_COLOUR_TARGET-"]],
-        #                             "high": [values["-BIO_INFO_HEATMAP_MID_COLOUR_TARGET-"],
-        #                                      values["-BIO_INFO_HEATMAP_HIGH_COLOUR_TARGET-"]]},
-        #                 "states": values["-BIO_INFO_STATE_LIST_BOX-"],
-        #                 "percentile": {"low": float(values["-BIO_INFO_HEAT_PERCENTILE_LOW-"]),
-        #                                "mid": float(values["-BIO_INFO_HEAT_PERCENTILE_MID-"]),
-        #                                "high": float(values["-BIO_INFO_HEAT_PERCENTILE_HIGH-"])}
-        #             }
-        #
-        #             gui_tab = "bio_exp"
-        #             plate = values["-BIO_INFO_PLATES-"]
-        #             analyse_method = values["-BIO_INFO_ANALYSE_METHOD-"]
-        #
-        #             temp_plate_bio_info = plate_bio_info[plate]["plates"][analyse_method]["wells"]
-        #             well_dict_bio_info, bio_info_min_x, bio_info_min_y, bio_info_max_x, bio_info_max_y, off_set \
-        #                 = draw_plate(config, graph_bio_exp, bio_info_plate_size, temp_plate_bio_info, gui_tab,
-        #                              mapping=mapping, state_dict=bio_info_state_dict)
-        #
-        #         if values["-BIO_INFO_MAPPING-"] == "Hit Map":
-        #             mapping = {
-        #                 "mapping": values["-BIO_INFO_MAPPING-"],
-        #                 "lower_bound_start": float(values["-BIO_INFO_PORA_LOW_MIN_HIT_THRESHOLD-"]),
-        #                 "lower_bound_end": float(values["-BIO_INFO_PORA_LOW_MAX_HIT_THRESHOLD-"]),
-        #                 "middle_bound_start": float(values["-BIO_INFO_PORA_MID_MIN_HIT_THRESHOLD-"]),
-        #                 "middle_bound_end": float(values["-BIO_INFO_PORA_MID_MAX_HIT_THRESHOLD-"]),
-        #                 "higher_bound_start": float(values["-BIO_INFO_PORA_HIGH_MIN_HIT_THRESHOLD-"]),
-        #                 "higher_bound_end": float(values["-BIO_INFO_PORA_HIGH_MAX_HIT_THRESHOLD-"]),
-        #                 "low_colour": values["-BIO_INFO_HIT_MAP_LOW_COLOUR_TARGET-"],
-        #                 "mid_colour": values["-BIO_INFO_HIT_MAP_MID_COLOUR_TARGET-"],
-        #                 "high_colour": values["-BIO_INFO_HIT_MAP_HIGH_COLOUR_TARGET-"],
-        #                 "states": values["-BIO_INFO_STATE_LIST_BOX-"]
-        #             }
-        #
-        #             plate = values["-BIO_INFO_PLATES-"]
-        #             analyse_method = values["-BIO_INFO_ANALYSE_METHOD-"]
-        #             gui_tab = "bio_exp"
-        #
-        #             temp_plate_bio_info = plate_bio_info[plate]["plates"][analyse_method]["wells"]
-        #             well_dict_bio_info, bio_info_min_x, bio_info_min_y, bio_info_max_x, bio_info_max_y, off_set \
-        #                 = draw_plate(config, graph_bio_exp, bio_info_plate_size, temp_plate_bio_info, gui_tab,
-        #                              mapping=mapping, state_dict=bio_info_state_dict)
-        #
-        # if event == "-BIO_INFO_MATRIX_POPUP-" and plate_bio_info:
-        #     method = values["-BIO_INFO_MATRIX_METHOD-"]
-        #     state = values["-BIO_INFO_MATRIX_STATE-"]
-        #     calc = values["-BIO_INFO_MATRIX_CALC-"]
-        #
-        #     matrix_popup(plate_bio_info, calc_values, state_values, method_values, calc, sub_settings_matrix, state,
-        #                  method)
-        #
-        # if event == "-BIO_INFO_Z_PRIME_MATRIX_BUTTON-" and plate_bio_info:
-        #     matrix_popup(plate_bio_info, calc_values, state_values, method_values, "z_prime", sub_settings_matrix)
-        #
-        # if event == "-BIO_INFO_MATRIX_BUTTON-" and plate_bio_info:
-        #     data_dict = plate_bio_info
-        #     state = values["-BIO_INFO_MATRIX_STATE-"]
-        #     if state == "z_prime":
-        #         calc = None
-        #         method = None
-        #     else:
-        #         calc = values["-BIO_INFO_MATRIX_CALC-"]
-        #         method = values["-BIO_INFO_MATRIX_METHOD-"]
-        #
-        #     try:
-        #         all_table_data["-BIO_INFO_MATRIX_TABLE-"], display_columns = sub_settings_matrix(data_dict, calc,
-        #                                                                                          method, state)
-        #     except KeyError:
-        #         sg.popup_error("Please select all information")
-        #     else:
-        #         window.Element("-BIO_INFO_MATRIX_TABLE-").Widget.configure(displaycolumns=display_columns)
-        #
-        #         window["-BIO_INFO_MATRIX_TABLE-"].update(values=all_table_data["-BIO_INFO_MATRIX_TABLE-"])
-        #     # window["-BIO_INFO_MATRIX_TABLE-"].update(headings=headings)
-        #
-        # if event == "-BIO_INFO_EXPORT-":
-        #     sg.popup("This functions does nothing ATM ")
+        if event == "-BIO_INFO_PLATES_DROPDOWN-":
+            well_dict_bio_info = bio_info_plate_update(dbf, config, window, values, event, well_dict_bio_info)
 
         #   WINDOW 2 - PURITY INFO  ###
         if event == "-PURITY_INFO_SAMPLE_SELECTION-":
@@ -704,7 +458,6 @@ def main(config, queue_gui, queue_mol):
 
 if __name__ == "__main__":
     from draw_tool_handler import launch_draw_tool
-
     config = configparser.ConfigParser()
     config.read("config.ini")
     queue_gui = Queue()

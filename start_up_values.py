@@ -1,8 +1,5 @@
 import os
 
-
-from database_handler import DataBaseFunctions
-from database_functions import grab_table_data
 from info import clm_to_row_96, clm_to_row_384, clm_to_row_1536, row_to_clm_1536, row_to_clm_384, row_to_clm_96
 
 # Makes a dict over all tables in the software. It is used to make tables sortable.
@@ -21,28 +18,43 @@ all_table_data = {"-COMPOUND_INFO_PLATE_TABLE-": None,
                   "-PURITY_INFO_PURITY_OVERVIEW_TABLE-": None,
                   "-PURITY_INFO_PEAK_TABLE-": None,
                   "-PURITY_INFO_PURITY_PEAK_LIST_TABLE-": None,
+                  "-BIO_EXP_ASSAY_RUN_TABLE-": None,
                   "-BIO_EXP_PLATE_TABLE-": None,
                   "-BIO_EXP_COMPOUND_TABLE-": None,
                   "-LC_MS_SAMPLE_TABLE-": None,
                   "-PLATE_TABLE_TABLE-": None,
                   "-PURITY_INFO_RAW_DATA_TABLE-": None,
-                  "-COMPOUND_INFO_ALL_PLATE_INFO_TABLE-": None,
-                  "-COMPOUND_INFO_MP_PLATE_INFO_TABLE-": None,
-                  "-COMPOUND_INFO_DP_PLATE_INFO_TABLE-": None,
-                  "-COMPOUND_INFO_BIO_INFO_TABLE-": None,
-                  "-COMPOUND_INFO_PURITY_INFO_TABLE-": None,
                   "-EXTRA_DATABASE_CUSTOMERS_TABLE-": None,
                   "-EXTRA_DATABASE_VENDORS_TABLE-": None,
                   "-EXTRA_DATABASE_AC_TABLE-": None,
                   "-EXTRA_DATABASE_RESPONSIBLE_TABLE-": None,
                   "-EXTRA_DATABASE_LOCATIONS_TABLE-": None,
+                  "-COMPOUND_INFO_INFO_MP_TABLE-": None,
+                  "-COMPOUND_INFO_INFO_DP_TABLE-": None,
+                  "-COMPOUND_INFO_INFO_ASSAY_TABLE-": None,
+                  "-COMPOUND_INFO_INFO_HITS_TABLE-": None,
+                  "-COMPOUND_INFO_INFO_PURITY_USED_TABLE-": None,
                   }
 
+all_table_data_extra = {
+    "-COMPOUND_INFO_INFO_MP_TABLE-": {"name": "Assay Table",
+                                      "headings": ["plate", "well", "vol"]},
+    "-COMPOUND_INFO_INFO_DP_TABLE-": {"name": "Plate Table",
+                                      "headings": ["Plate", "well", "Vol"]},
+    "-COMPOUND_INFO_INFO_ASSAY_TABLE-": {"name": "Assay Compound Table",
+                                         "headings": ["Name", "Plate", "Method"]},
+    "-COMPOUND_INFO_INFO_HITS_TABLE-": {"name": "",
+                                        "headings": ["Assay", "Score", "Conc."]},
+    "-COMPOUND_INFO_INFO_PURITY_USED_TABLE-": {"name": "",
+                                               "headings": ["Purity", "Replicates", "Date"]},
+}
 
 plate_type_count = {"plate_96": 96, "plate_384": 384, "plate_1536": 1536}
 row_to_clm_converter = {"plate_96": row_to_clm_96, "plate_384": row_to_clm_384, "plate_1536": row_to_clm_1536}
 clm_to_row_converter = {"plate_96": clm_to_row_96, "plate_384": clm_to_row_384, "plate_1536": clm_to_row_1536}
 ms_mode_selector = {"Positive": "ms_pos", "Negative": "ms_neg"}
+search_reverse = {}
+
 
 draw_tool_values = {
     "start_point": None,
@@ -134,8 +146,37 @@ window_1_extra = {
     "location_data": None,
 }
 
+all_data = None
+compound_info_tables = {"-COMPOUND_INFO_INFO_MP-": "-COMPOUND_INFO_INFO_MP_TABLE-",
+                        "-COMPOUND_INFO_INFO_DP-": "-COMPOUND_INFO_INFO_DP_TABLE-",
+                        "-COMPOUND_INFO_INFO_ASSAY-": "-COMPOUND_INFO_INFO_ASSAY_TABLE-",
+                        "-COMPOUND_INFO_INFO_HITS-": "-COMPOUND_INFO_INFO_HITS_TABLE-",
+                        "-COMPOUND_INFO_INFO_TRANSFERS-": "-COMPOUND_INFO_INFO_TRANSFERS_TABLE-",
+                        "-COMPOUND_INFO_INFO_PURITY-": "-COMPOUND_INFO_INFO_PURITY_USED_TABLE-"}
+
+
 # BIO EXP TABLE CONSTANTS:
 window_tables = {"all_assays": None, "plate_bio_info": None}
+bio_info_tables = ["-BIO_EXP_TABLE_ASSAY_LIST_BOX-+-double click-",
+                   "-BIO_EXP_ASSAY_RUN_TABLE-+-double click-",
+                   "-BIO_EXP_PLATE_TABLE-+-double click-"]
+
+colour_chooser_buttons = ["-BIO_INFO_HIT_MAP_TH_1_COLOUR_TARGET-",
+                          "-BIO_INFO_HIT_MAP_TH_2_COLOUR_TARGET-",
+                          "-BIO_INFO_HIT_MAP_TH_3_COLOUR_TARGET-",
+                          "-BIO_INFO_HIT_MAP_TH_4_COLOUR_TARGET-",
+                          "-BIO_INFO_HIT_MAP_TH_5_COLOUR_TARGET-",
+                          "-BIO_INFO_HIT_MAP_TH_6_COLOUR_TARGET-",
+                          "-BIO_INFO_HIT_MAP_TH_7_COLOUR_TARGET-",
+                          "-BIO_INFO_HIT_MAP_TH_8_COLOUR_TARGET-",
+                          "-BIO_INFO_HIT_MAP_TH_9_COLOUR_TARGET-",
+                          "-BIO_INFO_HEATMAP_LOW_COLOUR_TARGET-",
+                          "-BIO_INFO_HEATMAP_MID_COLOUR_TARGET-",
+                          "-BIO_INFO_HEATMAP_HIGH_COLOUR_TARGET-"]
+
+assay_updater_list = ["-BIO_INFO_ASSAY_DROPDOWN-",
+                      "-BIO_INFO_APPROVED_CHECK-",
+                      "-BIO_INFO_ANALYSE_METHOD-"]
 
 
 def database_guard(config, cw):
@@ -150,134 +191,45 @@ def database_guard(config, cw):
     return db_active
 
 
-def _get_plate_names(dbf, table, column_headline):
-    """
-    Gets a list of the plate names from the database
-    :param dbf: The DataBaseFunction
-    :type dbf: class
-    :param table: The table where the data is storage
-    :type table: str
-    :param column_headline: The headline of the column that is used for finding data
-    :type column_headline: str
-    :return:
-    """
-    temp_rows = dbf.find_column_data(table, column_headline)
-    plate_names = [names for names in temp_rows]
-    return plate_names
+def start_up_gui(config, window):
+    well_dict_bio_info = {}
+    well_dict = {}
+    dose_colour_dict = {}
+    colour_select = {}
+    for keys in list(config["plate_colouring"].keys()):
+        colour_select[keys] = config["plate_colouring"][keys]
 
+    graph_bio_exp = window["-BIO_INFO_CANVAS-"]
+    window_1_plate_layout["graph_plate"] = window["-RECT_BIO_CANVAS-"]
 
-def _get_plate_archive(dbf, table, column_headline, plate_names):
-    """
-    Gets a dict of the plate layouts from the database, based on a list of plate names
-    :param dbf: The DataBaseFunction
-    :type dbf: class
-    :param plate_names: A list of plate names
-    :type plate_names: list
-    :param table: The table where the data is storage
-    :type table: str
-    :param column_headline: The headline of the column that is used for finding data
-    :type column_headline: str
-    :return: a dict of the plate layouts
-    :rtype: dict
-    """
-    archive_plates_dict = {}
+    #   WINDOW 2 - PURITY INFO  #
+    lc_graph_showing = [keys for keys in list(config["lc_mapping"].keys())]
 
-    # loops over all the plates
-    for plates in plate_names:
-        temp_row_data = dbf.find_data_single_lookup(table, plates, column_headline)
+    # Makes it possible to double-click on the table
 
-        # grabs data from the return rown
-        plate_name = temp_row_data[0][1]
-        plate_type = temp_row_data[0][2]
+    window["-COMPOUND_INFO_MP-"].bind('<Double-Button-1>', "+-double click-")
+    window["-COMPOUND_INFO_DP-"].bind('<Double-Button-1>', "+-double click-")
+    window["-COMPOUND_INFO_ASSAY-"].bind('<Double-Button-1>', "+-double click-")
+    window["-COMPOUND_INFO_HITS-"].bind('<Double-Button-1>', "+-double click-")
+    window["-COMPOUND_INFO_PURITY-"].bind('<Double-Button-1>', "+-double click-")
 
-        temp_sub_row_data = dbf.find_data_single_lookup("plate_layout_sub", plate_name, "plate_sub")
-        try:
-            well_layout = eval(temp_sub_row_data[0][3])
-        except IndexError:
-            well_layout = None
+    # Plate Tables
+    window["-PLATE_TABLE_TABLE-"].bind('<Double-Button-1>', "+-double click-")
 
-        try:
-            sample_type = temp_sub_row_data[0][4]
-        except IndexError:
-            sample_type = None
+    # Bio tables
+    window["-BIO_EXP_TABLE_ASSAY_LIST_BOX-"].bind('<Double-Button-1>', "+-double click-")
+    window["-BIO_EXP_ASSAY_RUN_TABLE-"].bind('<Double-Button-1>', "+-double click-")
+    window["-BIO_EXP_PLATE_TABLE-"].bind('<Double-Button-1>', "+-double click-")
+    window["-BIO_EXP_COMPOUND_TABLE-"].bind('<Double-Button-1>', "+-double click-")
 
-        # Generates the dict
-        archive_plates_dict[plate_name] = {"well_layout": well_layout,
-                                           "plate_type": plate_type,
-                                           "sample_type": sample_type,
-                                           "sample": [],
-                                           "blank": [],
-                                           "max": [],
-                                           "minimum": [],
-                                           "positive": [],
-                                           "negative": [],
-                                           "empty": []}
+    # LC tables
+    window["-LC_MS_SAMPLE_TABLE-"].bind('<Double-Button-1>', "+-double click-")
 
-        # Makes list of the different well-types and adds them
-        if well_layout is not None:
-            temp_well_dict = well_layout
-            for counter in temp_well_dict:
-                well_id = temp_well_dict[counter]["well_id"]
-                if temp_well_dict[counter]["state"] == "sample":
-                    archive_plates_dict[plate_name]["sample"].append(well_id)
-                elif temp_well_dict[counter]["state"] == "blank":
-                    archive_plates_dict[plate_name]["blank"].append(well_id)
-                elif temp_well_dict[counter]["state"] == "max":
-                    archive_plates_dict[plate_name]["max"].append(well_id)
-                elif temp_well_dict[counter]["state"] == "minimum":
-                    archive_plates_dict[plate_name]["minimum"].append(well_id)
-                elif temp_well_dict[counter]["state"] == "positive":
-                    archive_plates_dict[plate_name]["positive"].append(well_id)
-                elif temp_well_dict[counter]["state"] == "negative":
-                    archive_plates_dict[plate_name]["negative"].append(well_id)
-                elif temp_well_dict[counter]["state"] == "empty":
-                    archive_plates_dict[plate_name]["empty"].append(well_id)
+    # Bio Analyser
 
-    return archive_plates_dict
+    # Table stuff
+    window.Element("-BIO_INFO_MATRIX_TABLE-").Widget.configure(displaycolumns=[])
+    window.Element("-PLATE_TABLE_TABLE-").Widget.configure(displaycolumns=plate_table_table_heading_mp)
 
-
-def get_plate_layout(config):
-    """
-    Gets a list of plate names and their layout from the database
-    :param config: The config handler, with all the default information in the config file.
-    :type config: configparser.ConfigParser
-    :return: plate_names, archive_plates_dict
-    :rtype: list, dict
-    """
-
-    # Connects to the database and setting up standard values
-    dbf = DataBaseFunctions(config)
-    table = "plate_layout"
-    column_headline = "plate_name"
-
-    # gets a list of the plate names
-    plate_names = _get_plate_names(dbf, table, column_headline)
-
-    # Gets a dict over all the plate_layouts
-    archive_plates_dict = _get_plate_archive(dbf, table, column_headline, plate_names)
-
-    return plate_names, archive_plates_dict
-
-
-def get_assay_list(config):
-    assay_table_data = grab_table_data(config, "assay")
-    assay_list = []
-    for row in assay_table_data[0]:
-        assay_list.append(row[1])
-
-    return assay_list
-
-
-def gui_data_fetcher(db_active, config):
-    if db_active:
-        plate_list, archive_plates_dict = get_plate_layout(config)
-        assay_list = get_assay_list(config)
-    else:
-        archive_plates_dict = {}
-        plate_list = []
-        assay_list = []
-
-    return plate_list, assay_list, archive_plates_dict
-
-
+    return well_dict_bio_info, well_dict, dose_colour_dict, colour_select, graph_bio_exp, lc_graph_showing
 

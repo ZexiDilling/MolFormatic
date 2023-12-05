@@ -1,10 +1,12 @@
 from PySimpleGUI import PopupError
 
 from database_handler import DataBaseFunctions
+from gui_function_info_bio import bio_info_grab_data
 from gui_function_info_compound import update_overview_compound
 from database_functions import grab_table_data
+from helpter_functions import eval_guard_dict, eval_guard_list
 
-from start_up_values import window_tables
+from start_up_values import window_tables, all_table_data
 
 
 def table_tab_group_pressed_update(config, window, values):
@@ -36,10 +38,10 @@ def experiment_table_assay_list_update(config, window, values):
                                                 specific_rows=selected_headlines, search_list_clm=search_list_clm)
 
         window["-BIO_EXP_ASSAY_RUN_TABLE-"].update(values=bio_exp_assay_runs)
-        return bio_exp_assay_runs
+        all_table_data["-BIO_EXP_ASSAY_RUN_TABLE-"] = bio_exp_assay_runs
 
 
-def experiment_table_assay_run_update(config, window, values, bio_exp_assay_runs):
+def experiment_table_assay_run_update(config, window, values):
     if values["-BIO_EXP_ASSAY_RUN_TABLE-"]:
 
         # clearing experiment and plate table:
@@ -49,11 +51,10 @@ def experiment_table_assay_run_update(config, window, values, bio_exp_assay_runs
         approval_check = values["-BIO_EXP_APPROVED_PLATES_ONLY-"]
 
         # updating bio plate table:
-        bio_exp_plate_data = _update_bio_exp_plate_table(config, window, values, bio_exp_assay_runs,
-                                                         approval_check=approval_check)
+        _update_bio_exp_plate_table(config, window, values, approval_check=approval_check)
 
 
-def experiment_table_plate_update(config, window, values, bio_exp_plate_data):
+def experiment_table_plate_update(config, window, values):
     if values["-BIO_EXP_PLATE_TABLE-"]:
         approval_check = values["-BIO_EXP_APPROVED_COMPOUNDS_ONLY-"]
         try:
@@ -70,38 +71,99 @@ def experiment_table_plate_update(config, window, values, bio_exp_plate_data):
         else:
             compound_amount = float(values["-BIO_EXP_SET_COMPOUND_AMOUNT-"])
 
-        bio_exp_compound_data = _update_bio_exp_compound_table(config,  window, values, bio_exp_plate_data,
-                                                               threshold=threshold, compound_amount=compound_amount,
-                                                               approval_check=approval_check)
-        return bio_exp_compound_data
+        _update_bio_exp_compound_table(config,  window, values, threshold=threshold, compound_amount=compound_amount,
+                                       approval_check=approval_check)
 
 
-def assay_table_double_click(window, values):
-    print("we are double clicking - runs")
+def bio_tables_double_clicked(dbf, window, values, event):
+    temp_plate = None
+    temp_run = None
+    temp_assay = None
+    headline = None
 
-
-def plate_table_double_click(window, values):
-    print("we are double clicking - plates")
-
-
-def compound_table_double_click(config, window, values, bio_exp_compound_data):
-    try:
-        table_row = values["-BIO_EXP_COMPOUND_TABLE-"][0]
-    except IndexError:
-        pass
+    if event == "-BIO_EXP_PLATE_TABLE-+-double click-":
+        try:
+            table_row = values["-BIO_EXP_PLATE_TABLE-"][0]
+        except IndexError:
+            temp_indicator = False
+        else:
+            temp_plate = all_table_data["-BIO_EXP_PLATE_TABLE-"][table_row][0]
+            temp_run = all_table_data["-BIO_EXP_PLATE_TABLE-"][table_row][5]
+            temp_indicator = True
+            headline = f"Plate - {temp_plate}"
+    elif event == "-BIO_EXP_TABLE_ASSAY_LIST_BOX-+-double click-":
+        temp_assay = values["-BIO_EXP_TABLE_ASSAY_LIST_BOX-"]
+        if temp_assay:
+            temp_indicator = True
+            headline = f"Assay - {temp_assay}"
+        else:
+            temp_indicator = False
+    elif event == "-BIO_EXP_ASSAY_RUN_TABLE-+-double click-":
+        try:
+            table_row = values["-BIO_EXP_ASSAY_RUN_TABLE-"][0]
+        except IndexError:
+            temp_indicator = False
+        else:
+            temp_run = all_table_data["-BIO_EXP_ASSAY_RUN_TABLE-"][table_row][0]
+            temp_indicator = True
+            headline = f"Run - {temp_run}"
     else:
-        print(bio_exp_compound_data[table_row])
-        temp_compound_id = bio_exp_compound_data[table_row][0]
-        print(temp_compound_id)
+        temp_indicator = False
+
+    if temp_indicator:
+        window["-BIO_INFO_HEADLINE-"].update(headline)
+        if not temp_assay:
+
+            temp_assay = dbf.find_data_single_lookup("assay_run", temp_run, "run_name")[0][1]
+            print(temp_assay)
+
+        default_plate_layout = dbf.find_data_single_lookup("assay", temp_assay, "assay_name")[0][3]
+        print(default_plate_layout)
+
+        if temp_plate:
+            plate_data = bio_info_grab_data(dbf, window, values, event, temp_plate)
+        else:
+            return
+
+        if plate_data:
+            pass
+        else:
+            return None
+
+
+def compound_table_double_click(config, window, values, event):
+
+    if event == "-BIO_EXP_COMPOUND_TABLE-+-double click-":
+        try:
+            table_row = values["-BIO_EXP_COMPOUND_TABLE-"][0]
+        except IndexError:
+            temp_compound_id = None
+        else:
+            temp_compound_id = all_table_data["-BIO_EXP_COMPOUND_TABLE-"][table_row][0]
+    elif event == "-PLATE_TABLE_TABLE-+-double click-":
+        try:
+            table_row = values["-PLATE_TABLE_TABLE-"][0]
+        except IndexError:
+            temp_compound_id = None
+        else:
+            temp_compound_id = all_table_data["-PLATE_TABLE_TABLE-"][table_row][2]
+    else:
+        print(f"Clicked - {event}")
+        temp_compound_id = None
+
+    if temp_compound_id:
+        window["-TAB_GROUP_TWO-"].Widget.select(0)
         window["-COMPOUND_INFO_ID-"].update(value=temp_compound_id)
         update_overview_compound(config, window, values, temp_compound_id)
+    else:
+        pass
 
 
-def _update_bio_exp_plate_table(config, window, values, bio_exp_assay_runs, approval_check=False):
+def _update_bio_exp_plate_table(config, window, values, approval_check=False):
     table_name = "biological_plate_data"
     bio_exp_selected_runs = []
     for temp_values in values["-BIO_EXP_ASSAY_RUN_TABLE-"]:
-        bio_exp_selected_runs.append(bio_exp_assay_runs[temp_values][0])
+        bio_exp_selected_runs.append(all_table_data["-BIO_EXP_ASSAY_RUN_TABLE-"][temp_values][0])
     search_list_clm = "assay_run"
     selected_headlines = ["plate_name", "z_prime", "approval", "note", "analysed_method", "assay_run"]
     bio_exp_plate_data, _ = grab_table_data(config, table_name, bio_exp_selected_runs,
@@ -128,22 +190,25 @@ def _update_bio_exp_plate_table(config, window, values, bio_exp_assay_runs, appr
         temp_data = dbf.find_data_single_lookup("assay_runs", temp_plate, "run_name")
         note = temp_data[0][7]
         window["-BIO_EXP_RUN_NOTE-"].update(value=note)
+        all_table_data["-BIO_EXP_PLATE_TABLE-"] = table_data
     else:
         table_data = None
         window["-BIO_EXP_PLATE_TABLE-"].update(values=[[]])
         window["-BIO_EXP_PLATE_COUNTER-"].update(value="0")
         bio_exp_plate_data.update(value="No Data")
+        all_table_data["-BIO_EXP_PLATE_TABLE-"] = None
 
     return table_data
 
 
-def _update_bio_exp_compound_table(config, window, values, bio_exp_plate_data,
+def _update_bio_exp_compound_table(config, window, values,
                                    threshold=False, compound_amount=False, approval_check=False, hit=False):
 
     bio_exp_selected_plates = []
     table_name = "biological_compound_data"
     for temp_values in values["-BIO_EXP_PLATE_TABLE-"]:
-        bio_exp_selected_plates.append(bio_exp_plate_data[temp_values][0])
+
+        bio_exp_selected_plates.append(all_table_data["-BIO_EXP_PLATE_TABLE-"][temp_values][0])
 
     search_list_clm = "assay_plate"
     selected_headlines = ["compound_id", "score", "hit", "concentration", "approved", "assay_well", "note"]
@@ -186,27 +251,26 @@ def _update_bio_exp_compound_table(config, window, values, bio_exp_plate_data,
     else:
         table_data = None
 
+    all_table_data["-BIO_EXP_COMPOUND_TABLE-"] = table_data
     # update the note field for the plate table:
-    # try:
-    bio_exp_plate_data[values["-BIO_EXP_PLATE_TABLE-"][0]]
-    print("Testing error !!!! if it fails")
-    # except:
-    #
-    #     print(values["-BIO_EXP_PLATE_TABLE-"])
-    #     note = ""
-    # else:
-    temp_plate = bio_exp_plate_data[values["-BIO_EXP_PLATE_TABLE-"][0]][0]
-    dbf = DataBaseFunctions(config)
-    temp_data = dbf.find_data_single_lookup("biological_plate_data", temp_plate, "plate_name")
-    note = temp_data[0][9]
+    try:
+        all_table_data["-BIO_EXP_PLATE_TABLE-"][values["-BIO_EXP_PLATE_TABLE-"][0]]
+    except KeyError:
+        print(values["-BIO_EXP_PLATE_TABLE-"])
+        note = ""
+    else:
+        temp_plate = all_table_data["-BIO_EXP_PLATE_TABLE-"][values["-BIO_EXP_PLATE_TABLE-"][0]][0]
+        dbf = DataBaseFunctions(config)
+        temp_data = dbf.find_data_single_lookup("biological_plate_data", temp_plate, "plate_name")
+        note = temp_data[0][9]
+
     window["-BIO_EXP_PLATE_NOTE-"].update(value=note)
 
-    return table_data
 
-def bio_exp_compound_list(config, event, values, bio_exp_compound_data):
+def bio_exp_compound_list(config, event, values):
 
     # Sort the list based on the score
-    bio_exp_compound_data.sort(key=lambda x: x[1])
+    all_table_data["-BIO_EXP_COMPOUND_TABLE-"].sort(key=lambda x: x[1])
 
     try:
         float(values["-BIO_EXP_SET_THRESHOLD-"])
@@ -223,7 +287,7 @@ def bio_exp_compound_list(config, event, values, bio_exp_compound_data):
         compound_amount = float(values["-BIO_EXP_SET_COMPOUND_AMOUNT-"])
 
     bio_list = []
-    for rows, row_data in enumerate(bio_exp_compound_data):
+    for rows, row_data in enumerate(all_table_data["-BIO_EXP_COMPOUND_TABLE-"]):
         if threshold and row_data[1] > threshold:
             break
 

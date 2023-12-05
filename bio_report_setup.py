@@ -10,6 +10,7 @@ import tempfile
 
 from config_dictionary import bio_final_report_setup_fetch
 from database_handler import DataBaseFunctions
+from excel_handler import insert_structure
 from import_openpyxl_handler import *
 from bio_data_functions import bar_chart, frequency_writer
 
@@ -123,20 +124,16 @@ def _well_writer_final_report(ws, hits, final_report_setup, init_row):
         row_counter = init_row
 
 
-def _get_data(config, all_plate_data, final_report_setup, plate_to_layout, archive_plates_dict, bio_sample_dict=None):
+def _get_data(dbf, all_plate_data, final_report_setup, plate_to_layout, bio_sample_dict=None):
     """
     Grabs data that are needed for the different output sheets in the excel file.
 
-    :param config: The config handler, with all the default information in the config file.
-    :type config: configparser.ConfigParser
     :param all_plate_data: The data for all the plates.
     :type all_plate_data: dict
     :param final_report_setup: The settings for the final report. is set in the settings.
     :type final_report_setup: dict
     :param plate_to_layout: a dicts for the plate_layout
     :type plate_to_layout: dict
-    :param archive_plates_dict: the dict over the layouys
-    :type archive_plates_dict: dict
     :return:
         - temp_hits: All the hits that are within the values
         - data_calc_dict: A dicts over all the calculations and the values
@@ -154,7 +151,6 @@ def _get_data(config, all_plate_data, final_report_setup, plate_to_layout, archi
         - dict
         - dict
     """
-    dbf = DataBaseFunctions(config)
     data_calc_dict = {}
     temp_hits = {}
     empty_wells = {}
@@ -180,45 +176,49 @@ def _get_data(config, all_plate_data, final_report_setup, plate_to_layout, archi
                 freq_data[barcode] = []
                 for thresholds in final_report_setup["pora_threshold"]:
                     temp_hits[barcode][method][thresholds] = {}
-                for well in archive_plates_dict[plate_to_layout[barcode]]["sample"]:
-                    temp_well_value = all_plate_data[barcode]["plates"][method]["wells"][well]
-                    freq_data[barcode].append(temp_well_value)
-                    freq_data["all_data"].append(temp_well_value)
+                temp_plate_layout = eval(dbf.find_data_single_lookup("plate_layout", plate_to_layout[barcode],
+                                                                     "layout_name")[0][5])
+                for rows in temp_plate_layout:
+                    if temp_plate_layout[rows]["state"] == "sample":
+                        well = temp_plate_layout[rows]["well_id"]
+                        temp_well_value = all_plate_data[barcode]["plates"][method]["wells"][well]
+                        freq_data[barcode].append(temp_well_value)
+                        freq_data["all_data"].append(temp_well_value)
 
-                    if bio_sample_dict:
-                        try:
-                            compound_id = bio_sample_dict[barcode][well]["compound_id"]
-                        except KeyError:
-                            empty_wells[barcode].append(well)
-                            print(f"Well {well} on {barcode} have no transferee in the worklist.")
-                            continue
-                        else:
-                            if not compound_id:
-                                table = "compound_mp"
-                                well_headline = "mp_well"
-                                temp_well_data = bio_sample_dict[barcode][well]["source_well"]
-                                plate_headline = "mp_barcode"
-                                temp_plate_data = bio_sample_dict[barcode][well]["source_plate"]
-                                temp_row_data = dbf.find_data_double_lookup(table, temp_well_data, temp_plate_data,
-                                                                            well_headline, plate_headline)
-                                try:
-                                    temp_row_data[0][3]
-                                except IndexError:
-                                    print(f"Missing data for MP: {temp_plate_data} well: {temp_well_data}")
-                                    print(bio_sample_dict[barcode][well])
-                                else:
-                                    compound_id = temp_row_data[0][3]
-                                    bio_sample_dict[barcode][well]["compound_id"] = compound_id
+                        if bio_sample_dict:
+                            try:
+                                compound_id = bio_sample_dict[barcode][well]["compound_id"]
+                            except KeyError:
+                                empty_wells[barcode].append(well)
+                                print(f"Well {well} on {barcode} have no transferee in the worklist.")
+                                continue
+                            else:
+                                if not compound_id:
+                                    table = "compound_mp"
+                                    well_headline = "mp_well"
+                                    temp_well_data = bio_sample_dict[barcode][well]["source_well"]
+                                    plate_headline = "mp_barcode"
+                                    temp_plate_data = bio_sample_dict[barcode][well]["source_plate"]
+                                    temp_row_data = dbf.find_data_double_lookup(table, temp_well_data, temp_plate_data,
+                                                                                well_headline, plate_headline)
+                                    try:
+                                        temp_row_data[0][3]
+                                    except IndexError:
+                                        print(f"Missing data for MP: {temp_plate_data} well: {temp_well_data}")
+                                        print(bio_sample_dict[barcode][well])
+                                    else:
+                                        compound_id = temp_row_data[0][3]
+                                        bio_sample_dict[barcode][well]["compound_id"] = compound_id
 
-                            hit_data[compound_id] = temp_well_value
+                                hit_data[compound_id] = temp_well_value
 
-                    for split in final_report_setup["pora_threshold"]:
+                        for split in final_report_setup["pora_threshold"]:
 
-                        # Check if the specific threshold is include in the report
-                        if final_report_setup["pora_threshold"][split]:
-                            if float(final_report_setup["pora_threshold"][split]["min"]) < float(temp_well_value) < \
-                                    float(final_report_setup["pora_threshold"][split]["max"]):
-                                temp_hits[barcode][method][split][well] = temp_well_value
+                            # Check if the specific threshold is included in the report
+                            if final_report_setup["pora_threshold"][split]:
+                                if float(final_report_setup["pora_threshold"][split]["min"]) < float(temp_well_value) < \
+                                        float(final_report_setup["pora_threshold"][split]["max"]):
+                                    temp_hits[barcode][method][split][well] = temp_well_value
 
         for method in all_plate_data[barcode]["calculations"]:
             data_calc_dict[barcode][method] = {}
@@ -693,11 +693,8 @@ def _write_hits(config, ws, hit_data, threshold, hit_amount, include_hit, includ
             temp_image.close()
 
 
-
-
-def bio_final_report_controller(config, analyse_method, all_plate_data, output_file,
-                                include_hits, threshold, hit_amount, include_smiles, bio_sample_dict, plate_to_layout,
-                                archive_plates_dict, include_structure):
+def bio_final_report_controller(dbf, config, analyse_method, all_plate_data, output_file, include_hits, threshold,
+                                hit_amount, include_smiles, bio_sample_dict, plate_to_layout, include_structure):
     """
     The controller for the flow of data, that writes the final report in an excel file.
     :param config: The config handler, with all the default information in the config file.
@@ -722,8 +719,6 @@ def bio_final_report_controller(config, analyse_method, all_plate_data, output_f
     :type bio_sample_dict: dict or None
     :param plate_to_layout: a dicts for the plate_layout
     :type plate_to_layout: dict
-    :param archive_plates_dict: the dict over the layouys
-    :type archive_plates_dict: dict
     :param include_structure: boolen to determen if the file report should include png of the structure
     :type include_structure: bool
     :return: An excel file ready to be presented... or something..
@@ -759,7 +754,7 @@ def bio_final_report_controller(config, analyse_method, all_plate_data, output_f
     print("Start getting data")
     # gets data:
     temp_hits, data_calc_dict, plate_counter, all_states, all_methods, all_freq_data, hit_data, empty_wells = \
-        _get_data(config, all_plate_data, final_report_setup, plate_to_layout, archive_plates_dict, bio_sample_dict)
+        _get_data(dbf, all_plate_data, final_report_setup, plate_to_layout, bio_sample_dict)
 
     print("Start writing well-data to the file")
     # write well data
@@ -812,7 +807,7 @@ def bio_final_report_controller(config, analyse_method, all_plate_data, output_f
     if include_hits or include_smiles:
         print("write hits")
         ws_hits = wb.create_sheet("Hit List")
-        _write_hits(config, ws_hits, hit_data, threshold, hit_amount, include_smiles, include_structure,
+        _write_hits(config, ws_hits, hit_data, threshold, hit_amount, include_hits, include_smiles, include_structure,
                     bio_sample_dict)
 
     if include_smiles:

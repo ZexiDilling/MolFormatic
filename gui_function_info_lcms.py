@@ -1,7 +1,7 @@
 from PySimpleGUI import LISTBOX_SELECT_MODE_SINGLE, LISTBOX_SELECT_MODE_MULTIPLE, PopupError, PopupGetText
 from matplotlib import pyplot as plt
 
-from lcms_functions import get_peak_information, purity_plotting, add_start_end_time, purity_ops, grab_sample_data
+from lcms_functions import get_peak_information, lcms_plotting, add_start_end_time, lcms_ops, grab_sample_data
 from start_up_values import window_1_lcms, all_table_data
 
 
@@ -51,8 +51,8 @@ def lcms_calculation(config, window, values):
             sample_data, _ = grab_sample_data(window_1_lcms["sample_data_file"], window_1_lcms["purity_data"], config)
 
             all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"], \
-            purity_peak_list_table_data = purity_ops(sample_data, window_1_lcms["purity_data"], peak_information, ms_mode,
-                                                     delta_mass, mz_threshold, peak_amounts, mass)
+            purity_peak_list_table_data = lcms_ops(sample_data, window_1_lcms["purity_data"], peak_information, ms_mode,
+                                                   delta_mass, mz_threshold, peak_amounts, mass)
 
             add_start_end_time(purity_peak_list_table_data, sample_peak_dict)
             window["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"]. \
@@ -172,10 +172,10 @@ def lcms_drawing(check, window, values, event, peak_table_data, lc_graph_showing
             mz_value = None
 
         if window_1_lcms["purity_info_samples"]:
-            plot_style = purity_plotting(lc_method, window_1_lcms["purity_data"], purity_info_canvas,
-                                         window_1_lcms["purity_info_samples"], fig_size, ms_mode,
-                                         window_1_lcms["purity_info_rt_start"], window_1_lcms["purity_info_rt_end"],
-                                         wavelength, bin_numbers, mz_value, window_1_lcms["canvas_lines"])
+            plot_style = lcms_plotting(lc_method, window_1_lcms["purity_data"], purity_info_canvas,
+                                       window_1_lcms["purity_info_samples"], fig_size, ms_mode,
+                                       window_1_lcms["purity_info_rt_start"], window_1_lcms["purity_info_rt_end"],
+                                       wavelength, bin_numbers, mz_value, window_1_lcms["canvas_lines"])
 
         else:
             fig = plt.gcf()

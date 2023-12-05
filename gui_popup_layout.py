@@ -3,6 +3,19 @@ import PySimpleGUI as sg
 from info import unit_converter_list_mol, unit_converter_list_liquids, matrix_header
 
 
+def table_popup_layout(table_name, table_headings, table_data):
+    col = sg.Frame(table_name, [[
+        sg.Column([
+            [sg.Table(table_data, headings=table_headings, auto_size_columns=True, key="-POPUP_TABLE-")],
+            [sg.Button("Close", key="-TABLE_POPUP_DONE-")]
+        ])
+    ]])
+
+    layout = [[col]]
+
+    return sg.Window("Table overview", layout, finalize=True, resizable=True)
+
+
 def matrix_popup_layout(calc, state=None, method=None):
     table_headings = matrix_header
     table_data = []

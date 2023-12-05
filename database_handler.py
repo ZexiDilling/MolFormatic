@@ -431,7 +431,6 @@ class DataBaseFunctions:
 
         return final_text
 
-
     def return_table_data_from_list(self, table, search_list, search_list_clm, specific_clm):
         # Convert the list of selected assay names into a comma-separated string for the SQL query
         selected_assays_str = ", ".join([f"'{assay_name}'" for assay_name in search_list])
@@ -447,6 +446,13 @@ class DataBaseFunctions:
         temp_table = f"SELECT {from_string} FROM {table} WHERE {search_list_clm} IN ({selected_assays_str})"
 
         return self._row_creator(temp_table)
+
+    def grab_table_headers(self, table):
+
+        temp_data = f"SELECT * FROM {table}"
+        self.create_connection()
+        cursor = self.cursor.execute(temp_data)
+        return [description[0] for description in cursor.description]
 
     def return_table_data(self, table, search_limiter):
         """

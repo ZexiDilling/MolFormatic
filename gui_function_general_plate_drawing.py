@@ -1,13 +1,14 @@
 import copy
 from PySimpleGUI import PopupError, PopupGetText, PopupGetFolder, Popup, PopupYesNo
 
-from gui_functions import draw_plate
+from draw_basic import draw_plate
 from lcms_functions import plate_layout_to_excel
-from database_functions import update_database, delete_records_from_database, rename_record_in_the_database
+from database_functions import update_database, delete_records_from_database, rename_record_in_the_database, \
+    get_plate_layout, _get_list_of_names_from_database
 from helpter_functions import int_guard
 from compound_plate_formatting import plate_layout_re_formate
 from start_up_values import window_1_plate_layout, draw_tool_values, clm_to_row_converter, plate_type_count, \
-    get_plate_layout, window_tables
+    window_tables
 
 
 def _on_up_grab_graph_list(values, temp_x, temp_y):
@@ -224,7 +225,7 @@ def on_up(window, values, well_dict, dose_colour_dict, colour_select):
     return well_dict
 
 
-def on_move(window, values, graph_bio_exp, well_dict_bio_info,  well_dict):
+def on_move(window, values, graph_bio_exp, well_dict, well_dict_bio_info):
 
     try:
         values["-BIO_INFO_CANVAS-"]
@@ -234,18 +235,16 @@ def on_move(window, values, graph_bio_exp, well_dict_bio_info,  well_dict):
         if values["-BIO_INFO_CANVAS-"][0] and values["-BIO_INFO_CANVAS-"][1]:
             try:
                 temp_well_bio_info = graph_bio_exp.get_figures_at_location(values['-BIO_INFO_CANVAS-'])[0]
-                temp_well_id_bio_info = well_dict_bio_info[temp_well_bio_info]["well_id"]
+                temp_well_bio_info = temp_well_bio_info - draw_tool_values["well_off_set"]
             except IndexError:
                 temp_well_id_bio_info = ""
+            else:
+                try:
+                    temp_well_id_bio_info = well_dict_bio_info[temp_well_bio_info]["well_id"]
+                except KeyError:
+                    temp_well_id_bio_info = ""
             window["-INFO_BIO_GRAPH_TARGET-"].update(value=f"{temp_well_id_bio_info}")
 
-            if temp_well_id_bio_info:
-                temp_plate_name = values["-BIO_INFO_PLATES-"]
-                temp_analyse_method = values["-BIO_INFO_ANALYSE_METHOD-"]
-
-                temp_plate_wells_bio_info = \
-                    window_tables["plate_bio_info"[temp_plate_name]["plates"][temp_analyse_method]["wells"]]
-                window["-INFO_BIO_WELL_VALUE-"].update(value=temp_plate_wells_bio_info[temp_well_id_bio_info])
     try:
         values["-RECT_BIO_CANVAS-"]
     except KeyError:
@@ -287,7 +286,7 @@ def on_move(window, values, graph_bio_exp, well_dict_bio_info,  well_dict):
             window["-CANVAS_INFO_REP-"].update(value=f"rep: {temp_rep}")
 
 
-def draw_layout(config, window, values, well_dict, archive_plates_dict):
+def draw_layout(dbf, config, window, values, well_dict):
     well_dict.clear()
     # sets the size of the well for when it draws the plate
     graph = window_1_plate_layout["graph_plate"]
@@ -297,17 +296,18 @@ def draw_layout(config, window, values, well_dict, archive_plates_dict):
     sample_type = values["-RECT_SAMPLE_TYPE-"]
 
     if values["-ARCHIVE-"]:
+
         try:
-            copy.deepcopy(archive_plates_dict[values["-ARCHIVE_PLATES-"]]["well_layout"])
+            plate_data = dbf.find_data_single_lookup("plate_layout", values["-ARCHIVE_PLATES-"], "layout_name")[0]
         except KeyError:
             window["-ARCHIVE-"].update(False)
             values["-ARCHIVE-"] = False
         else:
-            well_dict = copy.deepcopy(archive_plates_dict[values["-ARCHIVE_PLATES-"]]["well_layout"])
+            well_dict = eval(plate_data[5])
             well_dict = plate_layout_re_formate(config, well_dict)
-            window["-PLATE-"].update(archive_plates_dict[values["-ARCHIVE_PLATES-"]]["plate_type"])
-            plate_type = archive_plates_dict[values["-ARCHIVE_PLATES-"]]["plate_type"]
-            sample_type = archive_plates_dict[values["-ARCHIVE_PLATES-"]]["sample_type"]
+            window["-PLATE-"].update(plate_data[2])
+            plate_type = plate_data[2]
+            sample_type = plate_data[4]
 
     well_dict, min_x, min_y, max_x, max_y, off_set = draw_plate(config, graph, plate_type, well_dict, gui_tab,
                                                                 archive_plates, sample_layout=sample_type)
@@ -337,7 +337,7 @@ def export_layout(config, window, values, well_dict):
             Popup("Done")
 
 
-def save_layout(config, window, values, well_dict, archive_plates_dict):
+def save_layout(dbf, config, window, values, well_dict):
     if not well_dict:
         PopupError("Please create a layout to save")
     elif any("paint" in stuff.values() for stuff in well_dict.values()):
@@ -353,44 +353,31 @@ def save_layout(config, window, values, well_dict, archive_plates_dict):
             temp_dict_name = PopupGetText("Name plate layout")
 
             if temp_dict_name:
-                archive_plates_dict[temp_dict_name] = {}
                 for index, well_counter in enumerate(well_dict):
                     temp_well_dict[index + 1] = copy.deepcopy(well_dict[well_counter])
-
-                archive_plates_dict[temp_dict_name]["well_layout"] = temp_well_dict
-                archive_plates_dict[temp_dict_name]["plate_type"] = values["-PLATE-"]
 
                 # saves the layout to the Database
                 # setting up the data for importing the new plate_layout to the database
                 temp_table = "plate_layout"
                 # ToDo add plate model ??
                 temp_plate_layout_data = {
-                    "plate_name": temp_dict_name,
-                    "plate_type": values["-PLATE-"],
-                    "plate_model": "placeholder"
+                    "layout_name": temp_dict_name,
+                    "plate_size": values["-PLATE-"],
+                    "plate_mode": "placeholder",
+                    "style": values["-RECT_SAMPLE_TYPE-"],
+                    "plate_layout": f"{temp_well_dict}"
                 }
 
                 update_database(config, temp_table, temp_plate_layout_data)
 
-                temp_sub_plate_layout_data = {
-                    "plate_sub": temp_dict_name,
-                    "plate_main": temp_dict_name,
-                    "plate_layout": f"{temp_well_dict}",
-                    "style": values["-RECT_SAMPLE_TYPE-"]
-                }
-                update_database(config, "plate_layout_sub", temp_sub_plate_layout_data)
-
                 # Updates the plate_list and archive_plates_dict with the new plate
-                plate_list, archive_plates_dict = get_plate_layout(config)
+                plate_list = _get_list_of_names_from_database(dbf, "plate_layout", "plate_name")
 
                 # Updates the window with new values
                 window["-ARCHIVE_PLATES-"].update(values=sorted(plate_list), value=plate_list[0])
 
-                # window["-BIO_PLATE_LAYOUT-"].update(values=sorted(plate_list), value="")
-                # window["-SEARCH_PLATE_LAYOUT-"].update(values=sorted(plate_list), value="")
 
-
-def delete_layout(config, window, values):
+def delete_layout(dbf, window, values):
     # ToDO FIX THIS so it can delete layouts
     if not values["-ARCHIVE_PLATES-"]:
         PopupError("Please select a layout to delete")
@@ -399,17 +386,17 @@ def delete_layout(config, window, values):
         table = "plate_layout"
         headline = "plate_name"
         data_value = values["-ARCHIVE_PLATES-"]
-        delete_records_from_database(config, table, headline, data_value)
+        dbf.delete_records(table, headline, data_value)
 
         # Grabs the updated data from the database
-        plate_list, archive_plates_dict = get_plate_layout(config)
+        plate_list = _get_list_of_names_from_database(dbf, "plate_layout", "plate_name")
 
         # Updates the window with new values
         window["-ARCHIVE_PLATES-"].update(values=sorted(plate_list), value=plate_list[0])
         # window["-BIO_PLATE_LAYOUT-"].update(values=sorted(plate_list), value="")
 
 
-def rename_layout(config, window, values):
+def rename_layout(dbf, window, values):
     # ToDO FIX THIS so it can Rename layouts - It needs to rename main and all sub layouts -
     #  Needs to take into account if layouts have been used by assays or other.
     if not values["-ARCHIVE_PLATES-"]:
@@ -422,16 +409,10 @@ def rename_layout(config, window, values):
             headline = "plate_name"
             old_value = values["-ARCHIVE_PLATES-"]
             new_value = temp_dict_name
-            rename_record_in_the_database(config, table, headline, old_value, new_value)
+            dbf.rename_record_value(table, headline, old_value, new_value)
 
             # Grabs the updated data from the database
-            plate_list, archive_plates_dict = get_plate_layout(config)
-
-            # Removes the old name and data from the plate_list and archive_plates_dict and adds the new one
-            # archive_plates_dict[temp_dict_name] = archive_plates_dict[values["-ARCHIVE_PLATES-"]]
-            # archive_plates_dict.pop(values["-ARCHIVE_PLATES-"])
-            # plate_list.remove(values["-ARCHIVE_PLATES-"])
-            # plate_list.append(temp_dict_name)
+            plate_list = _get_list_of_names_from_database(dbf, "plate_layout", "plate_name")
 
             # Updates the window with new values
             window["-ARCHIVE_PLATES-"].update(values=sorted(plate_list), value=plate_list[0])

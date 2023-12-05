@@ -71,12 +71,14 @@ def bio_compound_info_from_worklist(config, bio_sample_list):
     return sample_dict, all_destination_plates
 
 
-def bio_data(config, folder, plate_to_layout, archive_plates_dict, analysis_method,
+def bio_data(dbf, config, folder, plate_to_layout, analysis_method,
              bio_sample_dict, save_location, add_compound_ids, write_to_excel=True):
 
     """
     Handles the Bio data.
 
+    :param dbf: the DataBaseFunction Class
+    :type dbf: class
     :param config: The config handler, with all the default information in the config file.
     :type config: configparser.ConfigParser
     :param folder: The folder where the raw data is located
@@ -84,8 +86,6 @@ def bio_data(config, folder, plate_to_layout, archive_plates_dict, analysis_meth
     :param plate_to_layout: Either the name of the default plate_layout that all plates are using or a dict over each
         plate and the layout for that place
     :type plate_to_layout: str or dict
-    :param archive_plates_dict: The layout for the plate with values for each well, what state they are in
-    :type archive_plates_dict: dict
     :param bio_sample_dict: None or a dict of sample ide, per plate analysed
     :type bio_sample_dict: dict
     :param analysis_method: The analysis method
@@ -121,8 +121,8 @@ def bio_data(config, folder, plate_to_layout, archive_plates_dict, analysis_meth
             if temp_plate_layout_name == "skip":
                 continue
             else:
-                temp_plate_layout = archive_plates_dict[temp_plate_layout_name]
-
+                row_data = dbf.find_data_single_lookup("plate_layout", "testing", "layout_name")
+                temp_plate_layout = eval(row_data[0][5])
                 all_data, well_row_col, well_type, barcode, date = original_data_dict(files, temp_plate_layout)
                 if not all_data:
                     return False
@@ -137,11 +137,13 @@ def bio_data(config, folder, plate_to_layout, archive_plates_dict, analysis_meth
     return True, all_plates_data, date, used_plates, plate_layout_dict
 
 
-def bio_full_report(config, analyse_method, all_plate_data, output_folder,
+def bio_full_report(dbf, config, analyse_method, all_plate_data, output_folder,
                     final_report_name, include_hits, threshold, hit_amount, include_smiles, bio_sample_dict,
-                    plate_to_layout, archive_plates_dict, include_structure):
+                    plate_to_layout, include_structure):
     """
     Writes the final report for the bio data
+    :param dbf: the DataBaseFunction Class
+    :type dbf: class
     :param config: The config handler, with all the default information in the config file.
     :type config: configparser.ConfigParser
     :param analyse_method: The analysed method used for the data
@@ -166,17 +168,15 @@ def bio_full_report(config, analyse_method, all_plate_data, output_folder,
     :type bio_sample_dict: dict or None
     :param plate_to_layout: a dicts for the plate_layout
     :type plate_to_layout: dict
-    :param archive_plates_dict: the dict over the layouys
-    :type archive_plates_dict: dict
     :param include_structure: boolen to determen if the file report should include png of the structure
     :type include_structure: bool
     :return: A excel report file with all the data
     """
 
     output_file = f"{output_folder}/{final_report_name}.xlsx"
-    bio_final_report_controller(config, analyse_method, all_plate_data, output_file,
+    bio_final_report_controller(dbf, config, analyse_method, all_plate_data, output_file,
                                 include_hits, threshold, hit_amount, include_smiles, bio_sample_dict, plate_to_layout,
-                                archive_plates_dict, include_structure)
+                                include_structure)
 
 
 def bio_experiment_to_database(config, assay_data, used_plates, all_plates_data, plate_analyse_methods, responsible,
@@ -380,22 +380,21 @@ def bio_experiment_to_database(config, assay_data, used_plates, all_plates_data,
         print(f"{plate_index + 1} / {total_plate_amount} have been uploaded to the database - last plate was: {plates}")
 
 
-def bio_import_handler_single_point(config, bio_import_folder, plate_to_layout, archive_plates_dict,
-                                    analyse_method, bio_sample_dict, bio_export_folder, add_compound_ids, export_to_excel,
-                                    all_destination_plates, combined_report_check, import_to_database_check,
-                                    final_report_name, include_hits, threshold, hit_amount,
-                                    include_smiles, include_structure, assay_name, responsible, concentration):
+def bio_import_handler_single_point(dbf, config, bio_import_folder, plate_to_layout, analyse_method, bio_sample_dict,
+                                    bio_export_folder, add_compound_ids, export_to_excel, all_destination_plates,
+                                    combined_report_check, import_to_database_check, final_report_name, include_hits,
+                                    threshold, hit_amount, include_smiles, include_structure, assay_name, responsible,
+                                    concentration):
 
     worked, all_plates_data, date, used_plates, plate_to_layout = \
-        bio_data(config, bio_import_folder, plate_to_layout, archive_plates_dict,
+        bio_data(dbf, config, bio_import_folder, plate_to_layout,
                  analyse_method, bio_sample_dict, bio_export_folder, add_compound_ids, export_to_excel)
 
     # Check if there should be produced a combined report over all the data
     if combined_report_check:
-        bio_full_report(config, analyse_method, all_plates_data,
-                        bio_export_folder, final_report_name, include_hits,
-                        threshold, hit_amount, include_smiles, bio_sample_dict, plate_to_layout,
-                        archive_plates_dict, include_structure)
+        bio_full_report(dbf, config, analyse_method, all_plates_data, bio_export_folder, final_report_name,
+                        include_hits, threshold, hit_amount, include_smiles, bio_sample_dict, plate_to_layout,
+                        include_structure)
 
     # Check if the data should be added to the database
     if import_to_database_check:
@@ -899,21 +898,21 @@ def _folder_digger_for_file_names(folder):
     return file_list
 
 
-def plate_layout_setup(folder, default_plate_layout, plate_layout_list):
+def plate_layout_setup(dbf, folder, default_plate_layout):
     """
     Gets all files from a folder, and list them in a table, where the user can choose the layout for each plate
+    :param dbf: The DataBaseFunction class
+    :param dbf: class
     :param folder:
     :type folder: str
     :param default_plate_layout: The default plate layout
     :type default_plate_layout: str
-    :param plate_layout_list: A list with all the plate layouts
-    :type plate_layout_list: list
     :return: a dicts with each plate having its own layout
     :rtype: dict
     """
 
     files = _folder_digger_for_file_names(folder)
-    all_plate_layouts = plate_layout_chooser(files, default_plate_layout, plate_layout_list)
+    all_plate_layouts = plate_layout_chooser(dbf, files, default_plate_layout)
 
     return all_plate_layouts
 

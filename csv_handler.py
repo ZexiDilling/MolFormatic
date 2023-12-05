@@ -549,9 +549,10 @@ class CSVWriter:
 
             for plate in range(plate_amount):
                 destination_plate = f"{assay_name}_{plate + initial_plate}"
-                for wells in plate_layout["well_layout"]:
-                    destination_well = plate_layout["well_layout"][wells]["well_id"]
-                    well_state = plate_layout["well_layout"][wells]["state"]
+                for counter in plate_layout:
+
+                    destination_well = plate_layout[counter]["well_id"]
+                    well_state = plate_layout[counter]["state"]
 
                     # Check if the well is suppose to have samples in it, and if it does, add sample from MotherPlates
                     if well_state == "sample":

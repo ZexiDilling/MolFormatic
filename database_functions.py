@@ -138,3 +138,152 @@ def grab_table_data(config, table_name, search_limiter=None, single_row=None, da
             return all_table_data, headlines
         else:
             return None, None
+
+
+def _get_list_of_names_from_database_double_lookup(dbf, table, column_headline, limiting_value, limiting_header):
+
+    temp_rows = dbf.find_data_single_lookup(table, limiting_value, limiting_header)
+    table_header = dbf.grab_table_headers(table)
+    try:
+        table_index = table_header.index(column_headline)
+    except ValueError:
+        return None
+    else:
+        name_list = []
+        for row_data in temp_rows:
+            for counter, data in enumerate(row_data):
+                if counter == table_index + 1:
+                    name_list.append(data)
+
+    return name_list
+
+
+def _get_list_of_names_from_database(dbf, table, column_headline):
+    """
+    Gets a list of the plate names from the database
+    :param dbf: The DataBaseFunction
+    :type dbf: class
+    :param table: The table where the data is storage
+    :type table: str
+    :param column_headline: The headline of the column that is used for finding data
+    :type column_headline: str
+    :return:
+    """
+    temp_rows = dbf.find_column_data(table, column_headline)
+    temp_list = [names for names in temp_rows]
+    return temp_list
+
+
+def _get_plate_archive(dbf, table, column_headline, plate_names):
+    """
+    Gets a dict of the plate layouts from the database, based on a list of plate names
+    :param dbf: The DataBaseFunction
+    :type dbf: class
+    :param plate_names: A list of plate names
+    :type plate_names: list
+    :param table: The table where the data is storage
+    :type table: str
+    :param column_headline: The headline of the column that is used for finding data
+    :type column_headline: str
+    :return: a dict of the plate layouts
+    :rtype: dict
+    """
+    archive_plates_dict = {}
+
+    # loops over all the plates
+    for plates in plate_names:
+        temp_row_data = dbf.find_data_single_lookup(table, plates, column_headline)
+
+        # grabs data from the return rown
+        plate_name = temp_row_data[0][1]
+        plate_type = temp_row_data[0][2]
+
+        temp_sub_row_data = dbf.find_data_single_lookup("plate_layout", plate_name, "layout_name")
+        try:
+            well_layout = eval(temp_sub_row_data[0][5])
+        except IndexError:
+            well_layout = None
+
+        try:
+            sample_type = temp_sub_row_data[0][4]
+        except IndexError:
+            sample_type = None
+
+        # Generates the dict
+        archive_plates_dict[plate_name] = {"well_layout": well_layout,
+                                           "plate_type": plate_type,
+                                           "sample_type": sample_type,
+                                           "sample": [],
+                                           "blank": [],
+                                           "max": [],
+                                           "minimum": [],
+                                           "positive": [],
+                                           "negative": [],
+                                           "empty": []}
+
+        # Makes list of the different well-types and adds them
+        if well_layout is not None:
+            temp_well_dict = well_layout
+            for counter in temp_well_dict:
+                well_id = temp_well_dict[counter]["well_id"]
+                if temp_well_dict[counter]["state"] == "sample":
+                    archive_plates_dict[plate_name]["sample"].append(well_id)
+                elif temp_well_dict[counter]["state"] == "blank":
+                    archive_plates_dict[plate_name]["blank"].append(well_id)
+                elif temp_well_dict[counter]["state"] == "max":
+                    archive_plates_dict[plate_name]["max"].append(well_id)
+                elif temp_well_dict[counter]["state"] == "minimum":
+                    archive_plates_dict[plate_name]["minimum"].append(well_id)
+                elif temp_well_dict[counter]["state"] == "positive":
+                    archive_plates_dict[plate_name]["positive"].append(well_id)
+                elif temp_well_dict[counter]["state"] == "negative":
+                    archive_plates_dict[plate_name]["negative"].append(well_id)
+                elif temp_well_dict[counter]["state"] == "empty":
+                    archive_plates_dict[plate_name]["empty"].append(well_id)
+
+    return archive_plates_dict
+
+
+def get_plate_layout(config):
+    """
+    Gets a list of plate names and their layout from the database
+    :param config: The config handler, with all the default information in the config file.
+    :type config: configparser.ConfigParser
+    :return: plate_names, archive_plates_dict
+    :rtype: list, dict
+    """
+
+    # Connects to the database and setting up standard values
+    dbf = DataBaseFunctions(config)
+    table = "plate_layout"
+    column_headline = "layout_name"
+
+    # gets a list of the plate names
+    plate_names = _get_list_of_names_from_database(dbf, table, column_headline)
+
+    # Gets a dict over all the plate_layouts
+    archive_plates_dict = _get_plate_archive(dbf, table, column_headline, plate_names)
+
+    return plate_names, archive_plates_dict
+
+
+def _get_assay_list(config):
+    assay_table_data = grab_table_data(config, "assay")
+    assay_list = []
+    for row in assay_table_data[0]:
+        assay_list.append(row[1])
+
+    return assay_list
+
+#
+# def gui_data_fetcher(db_active, config):
+#     if db_active:
+#         plate_list, archive_plates_dict = get_plate_layout(config)
+#         assay_list = _get_assay_list(config)
+#     else:
+#         archive_plates_dict = {}
+#         plate_list = []
+#         assay_list = []
+#
+#     return plate_list, assay_list, archive_plates_dict
+

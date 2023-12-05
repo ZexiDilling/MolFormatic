@@ -1,13 +1,21 @@
 from math import floor
 
 import PySimpleGUI as sg
-from info import matrix_header, unit_converter_list, unit_converter_list_liquids, unit_converter_list_mol
 
-#ToDo add tooltips to everything!!!!!!!!! ARG!!!!!!
+from database_functions import _get_list_of_names_from_database, _get_list_of_names_from_database_double_lookup
+from info import matrix_header, unit_converter_list, unit_converter_list_liquids, unit_converter_list_mol
 
 
 class GUILayout:
-    def __init__(self, config, plate_list):
+    def __init__(self, config, dbf):
+        column_headline = "layout_name"
+        limiting_value = "single"
+        limiting_header = "style"
+        table = "plate_layout"
+
+        plate_list = _get_list_of_names_from_database_double_lookup(dbf, table, column_headline, limiting_value,
+                                                                    limiting_header)
+        self.assay = _get_list_of_names_from_database(dbf, "assay", "assay_name")
         self.config = config
         self.standard_size = 20
         self.input_size = 5
@@ -19,6 +27,7 @@ class GUILayout:
         self.plate_list = plate_list
         self.lable_style = "solid"
         self.show_input_style = "sunken"
+        self.plate_type = ["plate_96", "plate_384", "plate_1536"]
 
     @staticmethod
     def menu_top():
@@ -195,13 +204,13 @@ class GUILayout:
                                      "Default will be the layout chosen in the platelayouyt dropdown")],
                 [sg.Text("Plate Layout", size=self.standard_size),
                  sg.DropDown(sorted(self.plate_list), key="-BIO_PLATE_LAYOUT-", enable_events=True,
-                             size=self.standard_size)],
+                             size=self.standard_size, default_value=self.plate_list[0])],
                 [sg.Text("Sample Type", size=self.standard_size),
                  sg.DropDown(self.sample_style, key="-BIO_SAMPLE_TYPE-", default_value=self.sample_style[0],
                              size=self.standard_size, enable_events=True,
                              tooltip="This indicates how many times each sample is on the plate. "
                                      "Choosing custome, will let you choose more than 3 times.")],
-                [sg.Text("Analyse Style (Not working)", size=self.standard_size),
+                [sg.Text("Analyse Style", size=self.standard_size),
                  sg.DropDown(self.analyse_style, key="-BIO_ANALYSE_TYPE-", size=self.standard_size, enable_events=True,
                              default_value=self.analyse_style[0],
                              tooltip="What style to use for analysing the samples")],
@@ -326,7 +335,7 @@ class GUILayout:
 
         return layout
 
-    def setup_1_purity(self):
+    def setup_1_lcms(self):
         """
 
         :return: A layour for the purity-module in the top box
@@ -397,15 +406,14 @@ class GUILayout:
         for keys in list(self.config["plate_colouring"].keys()):
             color_select[keys] = self.config["plate_colouring"][keys]
 
-        plate_type = ["plate_96", "plate_384", "plate_1536"]
-        sample_type = self.sample_style
+
 
         col_graph = sg.Frame("Plate Layout", [[
             sg.Column([
                 [sg.Graph(canvas_size=(500, 350), graph_bottom_left=(0, 0), graph_top_right=(500, 350),
                           background_color='grey', key="-RECT_BIO_CANVAS-", enable_events=True, drag_submits=True,
                           motion_events=True)],
-                [sg.DropDown(values=plate_type, default_value=plate_type[1], key="-PLATE-"),
+                [sg.DropDown(values=self.plate_type, default_value=self.plate_type[1], key="-PLATE-"),
                  sg.B("Draw Plate", key="-DRAW-"),
                  # sg.B("Add sample layout", key="-DRAW_SAMPLE_LAYOUT-"),
                  sg.Text(key="-CANVAS_INFO_WELL-"),
@@ -497,14 +505,13 @@ class GUILayout:
         draw_options = sg.Frame("Options", [[
             sg.Column([
                 [tab_draw_group],
-                [sg.Checkbox("Use Archive", default=False, key="-ARCHIVE-", size=floor(self.standard_size / 2)),
-                 sg.DropDown(sample_type, key="-RECT_SAMPLE_TYPE-", default_value=sample_type[0], visible=True,
-                             enable_events=True)],
-                [sg.T("Main", size=5),
+                [sg.Checkbox("Use Archive", default=False, key="-ARCHIVE-", size=floor(self.standard_size / 2))],
+                [sg.T("Style", size=5),
+                 sg.DropDown(self.analyse_style, key="-RECT_SAMPLE_TYPE-", default_value=self.analyse_style[0],
+                             visible=True, enable_events=True)],
+                [sg.T("Archive", size=5),
                  sg.DropDown(sorted(self.plate_list), key="-ARCHIVE_PLATES-", size=self.standard_size,
                              enable_events=True)],
-                [sg.T("Sub", size=5),
-                 sg.DropDown([], key="-ARCHIVE_PLATES_SUB-", size=self.standard_size)],
                 [sg.Button("Save", key="-SAVE_LAYOUT-"),
                  sg.Button("Rename", key="-RENAME_LAYOUT-"),
                  sg.Button("Delete", key="-DELETE_LAYOUT-"),
@@ -985,22 +992,23 @@ class GUILayout:
         info_purity_table_headings = ["Purity", "Replicates", "Date"]
         row_info_table = sg.Frame("Info Table", [[
             sg.Column([
+                [sg.T("Double click table name, to get a popup for that table")],
                 [sg.Table(values=[], headings=info_mp_table_headings, key="-COMPOUND_INFO_INFO_MP_TABLE-",
                           justification="center", auto_size_columns=False, enable_click_events=True,
                           num_rows=2, visible=True),
-                 sg.T("Mp")],
+                 sg.T("Mp", key="-COMPOUND_INFO_MP-", enable_events=True)],
                 [sg.Table(values=[], headings=info_dp_table_headings, key="-COMPOUND_INFO_INFO_DP_TABLE-",
                           justification="center", auto_size_columns=False, enable_click_events=True,
                           num_rows=2, visible=True),
-                 sg.T("Dp")],
+                 sg.T("Dp", key="-COMPOUND_INFO_DP-", enable_events=True)],
                 [sg.Table(values=[], headings=info_assay_table_headings, key="-COMPOUND_INFO_INFO_ASSAY_TABLE-",
                           justification="center", auto_size_columns=False, enable_click_events=True,
                           num_rows=2, visible=True),
-                 sg.T("Assays")],
+                 sg.T("Assays", key="-COMPOUND_INFO_ASSAY-", enable_events=True)],
                 [sg.Table(values=[], headings=info_hits_table_headings, key="-COMPOUND_INFO_INFO_HITS_TABLE-",
                           justification="center", auto_size_columns=False, enable_click_events=True,
                           num_rows=2, visible=True),
-                 sg.T("Hits")],
+                 sg.T("Hits", key="-COMPOUND_INFO_HITS-", enable_events=True)],
                 # [sg.Table(values=[], headings=info_transfer_table_headings, key="-COMPOUND_INFO_INFO_TRANSFERS_TABLE
                 # -", justification="center", #           auto_size_columns=False, enable_click_events=True,
                 # num_rows=2, visible=True),
@@ -1008,7 +1016,7 @@ class GUILayout:
                 [sg.Table(values=[], headings=info_purity_table_headings, key="-COMPOUND_INFO_INFO_PURITY_USED_TABLE-",
                           justification="center", auto_size_columns=False, enable_click_events=True,
                           num_rows=2, visible=True),
-                 sg.T("Purity")]
+                 sg.T("Purity", key="-COMPOUND_INFO_PURITY-", enable_events=True)]
             ])
         ]], expand_x=True)
 
@@ -1018,23 +1026,38 @@ class GUILayout:
 
     def setup_2_bio(self):
         # analyse_method = ["original", "normalised", "pora"]
-        analyse_method = []
+        runs = ["All"]
+        analyse_method = ["All", "Single", "Dose"]
+        plates = ["All"]
+        dropdown_size = 14
         mapping = ["State Mapping", "Heatmap", "Hit Map"]
 
         row_settings = sg.Frame("Bio Information", [[
             sg.Column([
-                        [sg.Push(),
+                        [sg.T("", key="-BIO_INFO_HEADLINE-"),
+                         sg.Checkbox("Approved Only", key="-BIO_INFO_APPROVED_CHECK-",
+                                     enable_events=True, default=True),
+                         sg.Push(),
                          sg.Checkbox("Plate Report", key="-BIO_INFO_EXPORT_PLATE_REPORT-"),
                          sg.Checkbox("Final Report", key="-BIO_INFO_EXPORT_FINAL_REPORT-"),
                          sg.B("Export", key="-BIO_INFO_EXPORT-")],
                         [sg.HorizontalSeparator()],
-                        [sg.T("Analyse method", size=14),
-                         sg.DropDown(analyse_method, key="-BIO_INFO_ANALYSE_METHOD-", size=14, enable_events=True),
-                         sg.T("Plate Mapping", size=14),
-                         sg.DropDown(mapping, key="-BIO_INFO_MAPPING-", size=14, enable_events=True)],
-                        [sg.T("Plate", size=14),
-                         sg.InputCombo([], key="-BIO_INFO_PLATES-", size=14, enable_events=True),
-                         sg.T("State", size=14),
+                        [sg.T("Assay", size=10),
+                         sg.DropDown(self.assay, key="-BIO_INFO_ASSAY_DROPDOWN-",
+                                     size=dropdown_size, enable_events=True),
+                         sg.T("Method", size=10),
+                         sg.DropDown(analyse_method, key="-BIO_INFO_ANALYSE_METHOD-", size=dropdown_size,
+                                     default_value=analyse_method[0], enable_events=True)],
+                        [sg.T("Runs", size=10),
+                         sg.DropDown(runs, key="-BIO_INFO_RUN_DROPDOWN-", size=dropdown_size,
+                                     default_value=runs[0], enable_events=True),
+                         sg.T("Mapping", size=10),
+                         sg.DropDown(mapping, key="-BIO_INFO_MAPPING-", size=dropdown_size, enable_events=True,
+                                     default_value=mapping[0])],
+                        [sg.T("Plates", size=10),
+                         sg.DropDown(plates, key="-BIO_INFO_PLATES_DROPDOWN-", size=14,
+                                     default_value=plates[0], enable_events=True),
+                         sg.T("State", size=10),
                          sg.InputCombo([], key="-BIO_INFO_STATES-", size=14, enable_events=True)]
                     ])
         ]], expand_x=True)
@@ -1061,83 +1084,140 @@ class GUILayout:
         ]], expand_x=True)
 
         col_hit_mapping = sg.Column([
-            [sg.T("Hit-Map Settings", relief="groove")],
+            [sg.T("Hit-Map Settings", relief="groove",
+                  tooltip="Below is  the upper and lower bound for each set. Top left is TH-1 lower bounder, "
+                          "to the right is TH-1 upper bound. First row is TH-1 and TH-2. Second row is TH-3 and TH-4 "
+                          "and so on")],
             [sg.HorizontalSeparator()],
-            [sg.T("TH-1 bound", size=10),
-             sg.InputText(key="-BIO_INFO_PORA_LOW_MIN_HIT_THRESHOLD-", size=8, enable_events=True,
+            [sg.InputText(key="-BIO_INFO_PORA_TH_1_MIN_HIT_THRESHOLD-", size=5, enable_events=True,
                           default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_1_min")),
-             sg.InputText(key="-BIO_INFO_PORA_LOW_MAX_HIT_THRESHOLD-", size=8, enable_events=True,
-                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_1_max"))],
-            [sg.T("TH-2 bound", size=10),
-             sg.InputText(key="-BIO_INFO_PORA_MID_MIN_HIT_THRESHOLD-", size=8, enable_events=True,
+             sg.InputText(key="-BIO_INFO_PORA_TH_1_MAX_HIT_THRESHOLD-", size=5, enable_events=True,
+                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_1_max")),
+             sg.InputText(key="-BIO_INFO_PORA_TH_2_MIN_HIT_THRESHOLD-", size=5, enable_events=True,
                           default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_2_min")),
-             sg.InputText(key="-BIO_INFO_PORA_MID_MAX_HIT_THRESHOLD-", size=8, enable_events=True,
+             sg.InputText(key="-BIO_INFO_PORA_TH_2_MAX_HIT_THRESHOLD-", size=5, enable_events=True,
                           default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_2_max"))],
-            [sg.T("TH-3 bound", size=10),
-             sg.InputText(key="-BIO_INFO_PORA_HIGH_MIN_HIT_THRESHOLD-", size=8, enable_events=True,
+
+            [sg.InputText(key="-BIO_INFO_PORA_TH_3_MIN_HIT_THRESHOLD-", size=5, enable_events=True,
                           default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_3_min")),
-             sg.InputText(key="-BIO_INFO_PORA_HIGH_MAX_HIT_THRESHOLD-", size=8, enable_events=True,
-                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_3_max"))],
+             sg.InputText(key="-BIO_INFO_PORA_TH_3_MAX_HIT_THRESHOLD-", size=5, enable_events=True,
+                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_3_max")),
+             sg.InputText(key="-BIO_INFO_PORA_TH_4_MIN_HIT_THRESHOLD-", size=5, enable_events=True,
+                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_4_min")),
+             sg.InputText(key="-BIO_INFO_PORA_TH_4_MAX_HIT_THRESHOLD-", size=5, enable_events=True,
+                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_4_max"))],
 
-            [sg.ColorChooserButton("TH-1 Values Colour", key="-INFO_BIO_HIT_MAP_LOW_COLOUR-", size=(15, None),
-                                   target="-BIO_INFO_HIT_MAP_TH_1_COLOUR_TARGET-"),
-             sg.T(background_color=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_1"]
-                  , key="-BIO_INFO_HIT_MAP_TH_1_COLOUR_BOX-", size=8, relief="groove"),
-             sg.Input(key="-BIO_INFO_HIT_MAP_TH_1_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
-                      default_text=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_1"])],
+            [sg.InputText(key="-BIO_INFO_PORA_TH_5_MIN_HIT_THRESHOLD-", size=5, enable_events=True,
+                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_5_min")),
+             sg.InputText(key="-BIO_INFO_PORA_TH_5_MAX_HIT_THRESHOLD-", size=5, enable_events=True,
+                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_5_max")),
+             sg.InputText(key="-BIO_INFO_PORA_TH_6_MIN_HIT_THRESHOLD-", size=5, enable_events=True,
+                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_6_min")),
+             sg.InputText(key="-BIO_INFO_PORA_TH_6_MAX_HIT_THRESHOLD-", size=5, enable_events=True,
+                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_6_max"))],
 
-            [sg.ColorChooserButton("TH-2 Values Colour", key="-INFO_BIO_HIT_MAP_MID_COLOUR-", size=(15, None),
-                                   target="-BIO_INFO_HIT_MAP_TH_2_COLOUR_TARGET-"),
-             sg.T(background_color=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_2"]
-                  , key="-BIO_INFO_HIT_MAP_TH_2_COLOUR_BOX-", size=8, relief="groove"),
-             sg.Input(key="-BIO_INFO_HIT_MAP_TH_2_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
-                      default_text=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_2"])],
+            [sg.InputText(key="-BIO_INFO_PORA_TH_7_MIN_HIT_THRESHOLD-", size=5, enable_events=True,
+                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_7_min")),
+             sg.InputText(key="-BIO_INFO_PORA_TH_7_MAX_HIT_THRESHOLD-", size=5, enable_events=True,
+                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_7_max")),
+             sg.InputText(key="-BIO_INFO_PORA_TH_8_MIN_HIT_THRESHOLD-", size=5, enable_events=True,
+                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_8_min")),
+             sg.InputText(key="-BIO_INFO_PORA_TH_8_MAX_HIT_THRESHOLD-", size=5, enable_events=True,
+                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_8_max"))],
 
-            [sg.ColorChooserButton("TH-3 Values Colour", key="-INFO_BIO_HIT_MAP_HIGH_COLOUR-", size=(15, None),
-                                   target="-BIO_INFO_HIT_MAP_TH_3_COLOUR_TARGET-"),
-             sg.T(background_color=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_3"]
-                  , key="-BIO_INFO_HIT_MAP_TH_3_COLOUR_BOX-", size=8, relief="groove"),
-             sg.Input(key="-BIO_INFO_HIT_MAP_TH_3_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
-                      default_text=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_3"])],
-            [sg.Button("More bins", key="-BIO_INFO_BOUNDS_BUTTON-"), sg.Listbox(values=["1-bin", "2-bin"])]
-            # [sg.T("Low Colour", size=10), sg.DropDown(colours, key="-INFO_BIO_Hit_LOW-", enable_events=True,
-            #                                           default_value=self.config["Settings_bio"]
-            #                                           ["plate_report_pora_threshold_colour_low"], size=14)],
-            # [sg.T("Mid Colour", size=10), sg.DropDown(colours, key="-INFO_BIO_Hit_MID-", enable_events=True,
-            #                                           default_value=self.config["Settings_bio"]
-            #                                           ["plate_report_pora_threshold_colour_mid"], size=14)],
-            # [sg.T("High Colour", size=10), sg.DropDown(colours, key="-INFO_BIO_Hit_HIGH-", enable_events=True,
-            #                                            default_value=self.config["Settings_bio"]
-            #                                            ["plate_report_pora_threshold_colour_high"], size=14)],
-        ], key="-INFO_BIO_ROW_HIT-"
+            [sg.InputText(key="-BIO_INFO_PORA_TH_9_MIN_HIT_THRESHOLD-", size=5, enable_events=True,
+                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_9_min")),
+             sg.InputText(key="-BIO_INFO_PORA_TH_9_MAX_HIT_THRESHOLD-", size=5, enable_events=True,
+                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_9_max")),
+             sg.InputText(key="-BIO_INFO_PORA_TH_10_MIN_HIT_THRESHOLD-", size=5, enable_events=True,
+                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_10_min")),
+             sg.InputText(key="-BIO_INFO_PORA_TH_10_MAX_HIT_THRESHOLD-", size=5, enable_events=True,
+                          default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_10_max"))],
+
+        ], key="-INFO_BIO_ROW_HIT-", vertical_alignment="top"
             # , size=(0, 0)
         )
-
+        box_size = 3
+        text_siz = 5
         col_heatmap = sg.Column([
-            [sg.T("Heatmap Settings", relief="groove")],
+            [sg.T("Heatmap Settings")],
             [sg.HorizontalSeparator()],
-            [sg.ColorChooserButton("Low Values Colour", key="-INFO_BIO_HEATMAP_LOW_COLOUR-", size=(15, None),
-                                   target="-BIO_INFO_HEATMAP_LOW_COLOUR_TARGET-"),
-             sg.T(background_color=self.config["Settings_bio"]["plate_report_heatmap_colours_low"]
-                      , key="-BIO_INFO_HEATMAP_LOW_COLOUR_BOX-", size=8, relief="groove"),
+            [sg.ColorChooserButton("Low", key="-BIO_INFO_HEATMAP_LOW_COLOUR-", size=(box_size, None),
+                                   target="-BIO_INFO_HEATMAP_LOW_COLOUR_TARGET-",
+                                   button_color=self.config["Settings_bio"]["plate_report_heatmap_colours_low"]),
              sg.Input(key="-BIO_INFO_HEATMAP_LOW_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
-                      default_text=self.config["Settings_bio"]["plate_report_heatmap_colours_low"])],
-            [sg.ColorChooserButton("Mid Values Colour", key="-INFO_BIO_HEATMAP_MID_COLOUR-", size=(15, None),
-                                   target="-BIO_INFO_HEATMAP_MID_COLOUR_TARGET-"),
-             sg.T(background_color=self.config["Settings_bio"]["plate_report_heatmap_colours_mid"]
-                      , key="-BIO_INFO_HEATMAP_MID_COLOUR_BOX-", size=8, relief="groove"),
+                      default_text=self.config["Settings_bio"]["plate_report_heatmap_colours_low"]),
+             sg.ColorChooserButton("Mid", key="-BIO_INFO_HEATMAP_MID_COLOUR-", size=(box_size, None),
+                                   target="-BIO_INFO_HEATMAP_MID_COLOUR_TARGET-",
+                                   button_color=self.config["Settings_bio"]["plate_report_heatmap_colours_mid"]),
              sg.Input(key="-BIO_INFO_HEATMAP_MID_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
-                      default_text=self.config["Settings_bio"]["plate_report_heatmap_colours_mid"])],
-            [sg.ColorChooserButton("High Values Colour", key="-INFO_BIO_HEATMAP_HIGH_COLOUR-", size=(15, None),
-                                   target="-BIO_INFO_HEATMAP_HIGH_COLOUR_TARGET-"),
-             sg.T(background_color=self.config["Settings_bio"]["plate_report_heatmap_colours_high"]
-                      , key="-BIO_INFO_HEATMAP_HIGH_COLOUR_BOX-", size=8, relief="groove"),
+                      default_text=self.config["Settings_bio"]["plate_report_heatmap_colours_mid"]),
+             sg.ColorChooserButton("High", key="-BIO_INFO_HEATMAP_HIGH_COLOUR-", size=(box_size, None),
+                                   target="-BIO_INFO_HEATMAP_HIGH_COLOUR_TARGET-",
+                                   button_color=self.config["Settings_bio"]["plate_report_heatmap_colours_high"]),
              sg.Input(key="-BIO_INFO_HEATMAP_HIGH_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
                       default_text=self.config["Settings_bio"]["plate_report_heatmap_colours_high"])],
-            [sg.T("Low", size=10), sg.T("Mid", size=8), sg.T("High", size=8)],
-            [sg.InputText(0, key="-BIO_INFO_HEAT_PERCENTILE_LOW-", size=10, enable_events=True),
-             sg.InputText(50, key="-BIO_INFO_HEAT_PERCENTILE_MID-", size=10, enable_events=True),
-             sg.InputText(100, key="-BIO_INFO_HEAT_PERCENTILE_HIGH-", size=10, enable_events=True)]
+            [sg.InputText(0, key="-BIO_INFO_HEAT_PERCENTILE_LOW-", size=text_siz, enable_events=True),
+             sg.InputText(50, key="-BIO_INFO_HEAT_PERCENTILE_MID-", size=text_siz, enable_events=True),
+             sg.InputText(100, key="-BIO_INFO_HEAT_PERCENTILE_HIGH-", size=text_siz, enable_events=True)],
+            [sg.HorizontalSeparator()],
+
+            [sg.T("Hit-Map Colours")],
+            [sg.HorizontalSeparator()],
+            [sg.ColorChooserButton("TH-1", key="-BIO_INFO_HIT_MAP_TH_1_COLOUR-", size=(box_size, None),
+                                   target="-BIO_INFO_HIT_MAP_TH_1_COLOUR_TARGET-",
+                                   button_color=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_1"]),
+             sg.Input(key="-BIO_INFO_HIT_MAP_TH_1_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
+                      default_text=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_1"]),
+
+             sg.ColorChooserButton("TH-2", key="-BIO_INFO_HIT_MAP_TH_2_COLOUR-", size=(box_size, None),
+                                   target="-BIO_INFO_HIT_MAP_TH_2_COLOUR_TARGET-",
+                                   button_color=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_2"]),
+             sg.Input(key="-BIO_INFO_HIT_MAP_TH_2_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
+                      default_text=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_2"]),
+
+             sg.ColorChooserButton("TH-3", key="-BIO_INFO_HIT_MAP_TH_3_COLOUR-", size=(box_size, None),
+                                   target="-BIO_INFO_HIT_MAP_TH_3_COLOUR_TARGET-",
+                                   button_color=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_3"]),
+             sg.Input(key="-BIO_INFO_HIT_MAP_TH_3_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
+                      default_text=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_3"])],
+
+            [sg.ColorChooserButton("TH-4", key="-BIO_INFO_HIT_MAP_TH_4_COLOUR-", size=(box_size, None),
+                                   target="-BIO_INFO_HIT_MAP_TH_4_COLOUR_TARGET-",
+                                   button_color=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_4"]),
+             sg.Input(key="-BIO_INFO_HIT_MAP_TH_4_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
+                      default_text=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_4"]),
+
+             sg.ColorChooserButton("TH-5", key="-BIO_INFO_HIT_MAP_TH_5_COLOUR-", size=(box_size, None),
+                                   target="-BIO_INFO_HIT_MAP_TH_5_COLOUR_TARGET-",
+                                   button_color=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_5"]),
+             sg.Input(key="-BIO_INFO_HIT_MAP_TH_5_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
+                      default_text=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_5"]),
+
+             sg.ColorChooserButton("TH-6", key="-BIO_INFO_HIT_MAP_TH_6_COLOUR-", size=(box_size, None),
+                                   target="-BIO_INFO_HIT_MAP_TH_6_COLOUR_TARGET-",
+                                   button_color=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_6"]),
+             sg.Input(key="-BIO_INFO_HIT_MAP_TH_6_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
+                      default_text=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_6"])],
+
+            [sg.ColorChooserButton("TH-7", key="-BIO_INFO_HIT_MAP_TH_7_COLOUR-", size=(box_size, None),
+                                   target="-BIO_INFO_HIT_MAP_TH_7_COLOUR_TARGET-",
+                                   button_color=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_7"]),
+             sg.Input(key="-BIO_INFO_HIT_MAP_TH_7_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
+                      default_text=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_7"]),
+
+             sg.ColorChooserButton("TH-8", key="-BIO_INFO_HIT_MAP_TH_8_COLOUR-", size=(box_size, None),
+                                   target="-BIO_INFO_HIT_MAP_TH_8_COLOUR_TARGET-",
+                                   button_color=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_8"]),
+             sg.Input(key="-BIO_INFO_HIT_MAP_TH_8_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
+                      default_text=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_8"]),
+
+             sg.ColorChooserButton("TH-9", key="-BIO_INFO_HIT_MAP_TH_9_COLOUR-", size=(box_size, None),
+                                   target="-BIO_INFO_HIT_MAP_TH_9_COLOUR_TARGET-",
+                                   button_color=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_9"]),
+             sg.Input(key="-BIO_INFO_HIT_MAP_TH_9_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
+                      default_text=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_9"])]
+
 
         ], key="-INFO_BIO_ROW_HEAT-"
             # , size=(0, 0)
@@ -1237,19 +1317,6 @@ class GUILayout:
              sg.B("Pop out the Matrix", key="-BIO_INFO_MATRIX_POPUP-")]
         ])
 
-        # This is covered by overview
-        # table_list_headings = ["barcode", "calc"]
-        # row_list = sg.Frame("List", [
-        #     [sg.Column([
-        #         [sg.T("Table with a list of calculation values for all the plates.")],
-        #         [sg.Table([], headings=table_list_headings, key="-BIO_INFO_LIST_TABLE-", auto_size_columns=False)],
-        #         [sg.T("Method", size=14), sg.T("State", size=14), sg.T("Calculation", size=14)],
-        #         [sg.DropDown([], key="-BIO_INFO_LIST_METHOD-", size=14, enable_events=True),
-        #          sg.DropDown([], key="-BIO_INFO_LIST_STATE-", size=14, enable_events=True),
-        #          sg.DropDown([], key="-BIO_INFO_LIST_CALC-", size=14, enable_events=True)],
-        #     ])]
-        # ])
-
         tab_mapping = sg.Tab("Mapping", [[row_options]])
         tab_overview = sg.Tab("Overview", [[row_overview]])
         tab_plate_overview = sg.Tab("Plate Overview", [[row_plate_overview]])
@@ -1268,7 +1335,7 @@ class GUILayout:
         layout = [[sg.Pane([sg.Column(top_row), sg.Column([tab_groups])])]]
         return layout
 
-    def setup_2_purity(self):
+    def setup_2_lcms(self):
 
         lc_graph_showing = [keys for keys in list(self.config["lc_mapping"].keys())]
 
@@ -1486,8 +1553,8 @@ class GUILayout:
 
         raw_table_col = sg.Column([
             [sg.Text("Raw data")],
-            [sg.Tree(data=treedata, headings=headlines, row_height=90, auto_size_columns=False, num_rows=4,
-                     col0_width=30, key="-TREE_DB-", show_expanded=True, expand_x=True,
+            [sg.Tree(data=treedata, headings=headlines, row_height=80, auto_size_columns=False, num_rows=4,
+                     col0_width=30, key="-TREE_DB-", show_expanded=True, expand_x=False,
                      enable_events=True)]
         ])
 
@@ -1642,7 +1709,8 @@ class GUILayout:
                 [sg.CalendarButton("End Date", key="-PLATE_TABLE_END_DATE-", format="%Y-%m-%d", size=10,
                                    enable_events=True, target="-PLATE_TABLE_END_DATE_TARGET-"),
                  sg.Input(key="-PLATE_TABLE_END_DATE_TARGET-", size=10, enable_events=True)],
-                [sg.Push(), sg.B("Clear", key="-PLATE_TABLE_CLEAR-", size=10)]
+                [sg.B("Update Vol", key="-PLATE_TABLE_UPDATE_VOLUME-", size=10),
+                 sg.Push(), sg.B("Clear", key="-PLATE_TABLE_CLEAR-", size=10)]
             ])
         ]], expand_x=True)
 
@@ -1669,7 +1737,7 @@ class GUILayout:
         """
         tab_1_search = sg.Tab("Search", self.setup_1_search())
         tab_1_bio_data = sg.Tab("Bio Data", self.setup_1_bio())
-        tab_1_purity_data = sg.Tab("Purity Data", self.setup_1_purity())
+        tab_1_purity_data = sg.Tab("Purity Data", self.setup_1_lcms())
         tab_1_plate_layout = sg.Tab("Plate Layout", self.setup_1_plate_layout())
         tab_1_add = sg.Tab("Update", self.setup_1_update())
         tab_1_worklist = sg.Tab("Worklist", self.set_1_worklist())
@@ -1691,7 +1759,7 @@ class GUILayout:
 
         tab_2_info = sg.Tab("Compound Info", self.setup_2_compound())
         tab_2_bio_bio = sg.Tab("bio info", self.setup_2_bio())
-        tab_2_purity_purity = sg.Tab("purity info", self.setup_2_purity())
+        tab_2_purity_purity = sg.Tab("purity info", self.setup_2_lcms())
         tab_2_calculations = sg.Tab("Cal", self.setup_2_calculations())
         # tab_2_customers = sg.Tab("Misc", self.setup_2_misc())
 
@@ -1702,7 +1770,6 @@ class GUILayout:
 
     def layout_tab_group_tables(self):
         """
-
         :return: the layout for the tab groups in the table box
         :rtype: list
         """
@@ -1719,14 +1786,13 @@ class GUILayout:
 
     def full_layout(self):
         """
-
         :return: The final layout
         :rtype: PySimpleGUI.PySimpleGUI.Window
         """
         sg.theme(self.config["GUI"]["theme"])
-        window_size = (int(self.config["GUI"]["size_x"]), int(self.config["GUI"]["size_y"]))
-        x_size = window_size[0]/3
-        y_size = window_size[1]/3
+        # window_size = (int(self.config["GUI"]["size_x"]), int(self.config["GUI"]["size_y"]))
+        # x_size = window_size[0]/3
+        # y_size = window_size[1]/3
 
         tab_group_1 = self.layout_tab_group_1()
         tab_group_2 = self.layout_tab_group_2()
@@ -1747,4 +1813,4 @@ class GUILayout:
                 ], orientation="h")
         ]]
 
-        return sg.Window("SCore", layout_complete, finalize=True, resizable=True, right_click_menu=right_click_options)
+        return sg.Window("MolFormatic", layout_complete, finalize=True, resizable=True, right_click_menu=right_click_options)

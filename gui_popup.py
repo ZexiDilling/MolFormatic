@@ -14,7 +14,8 @@ from info import plate_384_row, plate_96_row
 from lcms_visualization import Toolbar
 from gui_popup_layout import matrix_popup_layout, plate_layout_chooser_layout, dead_run_naming_layout, \
     assay_run_naming_layout, bio_dose_response_set_up_layout, bio_data_approval_table_layout, sample_checker_layout, \
-    new_headlines_layout, assay_generator_layout
+    new_headlines_layout, assay_generator_layout, table_popup_layout
+from start_up_values import all_table_data, all_table_data_extra
 
 matplotlib.use('TkAgg')
 
@@ -391,12 +392,17 @@ def new_headlines_popup(sort_table, right_headlines, wrong_headlines):
                 table_data = new_table
 
 
-def plate_layout_chooser(files, default_plate_layout, all_plate_layouts):
+def plate_layout_chooser(dbf, files, default_plate_layout):
     # ToDo Make it possible to choose multiple file to change layout for at the same time
     table_data = []
     plate_to_layout = {}
+    all_plate_layouts = []
     # Add the options to skip files.
+    clm_data = dbf.find_column_data("plate_layout", "layout_name")
+    for layout_name in clm_data:
+        all_plate_layouts.append(layout_name)
     all_plate_layouts.append("skip")
+
 
     for file in files:
         temp_data = [file, default_plate_layout]
@@ -2386,6 +2392,23 @@ def bio_dose_response_set_up(config, worklist, assay_name, plate_reader_files, b
             window["-CALC_TABLE_OVERVIEW-"].update(values=[[]])
             window["-CALC_TABLE_STOCK-"].update(values=[[]])
 
+
+def popup_table(table):
+
+    table_name = all_table_data_extra[table]["name"]
+    table_headings = all_table_data_extra[table]["headings"]
+    table_data = all_table_data[table]
+
+    if table_data:
+        window = table_popup_layout(table_name, table_headings, table_data)
+
+        while True:
+            event, values = window.read()
+
+            if event == sg.WIN_CLOSED or event == "-TABLE_POPUP_DONE-":
+
+                window.close()
+                return
 
 
 if __name__ == "__main__":

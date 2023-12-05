@@ -2,7 +2,7 @@ from datetime import date
 from os import mkdir
 
 import PySimpleGUI as sg
-
+import pandas as pd
 
 from bio_data_functions import well_row_col_type
 from chem_operators import ChemOperators
@@ -22,7 +22,7 @@ from lcms_visualization import uv_chromatogram, ms_chromatogram, ms_spectrum, ms
     heatmap_uv_rt, heatmap_uv_wavelength, heatmap_ms_sample_binned, heatmap_ms_rt_binned, heatmap_ms_mz
 
 
-def amount_samples(plate_amount, samples_per_plate=384):
+def calculate_sample_amount(plate_amount, samples_per_plate=384):
     """
     calculate the amount of samples needed depending on amount of mother plates.
 
@@ -82,7 +82,7 @@ def _compound_list(config, mp_amount, min_mp, samples_per_plate, ignore_active, 
         - list
     """
     if mp_amount:
-        sample_amount = amount_samples(mp_amount, samples_per_plate)
+        sample_amount = calculate_sample_amount(mp_amount, samples_per_plate)
     else:
         sample_amount = None
     plated_compounds = []
@@ -223,8 +223,8 @@ def compound_counter(config, table):
     return len(fd.data_search(table, None))
 
 
-def purity_handler(folder, uv_one, uv_same_wavelength, wavelength, uv_threshold, rt_solvent_peak, ms_delta, ms_mode,
-                   ms_threshold):
+def lcms_raw_data_handler(folder, uv_one, uv_same_wavelength, wavelength, uv_threshold, rt_solvent_peak, ms_delta, ms_mode,
+                          ms_threshold):
     """
     Takes raw data from LC/MS (UV and MS data) and mass from the database, per compound. and see if they can find the
     mass in the raw data, and then find the purity of the peak (based on retention time) for each compound
@@ -352,7 +352,7 @@ def import_ms_data(folder):
     return all_data
 
 
-def purity_data_to_db(config, purity_data):
+def lcms_data_to_db(config, purity_data):
 
     batch_dict = {}
     today = date.today()
@@ -398,8 +398,8 @@ def purity_data_to_db(config, purity_data):
     return batch_dict
 
 
-def purity_plotting(method, data, canvas, samples, fig_size, ms_mode, rt_start, rt_end, wavelength, bin_numbers,
-                    mz_value, canvas_lines):
+def lcms_plotting(method, data, canvas, samples, fig_size, ms_mode, rt_start, rt_end, wavelength, bin_numbers,
+                  mz_value, canvas_lines):
     if method == "uv_chromatogram":
         try:
             figure_canvas_agg = uv_chromatogram(data, canvas, samples, fig_size, canvas_lines)
@@ -455,7 +455,7 @@ def purity_plotting(method, data, canvas, samples, fig_size, ms_mode, rt_start, 
     return figure_canvas_agg
 
 
-def _purity_mass(purity_data, uv_peak_information, mass_hit):
+def _uv_mass_to_purity(purity_data, uv_peak_information, mass_hit):
     """uses area data combined with mass to find purity"""
 
     for sample in purity_data:
@@ -478,7 +478,7 @@ def _purity_mass(purity_data, uv_peak_information, mass_hit):
         purity_data[sample]["peak_hits"] = mass_hit[sample]
 
 
-def _purity_overview_table_data_creation(purity_data, sample_data):
+def _lcms_overview_table_data_creation(purity_data, sample_data):
     """
 
     :param purity_data:
@@ -574,10 +574,10 @@ def add_start_end_time(purity_peak_list_table_data, sample_peak_dict):
             purity_peak_list_table_data[samples][index].append(sample_peak_dict[samples][peak_data[0]]["end"])
 
 
-def purity_ops(sample_data, purity_data, peak_information, ms_mode, delta_mass, mz_threshold, peak_amounts,
-               mass=None):
+def lcms_ops(sample_data, purity_data, peak_information, ms_mode, delta_mass, mz_threshold, peak_amounts,
+             mass=None):
     """
-
+    #todo write this ?
     :param config: The config handler, with all the default information in the config file.
     :type config: configparser.ConfigParser
     :param sample_data_file:
@@ -594,9 +594,9 @@ def purity_ops(sample_data, purity_data, peak_information, ms_mode, delta_mass, 
     mass_hit = mass_search(purity_data, peak_information, ms_mode, sample_data, delta_mass, mz_threshold, peak_amounts,
                            mass)
 
-    _purity_mass(purity_data, peak_information, mass_hit)
+    _uv_mass_to_purity(purity_data, peak_information, mass_hit)
 
-    purity_overview_table_data, purity_peak_list_table_data = _purity_overview_table_data_creation(purity_data, sample_data)
+    purity_overview_table_data, purity_peak_list_table_data = _lcms_overview_table_data_creation(purity_data, sample_data)
 
     return purity_overview_table_data, purity_peak_list_table_data
 
@@ -687,7 +687,7 @@ def compound_info_table_data(config, sample):
         bio_info_table_data
 
 
-def purity_data_compounds_to_db(config, table_data):
+def lcms_to_compounds(config, table_data):
 
     table = "purity"
     dbf = DataBaseFunctions(config)

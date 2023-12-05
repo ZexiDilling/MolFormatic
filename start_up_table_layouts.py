@@ -77,10 +77,12 @@ plate_type = """ CREATE TABLE IF NOT EXISTS plate_type(
             """
 
 plate_layout = """ CREATE TABLE IF NOT EXISTS plate_layout(  
-            plate_name TEXT NOT NULL UNIQUE,
-            plate_type TEXT,
-            plate_model TEXT
-            FOREIGN KEY(plate_model) REFERENCES plate_type(plate_type)
+            "plate_name"	TEXT NOT NULL UNIQUE,
+            "plate_size"	TEXT NOT NULL,
+            "plate_model"	TEXT NOT NULL,
+            "style"	        TEXT NOT NULL,
+            "plate_layout"	BLOB NOT NULL,
+            FOREIGN KEY("plate_model") REFERENCES "plate_type"("plate_type")
             ); """
 
 compound_data_table = """ CREATE TABLE IF NOT EXISTS compound_data( 
@@ -113,8 +115,7 @@ assay = """ CREATE TABLE IF NOT EXISTS assay(
             sop TEXT,
             plate_layout TEXT,
             z_prime_threshold	REAL,
-            hit_threshold	REAL,
-            FOREIGN KEY(plate_layout) REFERENCES plate_layout(plate_name)
+            hit_threshold	REAL
             ); """
 
 assay_runs = """ CREATE TABLE IF NOT EXISTS assay_runs(
@@ -133,14 +134,6 @@ assay_plates = """ CREATE TABLE IF NOT EXISTS assay_plates(
             assay_run	TEXT NOT NULL,
             FOREIGN KEY("assay_run") REFERENCES "assay_runs"("run_name")
             ); """
-
-plate_layout_sub = """CREATE TABLE IF NOT EXISTS plate_layout_sub(
-            plate_sub	TEXT NOT NULL UNIQUE,
-            plate_main	TEXT NOT NULL,
-            well_layout	BLOB NOT NULL,
-            style   TEXT NOT NULL,
-            FOREIGN KEY(plate_main) REFERENCES plate_layout(plate_name)
-            );"""
 
 
 bio_experiment_table = """ CREATE TABLE IF NOT EXISTS biological_plate_data(
@@ -261,3 +254,10 @@ cal_dose_response_method = """ CREATE TABLE IF NOT EXISTS calc_dose_response_met
                     "formula"	TEXT NOT NULL,
                     ); """
 
+
+assay_plate_layout_intermediate = """ CREATE TABLE IF NOT EXISTS "assay_plate_layout_intermediate" (
+                    "assay"	INTEGER NOT NULL,
+                    "plate_layout"	TEXT NOT NULL,
+                    FOREIGN KEY("assay") REFERENCES "assay"("assay_name"),
+                    FOREIGN KEY("plate_layout") REFERENCES "plate_layout"("layout_name")
+                    ); """

@@ -69,11 +69,12 @@ class PlateDilution:
             "negative": []
         }
 
-        for samples in plate_layout:
-            if plate_layout[samples]["state"] == "sample":
-                destination_wells.append(samples)
-            elif plate_layout[samples]["state"] != "empty":
-                other_well_types[plate_layout[samples]["state"]].append(samples)
+        for counter in plate_layout:
+            well = plate_layout["well_id"]
+            if plate_layout[counter]["state"] == "sample":
+                destination_wells.append(well)
+            elif plate_layout[counter]["state"] != "empty":
+                other_well_types[plate_layout[counter]["state"]].append(well)
         if direction != "row":
             return destination_wells, other_well_types
         else:

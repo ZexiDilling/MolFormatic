@@ -1,5 +1,7 @@
 
 from PySimpleGUI import PopupGetFile, popup_error, Popup, WIN_CLOSED
+
+from gui_function_setup_worklist import worklist_tab_clicked
 from helpter_functions import config_update, sort_table
 from gui_help_info_layout import info_help_window
 from gui_help_info_text import TextForInfo
@@ -7,8 +9,8 @@ from start_up_values import all_table_data
 
 
 def menu_open(config, config_writer, window, gui_layout):
-    db = PopupGetFile("Choose database", file_types=(("Database", ".db"),))
-    setting_dict = {"Database": {"database": db}}
+    database = PopupGetFile("Choose database", file_types=(("Database", ".db"),))
+    setting_dict = {"Database": {"database": database}}
     config_writer.run(setting_dict, "simple_settings", True)
     config_update(config)
     window.close()
@@ -101,3 +103,4 @@ def sorting_the_tables(window, event, search_reverse):
             window[clicked_table].update(new_table)
             # all_table_data[clicked_table] = [all_table_data[clicked_table][0]] + new_table
             all_table_data[clicked_table] = new_table
+

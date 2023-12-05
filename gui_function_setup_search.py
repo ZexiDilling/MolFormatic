@@ -42,13 +42,14 @@ def search_mother_plates_update_values(window):
     window["-SEARCH_PLATE_LAYOUT-"].update(value="")
 
 
-def search_plate_layout(window, values, archive_plates_dict):
-    temp_counter = []
-    for counter in archive_plates_dict[values["-SEARCH_PLATE_LAYOUT-"]]["well_layout"]:
-        if archive_plates_dict[values["-SEARCH_PLATE_LAYOUT-"]]["well_layout"][counter]["state"] == "sample":
-            temp_counter.append(archive_plates_dict[values["-SEARCH_PLATE_LAYOUT-"]]["well_layout"][counter]
-                                ["well_id"])
-    window["-SEARCH_PLATE_LAYOUT_SAMPLE_AMOUNT-"].update(value=len(temp_counter))
+def search_sample_counter_update(dbf, window, values):
+    temp_layout = eval(dbf.find_data_single_lookup("plate_layout", values["-SEARCH_PLATE_LAYOUT-"],
+                                                   "layout_name")[0][5])
+    temp_counter = 0
+    for counter in temp_layout:
+        if temp_layout[counter]["state"] == "sample":
+            temp_counter += 1
+    window["-SEARCH_PLATE_LAYOUT_SAMPLE_AMOUNT-"].update(value=temp_counter)
 
 
 

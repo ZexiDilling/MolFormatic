@@ -2,6 +2,7 @@ from math import floor
 
 
 from bio_heatmap import Heatmap
+from database_functions import _get_list_of_names_from_database_double_lookup
 from helpter_functions import int_guard
 from start_up_values import window_1_plate_layout
 
@@ -13,12 +14,23 @@ def colour_target_update(window, values):
 
 
 def plate_archive(window, values):
-    print("Needs to update ARCHIVE_PLATES_SUB")
+    pass
 
 
-def sample_type_update(window, values):
-    if values["-ARCHIVE_PLATES-"]:
-        print("Needs to update ARCHIVE_PLATES_SUB")
+def plate_list_updater(dbf, window, values, event):
+    if event == "-RECT_SAMPLE_TYPE-":
+        target_window = "-ARCHIVE_PLATES-"
+    elif event == "-BIO_ANALYSE_TYPE-":
+        target_window = "-BIO_PLATE_LAYOUT-"
+
+    table = "plate_layout"
+    column_headline = "layout_name"
+    limiting_value = values[event].casefold()
+    limiting_header = "style"
+
+    plate_list = _get_list_of_names_from_database_double_lookup(dbf, table, column_headline, limiting_value,
+                                                                limiting_header)
+    window[target_window].update(values=plate_list, value=plate_list[0])
 
 
 def plate_layout_draw_groups(window, values, well_dict):

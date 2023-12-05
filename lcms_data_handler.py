@@ -183,7 +183,7 @@ class LCMSHandler:
         return mass_hit
 
     @staticmethod
-    def _purity_mass(batch_dict, uv_peak_information, mass_hit, compound_info):
+    def _uv_ms_list_comparison(batch_dict, uv_peak_information, mass_hit, compound_info):
         """
         Compare the list of peak-information from uv with the peak-information for the ms-data
 

@@ -1,6 +1,7 @@
 from PySimpleGUI import PopupError
 
 from database_functions import grab_table_data
+from start_up_values import all_table_data
 
 
 def update_overview_compound(config, window, values, compound_id):
@@ -126,7 +127,6 @@ def update_overview_compound(config, window, values, compound_id):
         window["-COMPOUND_INFO_INFO_PURITY-"].update(value=amount_purity)
 
         # Update tables
-
         window["-COMPOUND_INFO_INFO_MP_TABLE-"].update(values=updated_mp_table_data)
         window["-COMPOUND_INFO_INFO_DP_TABLE-"].update(values=updated_dp_table_data)
         window["-COMPOUND_INFO_INFO_ASSAY_TABLE-"].update(values=updated_assay_table_data)
@@ -134,5 +134,10 @@ def update_overview_compound(config, window, values, compound_id):
         # window["-COMPOUND_INFO_INFO_TRANSFERS_TABLE-"].update(values=updated_transfer_table_data)
         window["-COMPOUND_INFO_INFO_PURITY_USED_TABLE-"].update(values=updated_purify_table_data)
 
+        all_table_data["-COMPOUND_INFO_INFO_MP_TABLE-"] = updated_mp_table_data
+        all_table_data["-COMPOUND_INFO_INFO_DP_TABLE-"] = updated_dp_table_data
+        all_table_data["-COMPOUND_INFO_INFO_ASSAY_TABLE-"] = updated_assay_table_data
+        all_table_data["-COMPOUND_INFO_INFO_HITS_TABLE-"] = updated_hit_table_data
+        all_table_data["-COMPOUND_INFO_INFO_PURITY_USED_TABLE-"] = updated_purify_table_data
     else:
         PopupError(f'No compound data for:\n "{compound_id}"')

@@ -32,26 +32,24 @@ def worklist_control_layout_update(window, values):
     window["-WORKLIST_CONTROL_LAYOUT_TARGET-"].update(value=worklist_layout)
 
 
-def worklist_tab_clicked(config, window, values):
-    if values["-TAB_GROUP_ONE-"] == "Worklist":
-        temp_mp_plates, _ = grab_table_data(config, "mp_plates")
-        worklist_mp_plates_list = []
-        for rows in temp_mp_plates:
-            worklist_mp_plates_list.append(rows[0])
+def worklist_tab_clicked(config, window):
 
-        # sortes the table
-        worklist_mp_plates_list = natsorted(worklist_mp_plates_list)
+    temp_mp_plates, _ = grab_table_data(config, "mp_plates")
+    worklist_mp_plates_list = []
+    for rows in temp_mp_plates:
+        worklist_mp_plates_list.append(rows[0])
 
-        window["-WORKLIST_MP_LIST-"].update(values=worklist_mp_plates_list)
-        # window["-WORKLIST_ASSAY_LIST-"].update(values=worklist_mp_plates_list)    # ToDO add the right data here
+    # sortes the table
+    worklist_mp_plates_list = natsorted(worklist_mp_plates_list)
 
-        temp_assay_list, _ = grab_table_data(config, "assay")
-        return temp_assay_list, worklist_mp_plates_list
-    else:
-        return None, None
+    window["-WORKLIST_MP_LIST-"].update(values=worklist_mp_plates_list)
+    # window["-WORKLIST_ASSAY_LIST-"].update(values=worklist_mp_plates_list)    # ToDO add the right data here
+
+    temp_assay_list, _ = grab_table_data(config, "assay")
+    return temp_assay_list, worklist_mp_plates_list
 
 
-def worklist_generator(config, window, values, worklist_mp_plates_list, archive_plates_dict):
+def worklist_generator(dbf, config, window, values, worklist_mp_plates_list):
     if not values["-WORKLIST_PLATE_LAYOUT-"]:
         PopupError("Please select a plate layout")
 
@@ -114,7 +112,9 @@ def worklist_generator(config, window, values, worklist_mp_plates_list, archive_
             worklist = None
             assays = values["-WORKLIST_ASSAY_LIST-"]
         if worklist != "cancelled":
-            plate_layout = archive_plates_dict[values["-WORKLIST_PLATE_LAYOUT-"]]
+
+            plate_layout = eval(dbf.find_data_single_lookup("plate_layout", values["-WORKLIST_PLATE_LAYOUT-"],
+                                                            "layout_name")[0][5])
 
             if worklist:
                 # Get data from the worklist, to see what plate and witch wells have been used before

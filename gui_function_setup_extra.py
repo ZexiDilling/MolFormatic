@@ -32,7 +32,7 @@ def add_source_wells_update(window, values):
     window["-PD_WELL_LAYOUT-"].update(disabled=not values["-PD_ADD_SOURCE_WELLS-"])
 
 
-def execute_button_pressed(config, window, values, archive_plates_dict):
+def execute_button_pressed(dbf, config, window, values):
     if not values["-PD_FILE-"]:
         PopupError("Please select an Excel file")
     elif values["-PD_METHOD_DD-"] == "Generate" and not values["-DP_PLATE_LAYOUT-"]:
@@ -47,7 +47,9 @@ def execute_button_pressed(config, window, values, archive_plates_dict):
         save_plates = values["-PD_SAVE_PLATES-"]
         well_layout = values["-PD_WELL_LAYOUT-"]
         try:
-            plate_layout = archive_plates_dict[values["-DP_PLATE_LAYOUT-"]]
+
+            plate_layout = eval(dbf.find_data_single_lookup("plate_layout", values["-DP_PLATE_LAYOUT-"],
+                                                            "layout_name")[0][5])
         except KeyError:
             plate_layout = None
         add_source_wells = values["-PD_ADD_SOURCE_WELLS-"]
@@ -266,7 +268,7 @@ def _plate_dilution(config, function, file, dw_amount, add_source_wells, source_
         return state
 
     elif function == "Generate":
-        plate_layout = plate_layout_re_formate(config, plate_layout["well_layout"])
+        plate_layout = plate_layout_re_formate(config, plate_layout)
         sample_info_dict, replicate_samples_max, replicate_plate_sets, dilution_factor, concentration_counter, \
             control_vol, control_conc = plate_dilution_excel(file, save_plates, dw_amount, well_layout)
 

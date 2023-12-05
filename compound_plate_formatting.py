@@ -87,7 +87,6 @@ def plate_layout_re_formate(config, plate_layout):
     :return: Reformate the platlayout from having a counter, to using the well-ID instead
     :rtype: dict
     """
-    print(plate_layout)
     plate_layout_re = {}
     for counter in plate_layout:
         plate_layout_re[plate_layout[counter]["well_id"]] = {}
@@ -115,8 +114,8 @@ def plate_layout_to_well_ditc(plate_layout):
     """
     well_dict = {"sample": [], "blank": [], "max": [], "minimum": [],
                  "positive": [], "negative": [], "empty": []}
-    for counter in plate_layout["well_layout"]:
-        well_dict[plate_layout["well_layout"][counter]["state"]].append(plate_layout["well_layout"][counter]["well_id"])
+    for counter in plate_layout:
+        well_dict[plate_layout[counter]["state"]].append(plate_layout[counter]["well_id"])
 
     return well_dict
 

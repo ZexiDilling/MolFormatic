@@ -6,7 +6,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import PatternFill
 from openpyxl.utils.exceptions import InvalidFileException
 
-from lcms_functions import get_peak_information, import_ms_data, add_start_end_time, purity_ops, name_changer
+from lcms_functions import get_peak_information, import_ms_data, add_start_end_time, lcms_ops, name_changer
 from gui_popup import ms_raw_name_guard
 
 

@@ -3,8 +3,8 @@ from natsort import natsorted
 
 from database_controller import FetchData
 from helpter_functions import sort_table
-from lcms_functions import get_peak_information, import_ms_data, purity_data_to_db, add_start_end_time, purity_ops, \
-    grab_sample_data, purity_data_compounds_to_db, name_changer
+from lcms_functions import get_peak_information, import_ms_data, lcms_data_to_db, add_start_end_time, lcms_ops, \
+    grab_sample_data, lcms_to_compounds, name_changer
 from gui_guards import guard_purity_data_wavelength
 from gui_popup import sample_to_compound_name_controller, ms_raw_name_guard
 from start_up_values import all_table_data, window_1_lcms, ms_mode_selector
@@ -90,7 +90,7 @@ def lcms_importer(config, window, values):
                             purity_samples.append(samples)
 
                     if values["-PURITY_DATA_ADD_TO_DATABASE-"]:
-                        _ = purity_data_to_db(config, window_1_lcms["purity_data"])
+                        _ = lcms_data_to_db(config, window_1_lcms["purity_data"])
                         window_1_lcms["purity_data_added_to_db"] = True
 
                     peak_information, peak_table_data, sample_peak_dict = get_peak_information(
@@ -125,9 +125,9 @@ def lcms_importer(config, window, values):
                                          sample_peak_dict)
 
                         all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"], \
-                        purity_peak_list_table_data = purity_ops(sample_data, window_1_lcms["purity_data"],
-                                                                 peak_information, ms_mode, delta_mass, mz_threshold,
-                                                                 peak_amounts)
+                        purity_peak_list_table_data = lcms_ops(sample_data, window_1_lcms["purity_data"],
+                                                               peak_information, ms_mode, delta_mass, mz_threshold,
+                                                               peak_amounts)
 
                         add_start_end_time(purity_peak_list_table_data, sample_peak_dict)
                         window["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"]. \
@@ -145,9 +145,9 @@ def lcms_info_overview(config, window, values):
             PopupError("Not compound data. Can't be added to the database. ")
         else:
             if not window_1_lcms["purity_data_added_to_db"]:
-                batch_dict = purity_data_to_db(config, window_1_lcms["purity_data"])
+                batch_dict = lcms_data_to_db(config, window_1_lcms["purity_data"])
 
-            purity_data_compounds_to_db(config, all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"])
+            lcms_to_compounds(config, all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"])
 
 
 def lcms_reporting(config, window, values):

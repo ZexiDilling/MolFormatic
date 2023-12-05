@@ -392,10 +392,10 @@ class GUISettingsController:
             event, values = window.read()
             if event == sg.WIN_CLOSED or event == "-CANCEL-" and not default_sat:
                 break
-                window.close()
+
             if event == "-CANCEL-" and default_sat:
                 return reports
-                break
+
             if event == "-TAB_GROUPS-":
                 if values["-TAB_GROUPS-"] == "Bio Plate Report":
                     report_name = "bio_plate_report"
@@ -428,7 +428,8 @@ class GUISettingsController:
 
             if event == "-SETTINGS_LOAD_DEFAULT-":
                 window.close()
-                window = self.gls.settings_window(self.final_setup_default, self.plate_setup_default)
+                window = self.gls.settings_window(self.final_setup_default, self.plate_setup_default,
+                                                  self.ms_settings_default)
                 # window.Refresh()
 
             # BIO PLATE REPORT - SINGLE POINT

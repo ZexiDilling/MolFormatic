@@ -1,5 +1,5 @@
 from operator import itemgetter
-
+import time
 import PySimpleGUI as sg
 from natsort import natsorted
 
@@ -64,3 +64,38 @@ def sort_table(table, cols, reverse):
             sg.popup_error('Error in sort_table', 'Exception in sort_table', e)
     reverse = not reverse
     return table, reverse
+
+
+def time_translater(time_testing):
+    time_return_value = time.strftime("%Hh%Mm%Ss", time.gmtime(time_testing))
+    # time_return_value = time_testing
+    return time_return_value
+
+
+def eval_guard_dict(test_dict):
+    """
+
+    :param test_dict:
+    :type test_dict: str
+    :return:
+    :rtype: dict or None
+    """
+    if test_dict.startswith("{") and test_dict.endswith("}"):
+        return eval(test_dict)
+    else:
+        return None
+
+def eval_guard_list(test_list):
+    """
+
+    :param test_dict:
+    :type test_dict: str
+    :return:
+    :rtype: dict or None
+    """
+    if test_list.startswith("[") and test_list.endswith("]"):
+        return eval(test_list)
+    else:
+        return None
+
+
