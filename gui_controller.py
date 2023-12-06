@@ -334,7 +334,7 @@ def main(config, queue_gui, queue_mol):
             experiment_table_plate_update(config, window, values)
 
         if event in bio_info_tables:
-            bio_tables_double_clicked(window, values, event)
+            bio_tables_double_clicked(dbf, config, window, values, event, well_dict_bio_info)
 
         if event == "-BIO_EXP_COMPOUND_TABLE-+-double click-":
             compound_table_double_click(config, window, values, event)
@@ -409,12 +409,15 @@ def main(config, queue_gui, queue_mol):
             colour_chooser_update(window, values, event)
 
         if event in assay_updater_list:
+            print("trigger")
             bio_info_window_update(dbf, window, values)
 
         if event == "-BIO_INFO_RUN_DROPDOWN-":
+            print("trigger")
             bio_info_plate_list_update(dbf, window, values, None)
 
         if event == "-BIO_INFO_PLATES_DROPDOWN-":
+            print("trigger")
             well_dict_bio_info = bio_info_plate_update(dbf, config, window, values, event, well_dict_bio_info)
 
         #   WINDOW 2 - PURITY INFO  ###

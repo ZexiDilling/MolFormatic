@@ -1,5 +1,6 @@
 from database_handler import DataBaseFunctions
-from gui_function_info_bio import bio_info_grab_data
+from gui_function_info_bio import bio_info_grab_data, bio_info_plate_update, bio_info_window_update, \
+    bio_info_plate_list_update
 from gui_function_info_compound import update_overview_compound
 from database_functions import grab_table_data
 from start_up_values import window_tables, all_table_data
@@ -71,29 +72,21 @@ def experiment_table_plate_update(config, window, values):
                                        approval_check=approval_check)
 
 
-def bio_tables_double_clicked(dbf, window, values, event):
+def bio_tables_double_clicked(dbf, config, window, values, event, well_dict_bio_info):
     temp_plate = None
     temp_run = None
     temp_assay = None
-    headline = None
-
     if event == "-BIO_EXP_PLATE_TABLE-+-double click-":
         try:
             table_row = values["-BIO_EXP_PLATE_TABLE-"][0]
         except IndexError:
             temp_indicator = False
         else:
-            temp_plate = all_table_data["-BIO_EXP_PLATE_TABLE-"][table_row][0]
+            temp_assay = values["-BIO_EXP_TABLE_ASSAY_LIST_BOX-"]
             temp_run = all_table_data["-BIO_EXP_PLATE_TABLE-"][table_row][5]
+            temp_plate = all_table_data["-BIO_EXP_PLATE_TABLE-"][table_row][0]
             temp_indicator = True
-            headline = f"Plate - {temp_plate}"
-    elif event == "-BIO_EXP_TABLE_ASSAY_LIST_BOX-+-double click-":
-        temp_assay = values["-BIO_EXP_TABLE_ASSAY_LIST_BOX-"]
-        if temp_assay:
-            temp_indicator = True
-            headline = f"Assay - {temp_assay}"
-        else:
-            temp_indicator = False
+
     elif event == "-BIO_EXP_ASSAY_RUN_TABLE-+-double click-":
         try:
             table_row = values["-BIO_EXP_ASSAY_RUN_TABLE-"][0]
@@ -101,31 +94,58 @@ def bio_tables_double_clicked(dbf, window, values, event):
             temp_indicator = False
         else:
             temp_run = all_table_data["-BIO_EXP_ASSAY_RUN_TABLE-"][table_row][0]
+            temp_assay = values["-BIO_EXP_TABLE_ASSAY_LIST_BOX-"]
             temp_indicator = True
-            headline = f"Run - {temp_run}"
+
+    elif event == "-BIO_EXP_TABLE_ASSAY_LIST_BOX-+-double click-":
+        temp_assay = values["-BIO_EXP_TABLE_ASSAY_LIST_BOX-"]
+        if temp_assay:
+            temp_indicator = True
+        else:
+            temp_indicator = False
+
     else:
         temp_indicator = False
 
     if temp_indicator:
-        window["-BIO_INFO_HEADLINE-"].update(headline)
-        if not temp_assay:
-
-            temp_assay = dbf.find_data_single_lookup("assay_run", temp_run, "run_name")[0][1]
-            print(temp_assay)
-
-        default_plate_layout = dbf.find_data_single_lookup("assay", temp_assay, "assay_name")[0][3]
-        print(default_plate_layout)
-
-        if temp_plate:
-            plate_data = bio_info_grab_data(dbf, window, values, event, temp_plate)
-        else:
-            return
-
-        if plate_data:
+        try:
+            temp_assay[0]
+        except IndexError:
             pass
         else:
-            return None
+            temp_assay = temp_assay[0]
 
+        if temp_plate:
+            print("I GOT TEMP PLATE TABLE")
+            if not temp_run:
+                row_data = dbf.find_data_single_lookup("biological_plate_data", temp_plate, "plate_name")[0]
+                temp_run = row_data[2]
+            if not temp_assay:
+                row_data = dbf.find_data_single_lookup("assay_runs", temp_assay, "run_name")[0]
+                temp_assay = row_data[2]
+            window["-BIO_INFO_ASSAY_DROPDOWN-"].update(value=temp_assay)
+            bio_info_window_update(dbf, window, values)
+            window["-BIO_INFO_RUN_DROPDOWN-"].update(value=temp_run)
+            bio_info_plate_list_update(dbf, window, values, None)
+            window["-BIO_INFO_PLATES_DROPDOWN-"].update(value=temp_plate)
+            well_dict_bio_info = bio_info_plate_update(dbf, config, window, values, event, well_dict_bio_info,
+                                                       plate=temp_plate)
+        elif temp_run:
+            print("I GOT TEMP RUN TABLE")
+            if not temp_assay:
+                row_data = dbf.find_data_single_lookup("assay_runs", temp_assay, "run_name")[0]
+                temp_assay = row_data[2]
+            window["-BIO_INFO_ASSAY_DROPDOWN-"].update(value=temp_assay)
+            bio_info_window_update(dbf, window, values, assay=temp_assay)
+            window["-BIO_INFO_RUN_DROPDOWN-"].update(value=temp_run)
+            bio_info_plate_list_update(dbf, window, values, ["All", temp_run])
+
+        else:
+            print("do we get here? ")
+            window["-BIO_INFO_ASSAY_DROPDOWN-"].update(value=temp_assay)
+            bio_info_window_update(dbf, window, values, assay=temp_assay)
+            # window["-BIO_INFO_PLATES_DROPDOWN-"].update(value="All")
+    return well_dict_bio_info
 
 def compound_table_double_click(config, window, values, event):
 

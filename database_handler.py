@@ -202,6 +202,7 @@ class DataBaseFunctions:
         :return: Data from the database
         :rtype: dict
         """
+
         if type(data_value) == str:
             find = f"SELECT rowid, * FROM '{table}' WHERE {headline} = '{data_value}' "
         else:

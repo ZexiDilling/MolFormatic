@@ -47,9 +47,10 @@ def _bio_info_update_window(analyse_method, plate_list, well_dict):
     pass
 
 
-def bio_info_window_update(dbf, window, values):
+def bio_info_window_update(dbf, window, values, assay=None):
+    if not assay:
+        assay = values["-BIO_INFO_ASSAY_DROPDOWN-"]
 
-    assay = values["-BIO_INFO_ASSAY_DROPDOWN-"]
     if assay:
         runs = ["All"]
         run_row_data = dbf.find_data_single_lookup("assay_runs", assay, "assay_name")
@@ -102,8 +103,9 @@ def bio_info_plate_list_update(dbf, window, values, runs):
     return skipped_runs, plates
 
 
-def bio_info_plate_update(dbf, config, window, values, event, well_dict_bio_info):
-    plate = values[event]
+def bio_info_plate_update(dbf, config, window, values, event, well_dict_bio_info, plate=None):
+    if not plate:
+        plate = values[event]
     if plate.casefold() != "all":
         plate_bio_data = bio_info_grab_data(dbf, plate)
         if plate_bio_data:
@@ -235,16 +237,20 @@ def bio_info_plate_update(dbf, config, window, values, event, well_dict_bio_info
 
 
 if __name__ == "__main__":
-    pass
-    # import configparser
+    # pass
+    import configparser
     #
-    # from database_functions import DataBaseFunctions, _get_list_of_names_from_database, \
+    from database_functions import DataBaseFunctions
     # _get_list_of_names_from_database_double_lookup
     #
-    # config = configparser.ConfigParser()
-    # config.read("config.ini")
+    config = configparser.ConfigParser()
+    config.read("config.ini")
+    dbf = DataBaseFunctions(config)
+    temp_run = "Alpha_so_run_3"
+    temp_row_data = dbf.find_data_double_lookup("biological_plate_data",
+                                                temp_run, "True", "assay_run", "approval")
+    print(temp_row_data)
 
-    # dbf = DataBaseFunctions(config)
     # plate = "alpha_so80"
     # plate_data = bio_info_grab_data(dbf, window=None, values=None, event=None, plate=plate)
     # for data in plate_data:
