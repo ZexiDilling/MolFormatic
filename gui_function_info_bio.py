@@ -2,7 +2,7 @@ import copy
 
 from compound_plate_formatting import plate_layout_re_formate
 from draw_basic import draw_plate
-from helpter_functions import eval_guard_dict, eval_guard_list
+from helpter_functions import eval_guard_dict, eval_guard_list, plate_layout_to_state_dict
 from start_up_values import draw_tool_values
 
 
@@ -31,12 +31,14 @@ def bio_info_grab_data(dbf, plate):
 
     plate_data = {"assay_run": assay_run,
                   "raw_data": raw_data,
+                  "specific_plate_layout": specific_plate_layout,
                   "z_prime": z_prime,
                   "responsible": responsible,
                   "approval": approval,
                   "note": note,
                   "plate_layout": plate_layout,
-                  "analysed_method": analysed_method}
+                  "analysed_method": analysed_method,
+                  "skipped_wells": skipped_wells}
     return plate_data
 
 
@@ -105,26 +107,126 @@ def bio_info_plate_update(dbf, config, window, values, event, well_dict_bio_info
     if plate.casefold() != "all":
         plate_bio_data = bio_info_grab_data(dbf, plate)
         if plate_bio_data:
+
             well_dict_bio_info.clear()
-            plate_layout_data = dbf.find_data_single_lookup("plate_layout", plate_bio_data["plate_layout"], "layout_name")
+            plate_layout_data = dbf.find_data_single_lookup("plate_layout", plate_bio_data["plate_layout"],
+                                                            "layout_name")
             try:
                 plate_layout_data = plate_layout_data[0]
             except IndexError:
                 return well_dict_bio_info
             else:
+
                 plate_layout = eval(plate_layout_data[5])
                 well_dict_bio_info = copy.deepcopy(plate_layout)
                 well_dict_bio_info = plate_layout_re_formate(config, well_dict_bio_info)
                 plate_size = plate_layout_data[2]
-                archive = True
+
                 gui_tab = "bio_exp"
                 graph_bio = window["-BIO_INFO_CANVAS-"]
 
-                well_dict_bio_info, _, _, _, _, off_set = draw_plate(config, graph_bio, plate_size, well_dict_bio_info,
-                                                               gui_tab, archive)
+            if values["-BIO_INFO_MAPPING-"] == "State Mapping":
+                mapping = None
+                archive = True
+                temp_well_ditch = well_dict_bio_info
+                skipped_wells = None
+                state_dict = None
+            elif values["-BIO_INFO_MAPPING-"] == "Heatmap":
+                temp_well_ditch = plate_bio_data["specific_plate_layout"]
+                archive = False
+                skipped_wells = plate_bio_data["skipped_wells"]
+                state_dict = plate_layout_to_state_dict(plate_layout)
+                mapping = {
+                    "mapping": "Heatmap",
+                    "colours": {"low": [values["-BIO_INFO_HEATMAP_LOW_COLOUR_TARGET-"],
+                                        values["-BIO_INFO_HEATMAP_MID_COLOUR_TARGET-"]],
+                                "high": [values["-BIO_INFO_HEATMAP_MID_COLOUR_TARGET-"],
+                                         values["-BIO_INFO_HEATMAP_HIGH_COLOUR_TARGET-"]]},
+                    "percentile": {"low": float(values["-BIO_INFO_HEAT_PERCENTILE_LOW-"]),
+                                   "mid": float(values["-BIO_INFO_HEAT_PERCENTILE_MID-"]),
+                                   "high": float(values["-BIO_INFO_HEAT_PERCENTILE_HIGH-"])}
+                }
+            elif values["-BIO_INFO_MAPPING-"] == "Hit Map":
+                temp_well_ditch = plate_bio_data["specific_plate_layout"]
+                archive = False
+                skipped_wells = plate_bio_data["skipped_wells"]
+                state_dict = plate_layout_to_state_dict(plate_layout)
+                th_use = {
+                    "TH_1": False,
+                    "TH_2": False,
+                    "TH_3": False,
+                    "TH_4": False,
+                    "TH_5": False,
+                    "TH_6": False,
+                    "TH_7": False,
+                    "TH_8": False,
+                    "TH_9": False,
+                    "TH_10": False}
+                for temp_th_value in th_use:
+                    if values[f"-BIO_INFO_PORA_{temp_th_value}_MIN_HIT_THRESHOLD-"] != \
+                            values[f"-BIO_INFO_PORA_{temp_th_value}_MAX_HIT_THRESHOLD-"]:
+                        th_use[temp_th_value] = True
+                mapping = {
+                    "mapping": "Hit Map",
+                    "bins": {"th_1": {
+                        "use": th_use["TH_1"],
+                        "min": float(values["-BIO_INFO_PORA_TH_1_MIN_HIT_THRESHOLD-"]),
+                        "max": float(values["-BIO_INFO_PORA_TH_1_MAX_HIT_THRESHOLD-"]),
+                        "colour": values["-BIO_INFO_HIT_MAP_TH_1_COLOUR_TARGET-"]},
+                        "th_2": {
+                            "use": th_use["TH_2"],
+                            "min": float(values["-BIO_INFO_PORA_TH_2_MIN_HIT_THRESHOLD-"]),
+                            "max": float(values["-BIO_INFO_PORA_TH_2_MAX_HIT_THRESHOLD-"]),
+                            "colour": values["-BIO_INFO_HIT_MAP_TH_2_COLOUR_TARGET-"]},
+                        "th_3": {
+                            "use": th_use["TH_3"],
+                            "min": float(values["-BIO_INFO_PORA_TH_3_MIN_HIT_THRESHOLD-"]),
+                            "max": float(values["-BIO_INFO_PORA_TH_3_MAX_HIT_THRESHOLD-"]),
+                            "colour": values["-BIO_INFO_HIT_MAP_TH_3_COLOUR_TARGET-"]},
+                        "th_4": {
+                            "use": th_use["TH_4"],
+                            "min": float(values["-BIO_INFO_PORA_TH_4_MIN_HIT_THRESHOLD-"]),
+                            "max": float(values["-BIO_INFO_PORA_TH_4_MAX_HIT_THRESHOLD-"]),
+                            "colour": values["-BIO_INFO_HIT_MAP_TH_4_COLOUR_TARGET-"]},
+                        "th_5": {
+                            "use": th_use["TH_5"],
+                            "min": float(values["-BIO_INFO_PORA_TH_5_MIN_HIT_THRESHOLD-"]),
+                            "max": float(values["-BIO_INFO_PORA_TH_5_MAX_HIT_THRESHOLD-"]),
+                            "colour": values["-BIO_INFO_HIT_MAP_TH_5_COLOUR_TARGET-"]},
+                        "th_6": {
+                            "use": th_use["TH_6"],
+                            "min": float(values["-BIO_INFO_PORA_TH_6_MIN_HIT_THRESHOLD-"]),
+                            "max": float(values["-BIO_INFO_PORA_TH_6_MAX_HIT_THRESHOLD-"]),
+                            "colour": values["-BIO_INFO_HIT_MAP_TH_6_COLOUR_TARGET-"]},
+                        "th_7": {
+                            "use": th_use["TH_7"],
+                            "min": float(values["-BIO_INFO_PORA_TH_7_MIN_HIT_THRESHOLD-"]),
+                            "max": float(values["-BIO_INFO_PORA_TH_7_MAX_HIT_THRESHOLD-"]),
+                            "colour": values["-BIO_INFO_HIT_MAP_TH_7_COLOUR_TARGET-"]},
+                        "th_8": {
+                            "use": th_use["TH_8"],
+                            "min": float(values["-BIO_INFO_PORA_TH_8_MIN_HIT_THRESHOLD-"]),
+                            "max": float(values["-BIO_INFO_PORA_TH_8_MAX_HIT_THRESHOLD-"]),
+                            "colour": values["-BIO_INFO_HIT_MAP_TH_8_COLOUR_TARGET-"]},
+                        "th_9": {
+                            "use": th_use["TH_9"],
+                            "min": float(values["-BIO_INFO_PORA_TH_9_MIN_HIT_THRESHOLD-"]),
+                            "max": float(values["-BIO_INFO_PORA_TH_9_MAX_HIT_THRESHOLD-"]),
+                            "colour": values["-BIO_INFO_HIT_MAP_TH_9_COLOUR_TARGET-"]},
+                        "th_10": {
+                            "use": th_use["TH_10"],
+                            "min": float(values["-BIO_INFO_PORA_TH_10_MIN_HIT_THRESHOLD-"]),
+                            "max": float(values["-BIO_INFO_PORA_TH_10_MAX_HIT_THRESHOLD-"]),
+                            "colour": values["-BIO_INFO_HIT_MAP_TH_10_COLOUR_TARGET-"]}
+                    }
+                }
+            else:
+                return well_dict_bio_info
 
-                draw_tool_values["well_off_set"] = off_set
-
+            well_dict_bio_info, _, _, _, _, off_set = draw_plate(config, graph_bio, plate_size,
+                                                                 temp_well_ditch, gui_tab, archive, mapping=mapping,
+                                                                 skipped_well=skipped_wells, state_dict=state_dict)
+            draw_tool_values["well_off_set"] = off_set
             return well_dict_bio_info
         else:
             return well_dict_bio_info

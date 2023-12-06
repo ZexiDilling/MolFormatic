@@ -1216,8 +1216,13 @@ class GUILayout:
                                    target="-BIO_INFO_HIT_MAP_TH_9_COLOUR_TARGET-",
                                    button_color=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_9"]),
              sg.Input(key="-BIO_INFO_HIT_MAP_TH_9_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
-                      default_text=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_9"])]
+                      default_text=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_9"])],
 
+            [sg.ColorChooserButton("TH-10", key="-BIO_INFO_HIT_MAP_TH_10_COLOUR-", size=(box_size, None),
+                                   target="-BIO_INFO_HIT_MAP_TH_10_COLOUR_TARGET-",
+                                   button_color=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_10"]),
+             sg.Input(key="-BIO_INFO_HIT_MAP_TH_10_COLOUR_TARGET-", visible=False, enable_events=True, disabled=True,
+                      default_text=self.config["Settings_bio"]["plate_report_pora_threshold_colour_th_10"])]
 
         ], key="-INFO_BIO_ROW_HEAT-"
             # , size=(0, 0)

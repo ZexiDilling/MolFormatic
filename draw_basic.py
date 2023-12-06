@@ -1,4 +1,39 @@
+import copy
+
 from bio_heatmap import Heatmap
+
+
+def _heat_mapping_setup(well_data_draw_dict, mapping):
+    heatmap = Heatmap()
+
+    # heatmap_dict = heatmap.dict_convert(well_data_draw_dict, state_dict, mapping["states"])
+    try:
+        well_data_draw_dict["value"]
+    except KeyError:
+
+        colour_dict, well_percentile, max_values, min_values = heatmap.heatmap_colours(well_data_draw_dict,
+                                                                                       mapping["percentile"],
+                                                                                       mapping["colours"])
+
+    else:
+        colour_dict, well_percentile, max_values, min_values = heatmap.heatmap_colours(well_data_draw_dict["value"],
+                                                                                       mapping["percentile"],
+                                                                                       mapping["colours"])
+    return colour_dict, well_percentile, max_values, min_values, heatmap
+
+
+def _re_write_well_data_ditch_for_only_relevant_wells(well_data_dict, state_dict):
+    well_data_draw_dict = copy.deepcopy(well_data_dict)
+    for states in state_dict["states"]:
+        if not state_dict[states]["use"]:
+            for wells in state_dict[states]["wells"]:
+                try:
+                    well_data_draw_dict["values"]
+                except KeyError:
+                    del well_data_draw_dict[wells]
+                else:
+                    del well_data_draw_dict["values"][wells]
+    return well_data_draw_dict
 
 
 def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate=False, sample_layout=None, mapping=None
@@ -12,13 +47,13 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
     :type graph: PySimpleGUI.PySimpleGUI.Graph
     :param plate_type: what platetype that it needs to draw. there are 3 options 96, 384 or 1536.
     :type plate_type: str
-    :param well_dict: A dict over wells, this is used for drawing saved plate layouts. The dict hold information for
+    :param well_data_dict: A dict over wells, this is used for drawing saved plate layouts. The dict hold information for
         what type each well is (sample, blank or paint) and the colour of the well to draw, or the value of the sample
         if the dict is from experimental data.
-    :type well_dict: dict
+    :type well_data_dict: dict
     :param archive_plate: bool to see if it needs to draw a blank plate or a saved plate
     :type archive_plate: bool
-    :param gui_tab: what tab the plate is drawn on. differet tabs differe sizes:
+    :param gui_tab: what tab the plate is drawn on. different tabs differ sizes:
     :type gui_tab: str
     :param sample_layout: This is for single point, or multiple samples with same ID.
     :type sample_layout: str
@@ -42,15 +77,17 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
         - int
         - int
     """
+    print(well_data_dict)
+    if state_dict:
+        well_data_draw_dict = _re_write_well_data_ditch_for_only_relevant_wells(well_data_dict, state_dict)
+    else:
+        well_data_draw_dict = copy.deepcopy(well_data_dict)
+
     if mapping and mapping["mapping"] == "Heatmap":
+        colour_dict, well_percentile, max_values, min_values, heatmap = _heat_mapping_setup(well_data_draw_dict, mapping)
 
-        heatmap = Heatmap()
-
-        # heatmap_dict = heatmap.dict_convert(well_data_dict, state_dict, mapping["states"])
-
-        colour_dict, well_percentile, max_values, min_values = heatmap.heatmap_colours(well_data_dict["value"],
-                                                                                       mapping["percentile"],
-                                                                                       mapping["colours"])
+    else:
+        heatmap = colour_dict = well_percentile = None
 
     well_dict = {}
     graph.erase()
@@ -99,16 +136,24 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
             if skipped_well and well_id in skipped_well:
                 fill_colour = "#FFFFFF"
                 group = 0
-                well_state = well_data_dict[well_id]["state"]
+                try:
+                    well_data_draw_dict[well_id]["state"]
+                except KeyError:
+                    if well_state:
+                        well_state = state_dict[well_id]
+                    else:
+                        well_state = "missing"
+                else:
+                    well_state = well_data_draw_dict[well_id]["state"]
             else:
                 if archive_plate:
                     counter += 1
-                    well_state = well_data_dict[well_id]["state"]
+                    well_state = well_data_draw_dict[well_id]["state"]
                     if sample_layout and sample_layout.casefold() == "single point":
                         fill_colour = config["plate_colouring"][well_state]
                     else:
-                        fill_colour = well_data_dict[well_id]["colour"]
-                    group = well_data_dict[well_id]["group"]
+                        fill_colour = well_data_draw_dict[well_id]["colour"]
+                    group = well_data_draw_dict[well_id]["group"]
 
                 elif sample_layout and sample_layout.casefold() != "single point":
                     group = 1
@@ -126,12 +171,18 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
 
                 if mapping:
                     try:
-                        well_data_dict["value"][well_id]
+                        well_data_draw_dict["value"][well_id]
                     except KeyError:
-                        map_well = False
+                        try:
+                            well_data_draw_dict[well_id]
+                        except KeyError:
+                            map_well = False
+                        else:
+                            map_well = True
                     else:
                         map_well = True
                     if mapping["mapping"] == "Heatmap":
+
                         if map_well:
                             try:
                                 fill_colour = heatmap.get_well_colour(colour_dict, well_percentile, well_id)
@@ -142,8 +193,14 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
                     elif mapping["mapping"] == "Hit Map":
                         if map_well:
                             for _, params in mapping["bins"].items():
+                                try:
+                                    well_data_draw_dict["value"][well_id]
+                                except KeyError:
+                                    test_well_data = float(well_data_draw_dict[well_id])
+                                else:
+                                    test_well_data = float(well_data_draw_dict["value"][well_id])
 
-                                if params["use"] and params["min"] <= well_data_dict["value"][well_id] <= params["max"]:
+                                if params["use"] and params["min"] <= test_well_data <= params["max"]:
                                     fill_colour = params["colour"]
                                 else:
                                     fill_colour = "black"
@@ -156,7 +213,7 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
             temp_well = temp_well - off_set
             well_dict[temp_well] = {}
             if group == "dose":
-                group = well_data_dict[well_id]["group"]
+                group = well_data_draw_dict[well_id]["group"]
             well_dict[temp_well]["group"] = group
             well_dict[temp_well]["well_id"] = well_id
             well_dict[temp_well]["state"] = well_state
@@ -167,3 +224,4 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
     max_y = start_y
 
     return well_dict, min_x, min_y, max_x, max_y, off_set
+

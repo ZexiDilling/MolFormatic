@@ -1,11 +1,7 @@
-from PySimpleGUI import PopupError
-
 from database_handler import DataBaseFunctions
 from gui_function_info_bio import bio_info_grab_data
 from gui_function_info_compound import update_overview_compound
 from database_functions import grab_table_data
-from helpter_functions import eval_guard_dict, eval_guard_list
-
 from start_up_values import window_tables, all_table_data
 
 

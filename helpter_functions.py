@@ -85,6 +85,7 @@ def eval_guard_dict(test_dict):
     else:
         return None
 
+
 def eval_guard_list(test_list):
     """
 
@@ -99,3 +100,29 @@ def eval_guard_list(test_list):
         return None
 
 
+def plate_layout_to_state_dict(plate_layout):
+    state_dict = {"states": []}
+
+    for counter in plate_layout:
+        current_state = plate_layout[counter]["state"]
+        well_id = plate_layout[counter]["well_id"]
+
+        if current_state == "sample":
+            use_it = True
+        else:
+            use_it = False
+
+        if current_state not in state_dict["states"]:
+            state_dict["states"].append(current_state)
+
+        try:
+            state_dict[current_state]
+        except KeyError:
+            state_dict[current_state] = {"use": use_it,
+                                         "wells": [well_id]}
+        else:
+            state_dict[current_state]["wells"].append(well_id)
+
+        state_dict[well_id] = current_state
+
+    return state_dict
