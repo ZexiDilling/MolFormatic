@@ -323,8 +323,8 @@ def main(config, queue_gui, queue_mol):
         if event == "-TABLE_TAB_GRP-":
             table_tab_group_pressed_update(config, window, values)
 
-        if event == "-BIO_EXP_TABLE_ASSAY_LIST_BOX-":
-            experiment_table_assay_list_update(config, window, values)
+        if event == "-BIO_EXP_TABLE_ASSAY_LIST_BOX-" or event == "-BIO_EXP_ANALYSE_STYLE-":
+            experiment_table_assay_list_update(dbf, config, window, values)
 
         if event == "-BIO_EXP_ASSAY_RUN_TABLE-" or event == "-BIO_EXP_APPROVED_PLATES_ONLY-":
             experiment_table_assay_run_update(config, window, values)
@@ -373,7 +373,8 @@ def main(config, queue_gui, queue_mol):
             table_limiter_update(config, window, values, temp_mp_plates)
 
         if event == "-PLATE_TABLE_UPDATE_VOLUME-":
-            sg.PopupError("Missing function - should update the volume of the selected plate's compounds based on ECHO survey file")
+            sg.PopupError("Missing function - should update the volume of the selected plate's "
+                          "compounds based on ECHO survey file")
 
         if event == "-PLATE_TABLE_TABLE-+-double click-":
             compound_table_double_click(dbf, config, window, values, event)

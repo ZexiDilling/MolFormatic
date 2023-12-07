@@ -18,7 +18,7 @@ def table_tab_group_pressed_update(config, window, values):
             window["-BIO_EXP_TABLE_ASSAY_LIST_BOX-"].update(values=all_assays)
 
 
-def experiment_table_assay_list_update(config, window, values):
+def experiment_table_assay_list_update(dbf, config, window, values):
 
     if values["-BIO_EXP_TABLE_ASSAY_LIST_BOX-"]:
         # clearing all tables
@@ -30,9 +30,26 @@ def experiment_table_assay_list_update(config, window, values):
         table_name = "assay_runs"
         selected_assays = values["-BIO_EXP_TABLE_ASSAY_LIST_BOX-"]
         selected_headlines = ["run_name", "batch", "date", "note"]
+
         search_list_clm = "assay_name"
-        bio_exp_assay_runs, _ = grab_table_data(config, table_name, selected_assays,
+        bio_exp_assay_runs, headlines = grab_table_data(config, table_name, selected_assays,
                                                 specific_rows=selected_headlines, search_list_clm=search_list_clm)
+
+        if values["-BIO_EXP_ANALYSE_STYLE-"] != "All":
+            kill_counter = []
+            run_name_counter = headlines.index("run_name")
+            for row_counter, rows in enumerate(bio_exp_assay_runs):
+
+                for counter, data in enumerate(rows):
+                    if counter == run_name_counter:
+                        row_data = dbf.find_data_single_lookup("biological_plate_data", data, "assay_run")[0]
+                        if row_data[-1].casefold() != values["-BIO_EXP_ANALYSE_STYLE-"].casefold():
+                            kill_counter.append(row_counter)
+
+            if kill_counter:
+                kill_counter.reverse()
+                for killer_count in kill_counter:
+                    del bio_exp_assay_runs[killer_count]
 
         window["-BIO_EXP_ASSAY_RUN_TABLE-"].update(values=bio_exp_assay_runs)
         all_table_data["-BIO_EXP_ASSAY_RUN_TABLE-"] = bio_exp_assay_runs

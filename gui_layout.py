@@ -529,7 +529,7 @@ class GUILayout:
         text_size_long = 14
         input_size_short = 5
         input_size_long = 10
-        
+
         dropdown_size = 13
         col_basic_setup = sg.Frame("Setup", [[
             sg.Column([
@@ -996,16 +996,16 @@ class GUILayout:
             sg.Column([
                 [sg.T("Double click table, to get a popup for that table")],
                 [sg.Table(values=[], headings=info_mp_table_headings, key="-COMPOUND_INFO_INFO_MP_TABLE-",
-                          justification="center", auto_size_columns=True, enable_click_events=True,
+                          justification="center", auto_size_columns=False, enable_click_events=True,
                           num_rows=2, visible=True)],
                 [sg.Table(values=[], headings=info_dp_table_headings, key="-COMPOUND_INFO_INFO_DP_TABLE-",
-                          justification="center", auto_size_columns=True, enable_click_events=True,
+                          justification="center", auto_size_columns=False, enable_click_events=True,
                           num_rows=2, visible=True)],
                 [sg.Table(values=[], headings=info_assay_table_headings, key="-COMPOUND_INFO_INFO_ASSAY_TABLE-",
-                          justification="center", auto_size_columns=True, enable_click_events=True,
-                          num_rows=2, visible=True)],
+                          justification="center", auto_size_columns=False, enable_click_events=True,
+                          num_rows=2, visible=True, col_widths=[8, 12, 10, 5, 7, 3])],
                 [sg.Table(values=[], headings=info_hits_table_headings, key="-COMPOUND_INFO_INFO_HITS_TABLE-",
-                          justification="center", auto_size_columns=True, enable_click_events=True,
+                          justification="center", auto_size_columns=False, enable_click_events=True,
                           num_rows=2, visible=True)],
                 # [sg.Table(values=[], headings=info_transfer_table_headings, key="-COMPOUND_INFO_INFO_TRANSFERS_TABLE
                 # -", justification="center", #           auto_size_columns=False, enable_click_events=True,
@@ -1623,8 +1623,8 @@ class GUILayout:
                 [sg.Checkbox("Only approved Plates", key="-BIO_EXP_APPROVED_PLATES_ONLY-", default=True,
                              enable_events=True),
                  sg.Push(),
-                 sg.DropDown(self.analyse_style_include_all, key="-æ-",
-                             default_value=self.analyse_style_include_all[0],
+                 sg.DropDown(self.analyse_style_include_all, key="-BIO_EXP_ANALYSE_STYLE-",
+                             default_value=self.analyse_style_include_all[0], enable_events=True,
                              tooltip="Will limit the data, to only show runs that have use the specific style")]
             ])
         ]])
