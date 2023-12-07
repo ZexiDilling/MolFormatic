@@ -266,7 +266,7 @@ def bio_calculate(dbf, config, values):
                                                     assay_name, responsible, temp_concentration)
 
                 elif analyse_method.casefold() == "dose response":
-                    print("HEY!!! ")
+                    print(f"HEY!!! - we are doing {analyse_method}")
 
                 popup("Done")
 

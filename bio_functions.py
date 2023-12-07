@@ -520,7 +520,7 @@ def dose_response_import_handler(config, assay_name, plate_reader_files, worklis
 
 
 def _add_dose_response_data_to_the_database(all_data):
-
+    print("_add_dose_response_data_to_the_database - in bio functions ")
     print(all_data)
 
 

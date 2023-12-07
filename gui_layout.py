@@ -24,6 +24,7 @@ class GUILayout:
         self.tab_colour = config["GUI"]["tab_colour"]
         self.sample_style = ["Single Point", "Duplicate", "Triplicate", "Custom", "Dose Response"]
         self.analyse_style = ["Single", "Dose Response"]
+        self.analyse_style_include_all = ["All", "Single", "Dose Response"]
         self.plate_list = plate_list
         self.lable_style = "solid"
         self.show_input_style = "sunken"
@@ -955,7 +956,8 @@ class GUILayout:
             sg.Column([
                 [sg.Image(key="-COMPOUND_INFO_PIC-", size=(1500, 500))],
                 [sg.Multiline(key="-COMPOUND_INFO_SMILES-", size=(50, 2), horizontal_scroll=True)],
-                [sg.B("Search", key="-COMPOUND_INFO_SEND_TO_SEARCH-", tooltip="Sends the smiles to the search field")]
+                [sg.B("Send Smiles to Search", key="-COMPOUND_INFO_SEND_TO_SEARCH-",
+                      tooltip="Sends the smiles to the search field")]
                 ])
         ]])
 
@@ -986,37 +988,32 @@ class GUILayout:
 
         info_mp_table_headings = ["Plate", "well", "Vol"]
         info_dp_table_headings = ["Plate", "well", "Vol"]
-        info_assay_table_headings = ["Name", "Plate", "Method"]
+        info_assay_table_headings = ["Assay", "Run", "Plate", "Well", "Score", "App"]
         info_hits_table_headings = ["Assay", "Score", "Conc."]
         # info_transfer_table_headings = ["Tube", "Mp", "Assays"]
         info_purity_table_headings = ["Purity", "Replicates", "Date"]
         row_info_table = sg.Frame("Info Table", [[
             sg.Column([
-                [sg.T("Double click table name, to get a popup for that table")],
+                [sg.T("Double click table, to get a popup for that table")],
                 [sg.Table(values=[], headings=info_mp_table_headings, key="-COMPOUND_INFO_INFO_MP_TABLE-",
-                          justification="center", auto_size_columns=False, enable_click_events=True,
-                          num_rows=2, visible=True),
-                 sg.T("Mp", key="-COMPOUND_INFO_MP-", enable_events=True)],
+                          justification="center", auto_size_columns=True, enable_click_events=True,
+                          num_rows=2, visible=True)],
                 [sg.Table(values=[], headings=info_dp_table_headings, key="-COMPOUND_INFO_INFO_DP_TABLE-",
-                          justification="center", auto_size_columns=False, enable_click_events=True,
-                          num_rows=2, visible=True),
-                 sg.T("Dp", key="-COMPOUND_INFO_DP-", enable_events=True)],
+                          justification="center", auto_size_columns=True, enable_click_events=True,
+                          num_rows=2, visible=True)],
                 [sg.Table(values=[], headings=info_assay_table_headings, key="-COMPOUND_INFO_INFO_ASSAY_TABLE-",
-                          justification="center", auto_size_columns=False, enable_click_events=True,
-                          num_rows=2, visible=True),
-                 sg.T("Assays", key="-COMPOUND_INFO_ASSAY-", enable_events=True)],
+                          justification="center", auto_size_columns=True, enable_click_events=True,
+                          num_rows=2, visible=True)],
                 [sg.Table(values=[], headings=info_hits_table_headings, key="-COMPOUND_INFO_INFO_HITS_TABLE-",
-                          justification="center", auto_size_columns=False, enable_click_events=True,
-                          num_rows=2, visible=True),
-                 sg.T("Hits", key="-COMPOUND_INFO_HITS-", enable_events=True)],
+                          justification="center", auto_size_columns=True, enable_click_events=True,
+                          num_rows=2, visible=True)],
                 # [sg.Table(values=[], headings=info_transfer_table_headings, key="-COMPOUND_INFO_INFO_TRANSFERS_TABLE
                 # -", justification="center", #           auto_size_columns=False, enable_click_events=True,
                 # num_rows=2, visible=True),
                 # sg.T(Transfers"],
                 [sg.Table(values=[], headings=info_purity_table_headings, key="-COMPOUND_INFO_INFO_PURITY_USED_TABLE-",
                           justification="center", auto_size_columns=False, enable_click_events=True,
-                          num_rows=2, visible=True),
-                 sg.T("Purity", key="-COMPOUND_INFO_PURITY-", enable_events=True)]
+                          num_rows=2, visible=True)]
             ])
         ]], expand_x=True)
 
@@ -1624,7 +1621,11 @@ class GUILayout:
                 [sg.T("Amount of Plates: "), sg.T("0", key="-BIO_EXP_PLATE_COUNTER-"),
                  sg.T("Note: "), sg.T("", key="-BIO_EXP_PLATE_NOTE-")],
                 [sg.Checkbox("Only approved Plates", key="-BIO_EXP_APPROVED_PLATES_ONLY-", default=True,
-                             enable_events=True)]
+                             enable_events=True),
+                 sg.Push(),
+                 sg.DropDown(self.analyse_style_include_all, key="-æ-",
+                             default_value=self.analyse_style_include_all[0],
+                             tooltip="Will limit the data, to only show runs that have use the specific style")]
             ])
         ]])
 

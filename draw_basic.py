@@ -77,7 +77,6 @@ def draw_plate(config, graph, plate_type, well_data_dict, gui_tab, archive_plate
         - int
         - int
     """
-    print(well_data_dict)
     if state_dict:
         well_data_draw_dict = _re_write_well_data_ditch_for_only_relevant_wells(well_data_dict, state_dict)
     else:

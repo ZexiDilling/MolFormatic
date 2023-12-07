@@ -1020,6 +1020,7 @@ def _generate_well_dict(config, plate_type, plate_data, analysed_method, show_st
         plate_layout = plate_96_row
     else:
         print("MISSING LAYOUT FOR PLATE_1536")
+        return well_dict, None
 
     # Get states
     all_states = []
@@ -1524,8 +1525,8 @@ def bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, pla
                 try:
 
                     temp_layout = plate_to_layout[temp_plate_name]
-                except KeyError:
-
+                except KeyError as e:
+                    print(e)
                     print(plate_to_layout)
                     print(temp_plate_name)
                     temp_layout = list(plate_to_layout())[0]
@@ -2162,7 +2163,6 @@ def bio_dose_response_set_up(config, worklist, assay_name, plate_reader_files, b
                           "echo": {}}
 
     for plate_files in plate_reader_files:
-        print(plate_files)
         temp_plate_name = plate_files.split()[0]
 
         all_plates_data[temp_plate_name] = {}
@@ -2213,7 +2213,6 @@ def bio_dose_response_set_up(config, worklist, assay_name, plate_reader_files, b
         if event == "-DOSE_RESPONSE_CALC-" and values["-DOSE_RESPONSE_CALC-"]:
             table, data_value, headline = ["calc_dose_response", values["-DOSE_RESPONSE_CALC-"], "name"]
             temp_calc_data = dbf.find_data_single_lookup(table, data_value, headline)
-            print(temp_calc_data)
             if temp_calc_data:
                 window["-CALC_DOSE_STOCK-"].update("")
                 window["-CALC_DOSE_STOCK_DILUTION-"].update("")
@@ -2235,7 +2234,6 @@ def bio_dose_response_set_up(config, worklist, assay_name, plate_reader_files, b
             # method_calc_reading_50 = "ec50 = (curve_max - curve_min)*0.5 + curve_min"
             table, data_value, headline = ["calc_dose_response_method", values["-CALC_METHOD-"], "name"]
             temp_calc_methods = dbf.find_data_single_lookup(table, data_value, headline)
-            print(temp_calc_methods)
             if temp_calc_methods:
                 window["-DOSE_RESPONSE_CALC_METHOD-"].update(temp_calc_methods)
 
@@ -2247,6 +2245,7 @@ def bio_dose_response_set_up(config, worklist, assay_name, plate_reader_files, b
                 check = sg.PopupYesNo("Do you wish to add this formula to the Database?")
                 if check.casefold() == "yes":
                     print("Adding it to the db")
+                    print("missing this step !! ! !! ")
 
                 window["-DOSE_RESPONSE_CALC_METHOD-"].update(temp_calc_methods)
 
@@ -2394,7 +2393,13 @@ def bio_dose_response_set_up(config, worklist, assay_name, plate_reader_files, b
 
 
 def popup_table(table):
+    """
 
+    :param table:
+    :type table: str
+    :return:
+    """
+    table = table.removesuffix("+-double click-")
     table_name = all_table_data_extra[table]["name"]
     table_headings = all_table_data_extra[table]["headings"]
     table_data = all_table_data[table]

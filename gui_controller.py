@@ -279,7 +279,7 @@ def main(config, queue_gui, queue_mol):
             execute_button_pressed(dbf, config, window, values)
 
         if event == "-EXTRA_SUB_TABS-":
-            print("WHAT IS THIS???????? ARG???????? NOT WORKING")
+            print(event)
 
         if event == "-EXTRA_SUB_DATABASE_TABS-":
             database_tab_pressed(config, window, values, db_active)
@@ -337,7 +337,7 @@ def main(config, queue_gui, queue_mol):
             bio_tables_double_clicked(dbf, config, window, values, event, well_dict_bio_info)
 
         if event == "-BIO_EXP_COMPOUND_TABLE-+-double click-":
-            compound_table_double_click(config, window, values, event)
+            compound_table_double_click(dbf, config, window, values, event)
 
         if event == "-BIO_EXP_EXPORT_COMPOUNDS-" and values["-BIO_EXP_PLATE_TABLE-"]:
             bio_exp_compound_list(config, event, values)
@@ -376,32 +376,20 @@ def main(config, queue_gui, queue_mol):
             sg.PopupError("Missing function - should update the volume of the selected plate's compounds based on ECHO survey file")
 
         if event == "-PLATE_TABLE_TABLE-+-double click-":
-            compound_table_double_click(config, window, values, event)
+            compound_table_double_click(dbf, config, window, values, event)
 
         #   WINDOW 2 - COMPOUND INFO    ###
         if event == "-COMPOUND_INFO_SEARCH_COMPOUND_ID-":
-            update_overview_compound(config, window, values, None)
+            update_overview_compound(dbf, config, window, values, None)
 
         if event in compound_info_tables:
-            print(f"compound info table - {compound_info_tables[event]}")
+            print(f"compound info table - {event}")
 
         if event == "-COMPOUND_INFO_SEND_TO_SEARCH-":
             window["-SUB_SEARCH_SMILES-"].update(value=values["-COMPOUND_INFO_ID-"])
 
-        if event == "-COMPOUND_INFO_MP-+-double click-":
-            popup_table("-COMPOUND_INFO_INFO_MP_TABLE-")
-
-        if event == "-COMPOUND_INFO_DP-+-double click-":
-            popup_table("-COMPOUND_INFO_INFO_DP_TABLE-")
-
-        if event == "-COMPOUND_INFO_ASSAY-+-double click-":
-            popup_table("-COMPOUND_INFO_INFO_ASSAY_TABLE-")
-
-        if event == "-COMPOUND_INFO_HITS-+-double click-":
-            popup_table("-COMPOUND_INFO_INFO_HITS_TABLE-")
-
-        if event == "-COMPOUND_INFO_PURITY-+-double click-":
-            popup_table("-COMPOUND_INFO_INFO_PURITY_USED_TABLE-")
+        if event in compound_info_tables:
+            popup_table(event)
 
         #   WINDOW 2 - BIO INFO         ###
         # Updating Sub setting data
@@ -409,15 +397,12 @@ def main(config, queue_gui, queue_mol):
             colour_chooser_update(window, values, event)
 
         if event in assay_updater_list:
-            print("trigger")
             bio_info_window_update(dbf, window, values)
 
         if event == "-BIO_INFO_RUN_DROPDOWN-":
-            print("trigger")
             bio_info_plate_list_update(dbf, window, values, None)
 
         if event == "-BIO_INFO_PLATES_DROPDOWN-":
-            print("trigger")
             well_dict_bio_info = bio_info_plate_update(dbf, config, window, values, event, well_dict_bio_info)
 
         #   WINDOW 2 - PURITY INFO  ###

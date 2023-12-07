@@ -89,10 +89,7 @@ def _on_up_well_handler(values, well_dict, new_graphs_list, temp_sample_amount, 
 
     for well_counter, wells in enumerate(new_graphs_list):
         temp_well = wells
-        print(f"well counter: {wells}")
-        print(f'off set: {draw_tool_values["well_off_set"]}')
         wells = wells - draw_tool_values["well_off_set"]
-        print(f"new well count: {wells}")
 
         if window_1_plate_layout["temp_draw_tool"] == "dose":
             try:
@@ -145,7 +142,8 @@ def _on_up_well_handler(values, well_dict, new_graphs_list, temp_sample_amount, 
                     window_1_plate_layout["graph_plate"].Widget.itemconfig(wells, fill=colour)
                     try:
                         well_dict[wells]["colour"]
-                    except IndexError:
+                    except IndexError as e:
+                        print(f"error - {e} - for:")
                         print(well_dict)
                     else:
                         well_dict[wells]["colour"] = colour

@@ -149,8 +149,6 @@ class DataBaseFunctions:
         table_row_string = table_row_string.removesuffix(", ")
         table_row_string += f" WHERE {index_key_headline} = {index_key_data}"
 
-        print(table_row_string)
-
         self.submit_update(table_row_string)
 
     def rename_record_value(self, table, headline, old_value, new_value):
@@ -393,7 +391,7 @@ class DataBaseFunctions:
         sql_join = f"SELECT * FROM {table_1} JOIN {table_2} ON {table_1}.{shared_data} = {table_2}.{shared_data} " \
                    f"{selector_1} {binder} {selector_2}"
 
-        print(sql_join)
+        print(f"sql_join - {sql_join}")
         return self._row_creator(sql_join)
 
     @staticmethod

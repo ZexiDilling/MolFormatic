@@ -4,7 +4,7 @@ from database_functions import grab_table_data
 from start_up_values import all_table_data
 
 
-def update_overview_compound(config, window, values, compound_id):
+def update_overview_compound(dbf, config, window, values, compound_id):
     if not compound_id:
         compound_id = values["-COMPOUND_INFO_ID-"]
 
@@ -21,8 +21,6 @@ def update_overview_compound(config, window, values, compound_id):
         window["-COMPOUND_INFO_ORIGIN_ID-"].update(value=sample_row[0][7])
         window["-COMPOUND_INFO_CONCENTRATION-"].update(value=sample_row[0][5])
         window["-COMPOUND_INFO_TUBE_VOLUME-"].update(value=sample_row[0][4])
-        # ToDo find info from DB if that is there, else:
-        window["-COMPOUND_INFO_TUBE_VOLUME-"].update(value="Missing info")
 
         # Update Picture frame:
         window["-COMPOUND_INFO_SMILES-"].update(value=sample_row[0][2])
@@ -33,12 +31,18 @@ def update_overview_compound(config, window, values, compound_id):
 
         dp_table_data = grab_table_data(config, "compound_dp", single_row=True, data_value=compound_id,
                                         headline="compound_id")
+
         assay_compound_table_data = grab_table_data(config, "biological_compound_data", single_row=True,
                                                     data_value=compound_id, headline="compound_id")
 
         assay_plate = []
+        plate_score = {}
         for assays in assay_compound_table_data:
             assay_plate.append(assays[3])
+            plate_score[assays[3]] = {"score": round(float(assays[5]), 2),
+                                      "well": assays[4],
+                                      "conc": assays[7],
+                                      "approved": assays[9]}
         assay_plate_table_data, _ = grab_table_data(config, "biological_plate_data", assay_plate,
                                                     specific_rows=None,
                                                     search_list_clm="plate_name")
@@ -90,16 +94,21 @@ def update_overview_compound(config, window, values, compound_id):
                 ])
         else:
             updated_dp_table_data = [["No", "Data", "Found"]]
-
         if len(assay_plate_table_data) != 0:
             for rows, row_data in enumerate(assay_plate_table_data):
+                assay_run = row_data[1]
+                plate = row_data[2]
+                assay = dbf.find_data_single_lookup("assay_runs", assay_run, "run_name")[0][2]
                 updated_assay_table_data.append([
-                    row_data[9],
-                    row_data[2],
-                    row_data[10]
+                    assay,
+                    assay_run,
+                    plate,
+                    plate_score[plate]["well"],
+                    plate_score[plate]["score"],
+                    plate_score[plate]["approved"]
                 ])
         else:
-            updated_assay_table_data = [["No", "Data", "Found"]]
+            updated_assay_table_data = [["No", "Data", "Found", "", ""]]
 
         if len(assay_compound_table_data) != 0:
             for rows, row_data in enumerate(assay_compound_table_data):

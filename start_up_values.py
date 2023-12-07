@@ -42,7 +42,7 @@ all_table_data_extra = {
     "-COMPOUND_INFO_INFO_DP_TABLE-": {"name": "Plate Table",
                                       "headings": ["Plate", "well", "Vol"]},
     "-COMPOUND_INFO_INFO_ASSAY_TABLE-": {"name": "Assay Compound Table",
-                                         "headings": ["Name", "Plate", "Method"]},
+                                         "headings": ["Assay", "run", "Plate", "Well", "Score", "Approved"]},
     "-COMPOUND_INFO_INFO_HITS_TABLE-": {"name": "",
                                         "headings": ["Assay", "Score", "Conc."]},
     "-COMPOUND_INFO_INFO_PURITY_USED_TABLE-": {"name": "",
@@ -147,14 +147,6 @@ window_1_extra = {
 }
 
 all_data = None
-compound_info_tables = {"-COMPOUND_INFO_INFO_MP-": "-COMPOUND_INFO_INFO_MP_TABLE-",
-                        "-COMPOUND_INFO_INFO_DP-": "-COMPOUND_INFO_INFO_DP_TABLE-",
-                        "-COMPOUND_INFO_INFO_ASSAY-": "-COMPOUND_INFO_INFO_ASSAY_TABLE-",
-                        "-COMPOUND_INFO_INFO_HITS-": "-COMPOUND_INFO_INFO_HITS_TABLE-",
-                        "-COMPOUND_INFO_INFO_TRANSFERS-": "-COMPOUND_INFO_INFO_TRANSFERS_TABLE-",
-                        "-COMPOUND_INFO_INFO_PURITY-": "-COMPOUND_INFO_INFO_PURITY_USED_TABLE-"}
-
-
 # BIO EXP TABLE CONSTANTS:
 window_tables = {"all_assays": None, "plate_bio_info": None}
 bio_info_tables = ["-BIO_EXP_TABLE_ASSAY_LIST_BOX-+-double click-",
@@ -177,6 +169,12 @@ colour_chooser_buttons = ["-BIO_INFO_HIT_MAP_TH_1_COLOUR_TARGET-",
 assay_updater_list = ["-BIO_INFO_ASSAY_DROPDOWN-",
                       "-BIO_INFO_APPROVED_CHECK-",
                       "-BIO_INFO_ANALYSE_METHOD-"]
+
+compound_info_tables = ["-COMPOUND_INFO_INFO_MP_TABLE-+-double click-",
+                        "-COMPOUND_INFO_INFO_DP_TABLE-+-double click-",
+                        "-COMPOUND_INFO_INFO_ASSAY_TABLE-+-double click-",
+                        "-COMPOUND_INFO_INFO_HITS_TABLE-+-double click-",
+                        "-COMPOUND_INFO_INFO_PURITY_USED_TABLE-+-double click-"]
 
 
 def database_guard(config, cw):
@@ -207,11 +205,11 @@ def start_up_gui(config, window):
 
     # Makes it possible to double-click on the table
 
-    window["-COMPOUND_INFO_MP-"].bind('<Double-Button-1>', "+-double click-")
-    window["-COMPOUND_INFO_DP-"].bind('<Double-Button-1>', "+-double click-")
-    window["-COMPOUND_INFO_ASSAY-"].bind('<Double-Button-1>', "+-double click-")
-    window["-COMPOUND_INFO_HITS-"].bind('<Double-Button-1>', "+-double click-")
-    window["-COMPOUND_INFO_PURITY-"].bind('<Double-Button-1>', "+-double click-")
+    window["-COMPOUND_INFO_INFO_MP_TABLE-"].bind('<Double-Button-1>', "+-double click-")
+    window["-COMPOUND_INFO_INFO_DP_TABLE-"].bind('<Double-Button-1>', "+-double click-")
+    window["-COMPOUND_INFO_INFO_ASSAY_TABLE-"].bind('<Double-Button-1>', "+-double click-")
+    window["-COMPOUND_INFO_INFO_HITS_TABLE-"].bind('<Double-Button-1>', "+-double click-")
+    window["-COMPOUND_INFO_INFO_PURITY_USED_TABLE-"].bind('<Double-Button-1>', "+-double click-")
 
     # Plate Tables
     window["-PLATE_TABLE_TABLE-"].bind('<Double-Button-1>', "+-double click-")

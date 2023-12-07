@@ -116,7 +116,6 @@ def bio_tables_double_clicked(dbf, config, window, values, event, well_dict_bio_
             temp_assay = temp_assay[0]
 
         if temp_plate:
-            print("I GOT TEMP PLATE TABLE")
             if not temp_run:
                 row_data = dbf.find_data_single_lookup("biological_plate_data", temp_plate, "plate_name")[0]
                 temp_run = row_data[2]
@@ -131,7 +130,6 @@ def bio_tables_double_clicked(dbf, config, window, values, event, well_dict_bio_
             well_dict_bio_info = bio_info_plate_update(dbf, config, window, values, event, well_dict_bio_info,
                                                        plate=temp_plate)
         elif temp_run:
-            print("I GOT TEMP RUN TABLE")
             if not temp_assay:
                 row_data = dbf.find_data_single_lookup("assay_runs", temp_assay, "run_name")[0]
                 temp_assay = row_data[2]
@@ -141,13 +139,13 @@ def bio_tables_double_clicked(dbf, config, window, values, event, well_dict_bio_
             bio_info_plate_list_update(dbf, window, values, ["All", temp_run])
 
         else:
-            print("do we get here? ")
             window["-BIO_INFO_ASSAY_DROPDOWN-"].update(value=temp_assay)
             bio_info_window_update(dbf, window, values, assay=temp_assay)
             # window["-BIO_INFO_PLATES_DROPDOWN-"].update(value="All")
     return well_dict_bio_info
 
-def compound_table_double_click(config, window, values, event):
+
+def compound_table_double_click(dbf, config, window, values, event):
 
     if event == "-BIO_EXP_COMPOUND_TABLE-+-double click-":
         try:
@@ -170,7 +168,7 @@ def compound_table_double_click(config, window, values, event):
     if temp_compound_id:
         window["-TAB_GROUP_TWO-"].Widget.select(0)
         window["-COMPOUND_INFO_ID-"].update(value=temp_compound_id)
-        update_overview_compound(config, window, values, temp_compound_id)
+        update_overview_compound(dbf, config, window, values, temp_compound_id)
     else:
         pass
 
@@ -259,6 +257,7 @@ def _update_bio_exp_compound_table(config, window, values,
                     break
 
         else:
+            print("No bio_exp_compound_data - for update bio exp table")
             print(bio_exp_compound_data)
 
         # Update compound table data and counter:
@@ -271,7 +270,8 @@ def _update_bio_exp_compound_table(config, window, values,
     # update the note field for the plate table:
     try:
         all_table_data["-BIO_EXP_PLATE_TABLE-"][values["-BIO_EXP_PLATE_TABLE-"][0]]
-    except KeyError:
+    except KeyError as e:
+        print(e)
         print(values["-BIO_EXP_PLATE_TABLE-"])
         note = ""
     else:

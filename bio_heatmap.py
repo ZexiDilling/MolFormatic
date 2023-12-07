@@ -99,7 +99,6 @@ class Heatmap:
             percentile_dict["high"]["mid"] = (((max_values - min_values) / 100) * percentiles["mid"]) + min_values
             percentile_dict["low"]["mid"] = (((max_values - min_values)/ 100) * percentiles["mid"]) + min_values
 
-        print(percentile_dict)
         return percentile_dict, max_values, min_values
 
     @staticmethod
