@@ -7,7 +7,7 @@ import PySimpleGUI as sg
 from config_writer import ConfigWriter
 from database_handler import DataBaseFunctions
 from gui_function_info_bio import colour_chooser_update, bio_info_window_update, \
-    bio_info_plate_list_update, bio_info_plate_update
+    bio_info_plate_list_update, bio_info_plate_update, bio_info_canvas_clicked
 from gui_function_info_calculations import calculate_dose
 from gui_function_info_lcms import sample_selection_mode_update, lcms_calculation, lcms_drawing
 from gui_popup import popup_table
@@ -21,7 +21,7 @@ from gui_function_general_startup import start_up_database
 from gui_function_setup_lcms import lcms_importer, lcms_info_overview, lcms_reporting
 from gui_function_table_lcms import table_group_lcms, date_set_update, batch_list_box_update
 from gui_function_general_menu import menu_open, menu_save, menu_about, help_info_controller, sorting_the_tables
-from gui_function_setup_plate_layout import plate_layout_draw_groups, colour_target_update, plate_archive, \
+from gui_function_setup_plate_layout import plate_layout_draw_groups, colour_target_update, \
     plate_list_updater, dose_sample_amount, dose_dilution_replicates, dose_colouring
 from gui_function_table_plate import plate_chooser_update, barcode_list_box_update, table_limiter_update, \
     table_group_tables, clear_plate_table_update
@@ -54,6 +54,7 @@ def main(config, queue_gui, queue_mol):
     :return: This is a gui control modul. Returns depending on what is being done in the GUI
     """
     # importing config writer, to write data to the config file
+    global bio_info_clicked
     config_writer = ConfigWriter(config)
     db_active = database_guard(config, config_writer)
     dbf = DataBaseFunctions(config)
@@ -217,30 +218,6 @@ def main(config, queue_gui, queue_mol):
 
         if event == "-RENAME_LAYOUT-":
             rename_layout(dbf, window, values)
-
-        # Used both for Plate layout and Bio Info
-        # prints coordinate and well under the plate layout
-        try:
-            event.endswith("+MOVE")
-
-        except AttributeError:
-            pass
-
-        else:
-            if event.endswith("+MOVE") and type(event) != tuple:
-                on_move(window, values, graph_bio_exp, well_dict, well_dict_bio_info)
-
-        if event == "-RECT_BIO_CANVAS-":
-            bio_canvas(values)
-
-        # it does not always detect this event:
-        try:
-            event.endswith("+UP")
-        except AttributeError:
-            pass
-        else:
-            if event.endswith("+UP"):
-                well_dict = on_up(window, values, well_dict, dose_colour_dict, colour_select)
 
         #     WINDOW 1 - UPDATE Database      ###
         if event == "-UPDATE_COMPOUND-":
@@ -406,6 +383,9 @@ def main(config, queue_gui, queue_mol):
         if event == "-BIO_INFO_PLATES_DROPDOWN-":
             well_dict_bio_info = bio_info_plate_update(dbf, config, window, values, event, well_dict_bio_info)
 
+        if event == "-BIO_INFO_CANVAS-":
+            bio_info_clicked = bio_info_canvas_clicked(window, values, event, bio_info_clicked)
+
         #   WINDOW 2 - PURITY INFO  ###
         if event == "-PURITY_INFO_SAMPLE_SELECTION-":
             sample_selection_mode_update(window, values)
@@ -443,6 +423,31 @@ def main(config, queue_gui, queue_mol):
         # Sorting when clicking on Table headers. All tables should be in here execpt compound table, as it is a tree
         if isinstance(event, tuple):
             sorting_the_tables(window, event, search_reverse)
+
+        # Used both for Plate layout and Bio Info
+        # prints coordinate and well under the plate layout
+        try:
+            event.endswith("+MOVE")
+
+        except AttributeError:
+            pass
+
+        else:
+            if event.endswith("+MOVE") and type(event) != tuple:
+                on_move(window, values, graph_bio_exp, well_dict, well_dict_bio_info)
+
+        if event == "-RECT_BIO_CANVAS-":
+            bio_canvas(values)
+
+        # it does not always detect this event:
+        try:
+            event.endswith("+UP")
+        except AttributeError:
+            pass
+        else:
+            if event.endswith("+UP"):
+                well_dict = on_up(window, values, well_dict, dose_colour_dict, colour_select)
+
 
 
 if __name__ == "__main__":

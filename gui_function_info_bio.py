@@ -236,6 +236,13 @@ def bio_info_plate_update(dbf, config, window, values, event, well_dict_bio_info
         return well_dict_bio_info
 
 
+def bio_info_canvas_clicked(window, values, event, bio_info_clicked):
+    if bio_info_clicked:
+        bio_info_clicked = False
+        bio_info_well = values["-BIO_INFO_CANVAS-"]
+        print(f"Canvas on BIO info was clicked. This is the value: {bio_info_well}")
+    return bio_info_clicked
+
 if __name__ == "__main__":
     # pass
     import configparser

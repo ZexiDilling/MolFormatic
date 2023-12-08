@@ -3,7 +3,8 @@ import PySimpleGUI as sg
 from info import unit_converter_list_mol, unit_converter_list_liquids, matrix_header
 
 
-def table_popup_layout(table_name, table_headings, table_data):
+def table_popup_layout(config, table_name, table_headings, table_data):
+    sg.theme(config["GUI"]["theme"])
     col = sg.Frame(table_name, [[
         sg.Column([
             [sg.Table(table_data, headings=table_headings, auto_size_columns=True, key="-POPUP_TABLE-")],
@@ -12,11 +13,11 @@ def table_popup_layout(table_name, table_headings, table_data):
     ]])
 
     layout = [[col]]
-
     return sg.Window("Table overview", layout, finalize=True, resizable=True)
 
 
-def matrix_popup_layout(calc, state=None, method=None):
+def matrix_popup_layout(config, calc, state=None, method=None):
+    sg.theme(config["GUI"]["theme"])
     table_headings = matrix_header
     table_data = []
     col_matrix_tabl = sg.Column([
@@ -37,11 +38,11 @@ def matrix_popup_layout(calc, state=None, method=None):
     ], size=(1500, 500))
 
     layout = [[row_matrix]]
-
     return sg.Window("Matrix", layout, finalize=True, resizable=True)
 
 
-def sample_checker_layout(table_data, headings, db_data):
+def sample_checker_layout(config, table_data, headings, db_data):
+    sg.theme(config["GUI"]["theme"])
     raw_table_col = sg.Frame("Compound Samples", [[
         sg.Column([
             [sg.Table(values=table_data, headings=headings,
@@ -64,7 +65,8 @@ def sample_checker_layout(table_data, headings, db_data):
     return sg.Window("Samples", layout, finalize=True, resizable=True), table_data
 
 
-def new_headlines_layout(table_data, headings):
+def new_headlines_layout(config, table_data, headings):
+    sg.theme(config["GUI"]["theme"])
     raw_table_col = sg.Frame("Please select new headlines", [[
         sg.Column([
             [sg.Table(values=table_data, headings=headings,
@@ -81,7 +83,8 @@ def new_headlines_layout(table_data, headings):
     return sg.Window("Samples", layout, finalize=True, resizable=True), table_data
 
 
-def plate_layout_chooser_layout(table_data, headings):
+def plate_layout_chooser_layout(config, table_data, headings):
+    sg.theme(config["GUI"]["theme"])
     raw_table_col = sg.Frame("Please select plate layout for each plate", [[
         sg.Column([
             [sg.Table(values=table_data, headings=headings,
@@ -95,10 +98,12 @@ def plate_layout_chooser_layout(table_data, headings):
         [sg.Button("Done", key="-POP_SAMPLE_CHECKER_OK-", expand_x=True),
          sg.Button("Cancel", key="-WINDOW_TWO_CANCEL-", expand_x=True)]
     ]
+
     return sg.Window("Samples", layout, finalize=True, resizable=True), table_data
 
 
-def assay_generator_layout(plate_layout):
+def assay_generator_layout(config, plate_layout):
+    sg.theme(config["GUI"]["theme"])
     text_size = 12
     input_size = 10
     assay_layout = sg.Frame("New Assay", [[
@@ -130,8 +135,9 @@ def assay_generator_layout(plate_layout):
     return sg.Window("New Assay", layout, finalize=True, resizable=True)
 
 
-def assay_run_naming_layout(plate_table_headline, run_name, previous_runs, assay_name, used_plates_table_data,
+def assay_run_naming_layout(config, plate_table_headline, run_name, previous_runs, assay_name, used_plates_table_data,
                             all_batch_numbers, batch_number):
+    sg.theme(config["GUI"]["theme"])
     text_size = 15
     input_size = 15
     previous_runs.append("New")
@@ -195,8 +201,9 @@ def assay_run_naming_layout(plate_table_headline, run_name, previous_runs, assay
     return sg.Window("Assay Run", layout, finalize=True, resizable=True)
 
 
-def dead_run_naming_layout(plate_table_headline, run_name, previous_runs, assay_name, plates_table_data,
+def dead_run_naming_layout(config, plate_table_headline, run_name, previous_runs, assay_name, plates_table_data,
                            all_batch_numbers, batch_number, worklist):
+    sg.theme(config["GUI"]["theme"])
     text_size = 15
     button_size = 15
     input_size = 15
@@ -293,6 +300,7 @@ def bio_data_approval_table_layout(config, plate_table_data, plate_headings, com
     :type well_state_overview: dict
     :return: The layout for the popup
     """
+    sg.theme(config["GUI"]["theme"])
     standard_size = 12
 
     raw_table_col = sg.Frame("Please approve or dimiss plates", [[
@@ -500,11 +508,13 @@ def bio_data_approval_table_layout(config, plate_table_data, plate_headings, com
               [sg.Button("Done", key="-BIO_DATA_APPROVED-", expand_x=True),
                sg.Button("Cancel", key="-WINDOW_TWO_CANCEL-", expand_x=True)]
               ]
+
     return sg.Window("Samples", layout, finalize=True, resizable=True), plate_table_data
 
 
-def bio_dose_response_set_up_layout(worklist, assay_name, run_name, dose_response_calc, used_plates_table_data,
+def bio_dose_response_set_up_layout(config, worklist, assay_name, run_name, dose_response_calc, used_plates_table_data,
                                     plate_table_headline, calc_methodes):
+    sg.theme(config["GUI"]["theme"])
     text_size = 15
     button_size = 15
     input_size = 15
@@ -555,7 +565,8 @@ def bio_dose_response_set_up_layout(worklist, assay_name, run_name, dose_respons
             [sg.Multiline(default_text="Dead Plates - ", key="-DOSE_RESPONSE_NOTES-", size=(18, 15))],
             [sg.Button("Update Run", key="-ASSAY_RUN_UPDATE-", size=text_size)],
             [sg.T("Current run-notes")],
-            [sg.T("", key="-DOSE_RESPONSE_CURRENT_NOTES-", relief="sunken", size=18)],
+            [sg.T("", key="-DOSE_RESPONSE_CURRENT_NOTES-", relief="sunken", size=18),
+             sg.InputText("", key="-DOSE_RESPONSE_CURRENT_NOTES_TARGET-", visible=False)],
             [sg.B("Show full text", key="-DOSE_RESPONSE_SHOW_NOTES-", size=button_size)]
         ]),
         sg.Column([
@@ -630,6 +641,7 @@ def bio_dose_response_set_up_layout(worklist, assay_name, run_name, dose_respons
         [sg.Button("Analyse", key="-DOSE_RESPONSE_SETUP_DONE-", expand_x=text_size),
          sg.Button("Cancel", key="-WINDOW_DOSE_CANCELLED-", expand_x=text_size)]
     ]
+
 
     return sg.Window("Dose Response", layout, finalize=True, resizable=True)
 

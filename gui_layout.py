@@ -1042,20 +1042,20 @@ class GUILayout:
                         [sg.T("Assay", size=10),
                          sg.DropDown(self.assay, key="-BIO_INFO_ASSAY_DROPDOWN-",
                                      size=dropdown_size, enable_events=True),
-                         sg.T("Method", size=10),
-                         sg.DropDown(analyse_method, key="-BIO_INFO_ANALYSE_METHOD-", size=dropdown_size,
+                         sg.T("Method - TODO", size=14),
+                         sg.DropDown(analyse_method, key="-BIO_INFO_ANALYSE_METHOD-", size=10,
                                      default_value=analyse_method[0], enable_events=True)],
                         [sg.T("Runs", size=10),
                          sg.DropDown(runs, key="-BIO_INFO_RUN_DROPDOWN-", size=dropdown_size,
                                      default_value=runs[0], enable_events=True),
                          sg.T("Mapping", size=10),
-                         sg.DropDown(mapping, key="-BIO_INFO_MAPPING-", size=dropdown_size, enable_events=True,
+                         sg.DropDown(mapping, key="-BIO_INFO_MAPPING-", size=14, enable_events=True,
                                      default_value=mapping[0])],
                         [sg.T("Plates", size=10),
                          sg.DropDown(plates, key="-BIO_INFO_PLATES_DROPDOWN-", size=14,
                                      default_value=plates[0], enable_events=True),
-                         sg.T("State", size=10),
-                         sg.InputCombo([], key="-BIO_INFO_STATES-", size=14, enable_events=True)]
+                         sg.T("State - TODO", size=14),
+                         sg.InputCombo([], key="-BIO_INFO_STATES-", size=10, enable_events=True)]
                     ])
         ]], expand_x=True)
 
@@ -1076,6 +1076,7 @@ class GUILayout:
                 [sg.Graph(canvas_size=(500, 350), graph_bottom_left=(0, 0), graph_top_right=(250, 175),
                           background_color='grey', key="-BIO_INFO_CANVAS-", enable_events=True, drag_submits=True,
                           motion_events=True)],
+                [sg.T("Re-Think what is needed her. ")],
                 [col_well_info, col_cal_info]
             ])
         ]], expand_x=True)
@@ -1225,15 +1226,8 @@ class GUILayout:
             # , size=(0, 0)
         )
 
-        col_list_box = sg.Column([
-            [sg.T("States for Mapping")],
-            [sg.Listbox([], key="-BIO_INFO_STATE_LIST_BOX-", size=(10, 10), enable_events=True,
-                        select_mode=sg.LISTBOX_SELECT_MODE_MULTIPLE)]
-        ])
-
         row_options = sg.Frame("Graph Settings", [
-            # sg.vtop([col_heatmap, col_hit_mapping])  This does not work for some reason....
-            [col_heatmap, sg.VerticalSeparator(), col_hit_mapping, sg.VerticalSeparator(), col_list_box],
+            [col_heatmap, sg.VerticalSeparator(), col_hit_mapping, sg.VerticalSeparator()],
             [sg.Push(), sg.Button("Re-Draw", key="-BIO_INFO_RE_DRAW-")]
             ])
 

@@ -55,6 +55,7 @@ clm_to_row_converter = {"plate_96": clm_to_row_96, "plate_384": clm_to_row_384, 
 ms_mode_selector = {"Positive": "ms_pos", "Negative": "ms_neg"}
 search_reverse = {}
 
+bio_info_clicked = False
 
 draw_tool_values = {
     "start_point": None,

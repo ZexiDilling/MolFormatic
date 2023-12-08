@@ -37,7 +37,7 @@ def popup_select(the_list, select_multiple=False):
 
 def matrix_popup(data_dict, calc_values, state_values, method_values, calc, sub_settings_matrix, state=None,
                  method=None):
-    window = matrix_popup_layout(calc, state, method)
+    window = matrix_popup_layout(config, calc, state, method)
     window["-POPUP_MATRIX_METHOD-"].update(values=method_values)
     window["-POPUP_MATRIX_STATE-"].update(values=state_values)
     window["-POPUP_MATRIX_CALC-"].update(values=calc_values)
@@ -123,7 +123,7 @@ def sample_to_compound_name_controller(config, data_dict, fd, purity_sample_layo
         temp_data = [samples, "Blank", "Blank"]
         table_data.append(temp_data)
 
-    window, table_data = sample_checker_layout(table_data, table_headings, db_data)
+    window, table_data = sample_checker_layout(config, table_data, table_headings, db_data)
     window["-POP_SAMPLE_CHECKER_TABLE-"].bind('<Double-Button-1>', "+-double click-")
 
     while True:
@@ -245,7 +245,7 @@ def ms_raw_name_guard(raw_data_samples, excel_data_samples, db_data, config):
     export_file = None
     table_headings = ["Raw Name", "Excel name", "Final Name"]
 
-    window, table_data = sample_checker_layout(table_data, table_headings, db_data)
+    window, table_data = sample_checker_layout(config, table_data, table_headings, db_data)
     window["-POP_SAMPLE_CHECKER_TABLE-"].bind('<Double-Button-1>', "+-double click-")
 
     while True:
@@ -321,7 +321,7 @@ def new_headlines_popup(sort_table, right_headlines, wrong_headlines):
 
     table_headings = ["Headline in file", "New Headline"]
 
-    window, table_data = new_headlines_layout(table_data, table_headings)
+    window, table_data = new_headlines_layout(config, table_data, table_headings)
     window["-POP_HEADLINE_TABLE-"].bind('<Double-Button-1>', "+-double click-")
 
     while True:
@@ -410,7 +410,7 @@ def plate_layout_chooser(dbf, files, default_plate_layout):
 
     table_headings = ["Plate", "Layout"]
 
-    window, table_data = plate_layout_chooser_layout(table_data, table_headings)
+    window, table_data = plate_layout_chooser_layout(config, table_data, table_headings)
     window["-POP_HEADLINE_TABLE-"].bind('<Double-Button-1>', "+-double click-")
 
     while True:
@@ -447,7 +447,7 @@ def plate_layout_chooser(dbf, files, default_plate_layout):
 
 
 def assay_generator(config, plate_list):
-    window = assay_generator_layout(plate_list)
+    window = assay_generator_layout(config, plate_list)
 
     while True:
         event, values = window.read()
@@ -493,7 +493,9 @@ def assay_generator(config, plate_list):
 
 
 def _previous_runs_data(dbf, assay_name):
+
     temp_rows = dbf.find_data_single_lookup("assay_runs", assay_name, "assay_name")
+
     temp_run_name = None
     previous_runs = []
     all_batch_numbers = []
@@ -543,13 +545,6 @@ def _handle_echo_data(echo_files_string, worklist_echo_data, run_name, transfer_
     worklist_echo_data["echo"][run_name] = echo_data
     echo_data = str(echo_data)
 
-    # echo_data layout:
-    # temp = {"plate_name":
-    #             {"destination_well":
-    #                  {"mp_source_plate": str,
-    #                   "mp_source_well": str,
-    #                   "reason": str}}}
-
     return echo_data, transfer_dict
 
 
@@ -590,8 +585,8 @@ def assay_run_naming(config, all_plates_data, analysis_method, used_plates, assa
             temp_data = [plates, ""]
             used_plates_table_data.append(temp_data)
 
-    window = assay_run_naming_layout(plate_table_headline, run_name, previous_runs, assay_name, used_plates_table_data,
-                                      all_batch_numbers, batch_number)
+    window = assay_run_naming_layout(config, plate_table_headline, run_name, previous_runs, assay_name,
+                                     used_plates_table_data, all_batch_numbers, batch_number)
     run_notes = {}
     plates_checked = []
     dismissed_plates = {}
@@ -823,7 +818,7 @@ def dead_run_naming(config, assay_name, all_destination_plates, worklist, bio_co
 
         plates_table_data.append(temp_data)
 
-    window = dead_run_naming_layout(plate_table_headline, run_name, previous_runs, assay_name, plates_table_data,
+    window = dead_run_naming_layout(config, plate_table_headline, run_name, previous_runs, assay_name, plates_table_data,
                                      all_batch_numbers, batch_number, "Got Worklist")
 
     worklist_echo_data = {"worklist": {},
@@ -1236,31 +1231,6 @@ def _update_plate_calculations(window, values, temp_plate_dict, temp_analysed_me
     return draw_options
 
 
-#
-# def __change_plate_layout_naming(dbf, default_plate_layout_name):
-#     table = "plate_layout_sub"
-#     data_value = default_plate_layout_name
-#     headline = "plate_main"
-#     rows = dbf.find_data_single_lookup(table, data_value, headline)
-#     # Generate name for the new sub layout
-#     highest_sub_name = rows[-1][1]
-#     temp_name_list = highest_sub_name.split("_")
-#     temp_counter = temp_name_list[-1]
-#
-#     try:
-#         int(temp_counter)
-#     except ValueError:
-#         temp_name = highest_sub_name
-#         temp_counter = "1"
-#     else:
-#         temp_counter = int(temp_counter) + 1
-#         temp_name = highest_sub_name.removesuffix(str(temp_counter))
-#
-#     new_sub_name = f"{temp_name}_{temp_counter}"
-#
-#     return new_sub_name
-
-
 def __change_plate_layout_dict(well_dict, worklist_echo_data, current_plate_name):
     # Change the state and colour of wells where the echo have not transfereed.
 
@@ -1275,33 +1245,8 @@ def __change_plate_layout_dict(well_dict, worklist_echo_data, current_plate_name
     return well_dict
 
 
-# def _change_plata_layout_archive_plate_update(temp_archive_plates_dict, new_sub_name, well_dict, current_layout):
-#     # Generates the dict
-#     plate_type = temp_archive_plates_dict[current_layout]["plate_type"]
-#     temp_archive_plates_dict[new_sub_name] = {"well_layout": well_dict,
-#                                               "plate_type": plate_type,
-#                                               "sample": [],
-#                                               "blank": [],
-#                                               "max": [],
-#                                               "minimum": [],
-#                                               "positive": [],
-#                                               "negative": [],
-#                                               "empty": []}
-#
-#     # Makes list of the different well-types and adds them
-#     temp_well_dict = well_dict
-#     for counter in temp_well_dict:
-#         well_id = temp_well_dict[counter]["well_id"]
-#         temp_state = temp_well_dict[counter]["state"]
-#         temp_archive_plates_dict[new_sub_name][temp_state].append(well_id)
-#
-#     return temp_archive_plates_dict
-
-
 def _change_plate_layout(dbf, well_dict, current_plate_name, default_plate_layout_name):
-    # Get sub plate outs to add a new
-    # new_sub_name = __change_plate_layout_naming(dbf, default_plate_layout_name)
-    # get the assay_run for the current plate and fetch the echo_data for that plate to make a plate_layout from.
+
     rows = dbf.find_data_single_lookup(table="assay_plates", data_value=current_plate_name, headline="plate_name")
 
     assay_run = rows[0][2]
@@ -1365,15 +1310,6 @@ def _plate_layout_controller(dbf, temp_archive_plates_dict, plate_layout_check, 
 
         if plate_layout_check.casefold() == "changed":
             well_dict = _change_plate_layout(dbf, well_dict, current_plate_name, temp_plate_layout)
-
-    # Old version where there was made a lot of sub plate layouts
-    # if plate_layout_check.casefold() == "changed":
-    # new_sub_name, well_dict = _change_plate_layout(dbf, well_dict, current_plate_name, temp_plate_layout)
-    # # update temp_archive_plates_dict
-    # temp_archive_plates_dict = _change_plata_layout_archive_plate_update(temp_archive_plates_dict,
-    #                                                                      new_sub_name, well_dict,
-    #                                                                      temp_plate_layout)
-    # plate_to_layout[current_plate_name] = new_sub_name
 
     temp_plate_dict = copy.deepcopy(all_plates_data[current_plate_name])
 
@@ -2171,8 +2107,8 @@ def bio_dose_response_set_up(config, worklist, assay_name, plate_reader_files, b
 
         plates_table_data.append(temp_data)
 
-    window = bio_dose_response_set_up_layout(worklist, assay_name, run_name, dose_response_calc,
-                                              plates_table_data, plate_table_headline, calc_methods)
+    window = bio_dose_response_set_up_layout(config, worklist, assay_name, run_name, dose_response_calc,
+                                             plates_table_data, plate_table_headline, calc_methods)
 
     if worklist and len(worklist) == 1:
         worklist_txt_data = _handle_worklist(config, worklist[0], bio_compound_info_from_worklist,
@@ -2272,10 +2208,11 @@ def bio_dose_response_set_up(config, worklist, assay_name, plate_reader_files, b
         if event == "-ASSAY_RUN_UPDATE-":
             temp_run_notes = values["-DOSE_RESPONSE_NOTES-"]
             window["-DOSE_RESPONSE_CURRENT_NOTES-"].update(temp_run_notes)
+            window["-DOSE_RESPONSE_CURRENT_NOTES_TARGET-"].update(temp_run_notes)
             window["-DOSE_RESPONSE_NOTES-"].update("")
 
         if event == "-DOSE_RESPONSE_SHOW_NOTES-":
-            current_run_notes = values["-DOSE_RESPONSE_CURRENT_NOTES-"]
+            current_run_notes = values["-DOSE_RESPONSE_CURRENT_NOTES_TARGET-"]
             window["-DOSE_RESPONSE_NOTES-"].update(current_run_notes)
 
         if event == "-DOSE_RESPONSE_APPLY_SELECTED-" or event == "-DOSE_RESPONSE_APPLY_ALL-":
@@ -2405,7 +2342,7 @@ def popup_table(table):
     table_data = all_table_data[table]
 
     if table_data:
-        window = table_popup_layout(table_name, table_headings, table_data)
+        window = table_popup_layout(config, table_name, table_headings, table_data)
 
         while True:
             event, values = window.read()
@@ -2422,7 +2359,7 @@ if __name__ == "__main__":
     config = configparser.ConfigParser()
     config.read("config.ini")
     worklist = None
-    assay_name = "aplha_so"
+    assay_name = "Alpha_so"
     destination_plates = ["test_1", "test_2", "Test_3"]
     bio_compound_info_from_worklist = None
     bio_dose_response_set_up(config, worklist, assay_name, destination_plates, bio_compound_info_from_worklist)
