@@ -2233,8 +2233,8 @@ def bio_dose_response_set_up(config, worklist, assay_name, plate_reader_files, b
                 sg.popup_error("Please select a calculation method for analysing your sample")
             elif values["-DOSE_RESPONSE_CALC_METHOD-"].casefold() == "all":
                 calc_all_check = sg.popup_yes_no('You have selected "All" for your calculation.\n '
-                                'This could take several minutes per plate when analysing the data.\n'
-                                'Do you wish to continue?')
+                                                 'This could take several minutes per plate when analysing the data.\n'
+                                                 'Do you wish to continue?')
 
             else:
                 if calc_all_check.casefold() == "yes" or not calc_all_check:
@@ -2276,7 +2276,7 @@ def bio_dose_response_set_up(config, worklist, assay_name, plate_reader_files, b
 
                     calc_all_check = None
 
-        if event == "-DOSE_RESPONSE_CALC_BUTTON-":
+        if event == "-DOSE_RESPONSE_CALC_BUTTON-" or event == "-DOSE_RESPONSE_CALC_ADD_TO_DB-":
             if not values["-CALC_DOSE_STOCK-"] or not values["-CALC_DOSE_STOCK_UNIT-"]\
                 or not values["-CALC_DOSE_STOCK_DILUTION-"] or not values["-CALC_MAX_SOLVENT_CONCENTRATION-"] \
                     or not values["-CALC_DOSE_MAX_CONC-"] or not values["-CALC_DOSE_MAX_CONC_UNIT-"]\
@@ -2307,13 +2307,35 @@ def bio_dose_response_set_up(config, worklist, assay_name, plate_reader_files, b
                 # stock_dilution = 100
                 # max_solvent_concentration = 1
 
-                vol_needed_pure, overview_table_data, stock_table_data = \
-                    calculate_dilution_series(stock, max_concentration, min_concentration, dilutions_steps,
-                                              dilutions_factor, echo_min, final_vol, stock_dilution,
-                                              max_solvent_concentration, table_data=True)
+                if event == "-DOSE_RESPONSE_CALC_BUTTON-":
+                    # TODO testing this button
+                    vol_needed_pure, overview_table_data, stock_table_data = \
+                        calculate_dilution_series(stock, max_concentration, min_concentration, dilutions_steps,
+                                                  dilutions_factor, echo_min, final_vol, stock_dilution,
+                                                  max_solvent_concentration, table_data=True)
 
-                window["-CALC_TABLE_OVERVIEW-"].update(values=overview_table_data)
-                window["-CALC_TABLE_STOCK-"].update(values=stock_table_data)
+                    window["-CALC_TABLE_OVERVIEW-"].update(values=overview_table_data)
+                    window["-CALC_TABLE_STOCK-"].update(values=stock_table_data)
+                else:
+                    name = sg.PopupGetText("Name the setup")
+                    if not name:
+                        return
+                    else:
+
+                        calc_dose_setup = {
+                            "name": name,
+                            "stock": stock,
+                            "stock_dilution": stock_dilution,
+                            "max_procent_solvent_conc": max_solvent_concentration,
+                            "max_conc": max_concentration,
+                            "min_conc": min_concentration,
+                            "final_vol": final_vol,
+                            "min_trans_volume": echo_min,
+                            "dilutions_factor": dilutions_factor,
+                        }
+                        dbf.add_records_controller("calc_dose_response_setup", calc_dose_setup)
+
+                        sg.Popup("Added")
 
         if event == "-DOSE_RESPONSE_CALC_CLEAR-":
             window["-CALC_DOSE_STOCK-"].update("")

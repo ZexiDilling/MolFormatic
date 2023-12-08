@@ -531,12 +531,12 @@ def bio_dose_response_set_up_layout(config, worklist, assay_name, run_name, dose
             [sg.T("Run Name", size=text_size),
              sg.Input(run_name, key="-DOSE_RESPONSE_RUN_NAME-", size=input_size)],
             [sg.T("Curve Shape", size=text_size, tooltip="Z-shape is for active assays and S-Shape is for inactive"),
-             sg.Radio("Z", group_id=1, key="-DOSE_RESPONSE_CURVE_SHAPE_Z-",
+             sg.Radio("Z - TODO", group_id=1, key="-DOSE_RESPONSE_CURVE_SHAPE_Z-",
                       enable_events=True, default=True),
-             sg.Radio("S", group_id=1, key="-DOSE_RESPONSE_CURVE_SHAPE_S-",
+             sg.Radio("S - TODO", group_id=1, key="-DOSE_RESPONSE_CURVE_SHAPE_S-",
                       enable_events=True),
+             # TODO check if this is correct
              sg.Input("Z", key="-DOSE_RESPONSE_CURVE_SHAPE-", visible=False)],
-            # TODO CHECK UP and make sure  that this is correct
             [sg.T("Calc Method:", size=text_size,
                   tooltip="This is the method use for analysing the curve generated"),
              sg.DropDown(calc_methodes, key="-CALC_METHOD-", size=input_size, enable_events=True)],
