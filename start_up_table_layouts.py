@@ -156,6 +156,7 @@ bio_experiment_table = """ CREATE TABLE IF NOT EXISTS biological_plate_data(
 biological_compound_data = """ CREATE TABLE IF NOT EXISTS biological_compound_data(
             bio_data_id INTEGER PRIMARY KEY UNIQUE,
             compound_id INTEGER NOT NULL,
+            assay_name, TEXT NOT NULL,
             assay_plate TEXT NOT NULL,
             assay_well TEXT NOT NULL,
             score REAL NOT NULL,
@@ -166,6 +167,7 @@ biological_compound_data = """ CREATE TABLE IF NOT EXISTS biological_compound_da
             note TEXT,
             transferred TEXT,
             FOREIGN KEY (compound_id) REFERENCES compound_main(compound_id),
+            FOREIGN KEY("assay_name") REFERENCES "assay"("assay_name"),
             FOREIGN KEY (assay_plate) REFERENCES biological_plate_data(plate_name)
             ); """
 

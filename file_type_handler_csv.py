@@ -7,7 +7,7 @@ from pathlib import Path
 from extra_functions import unit_converter
 from info import plate_96_row, plate_96_column, compound_well_layout
 from compound_plate_formatting import mother_plate_generator as mpg
-from gui_popup import new_headlines_popup
+
 
 
 class CSVWriter:

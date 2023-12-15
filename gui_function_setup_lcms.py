@@ -7,7 +7,7 @@ from lcms_functions import get_peak_information, import_ms_data, lcms_data_to_db
     grab_sample_data, lcms_to_compounds, name_changer
 from gui_guards import guard_purity_data_wavelength
 from gui_popup import sample_to_compound_name_controller, ms_raw_name_guard
-from start_up_values import all_table_data, window_1_lcms, ms_mode_selector
+from start_up_values import window_1_lcms, ms_mode_selector
 
 
 def lcms_importer(config, window, values):
@@ -23,9 +23,6 @@ def lcms_importer(config, window, values):
         window["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"].update(values="")
         window["-PURITY_INFO_PEAK_TABLE-"].update(values="")
         window["-PURITY_INFO_PURITY_PEAK_LIST_TABLE-"].update(values="")
-        all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"] = None
-        all_table_data["-PURITY_INFO_PEAK_TABLE-"] = None
-        all_table_data["-PURITY_INFO_PURITY_PEAK_LIST_TABLE-"] = None
         window["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"].update(select_rows=[])
         window["-PURITY_INFO_PEAK_TABLE-"].update(select_rows=[])
         window["-PURITY_INFO_PURITY_PEAK_LIST_TABLE-"].update(select_rows=[])
@@ -124,19 +121,18 @@ def lcms_importer(config, window, values):
                             name_changer(new_names, window_1_lcms["purity_data"], sample_data, peak_information,
                                          sample_peak_dict)
 
-                        all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"], \
+                        temp_overview_table_data, \
                         purity_peak_list_table_data = lcms_ops(sample_data, window_1_lcms["purity_data"],
                                                                peak_information, ms_mode, delta_mass, mz_threshold,
                                                                peak_amounts)
 
                         add_start_end_time(purity_peak_list_table_data, sample_peak_dict)
                         window["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"]. \
-                            update(values=all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"])
+                            update(values=temp_overview_table_data)
 
                     window["-PURITY_INFO_SAMPLE_BOX-"].update(values=purity_samples)
                     window["-PURITY_DATA_IMPORT-"].update(text="Clear Purity Info")
                     window_1_lcms["purity_info_values"] = True
-                    # window["-PURITY_INFO_OVERVIEW_TABLE-"].update(values=all_table_data["-PURITY_INFO_OVERVIEW_TABLE-"])
 
 
 def lcms_info_overview(config, window, values):
@@ -146,8 +142,8 @@ def lcms_info_overview(config, window, values):
         else:
             if not window_1_lcms["purity_data_added_to_db"]:
                 batch_dict = lcms_data_to_db(config, window_1_lcms["purity_data"])
-
-            lcms_to_compounds(config, all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"])
+            temp_overview_table_data = window["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"].get()
+            lcms_to_compounds(config, temp_overview_table_data)
 
 
 def lcms_reporting(config, window, values):

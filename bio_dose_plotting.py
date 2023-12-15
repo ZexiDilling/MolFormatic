@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
 from bio_dose_auto_judge import JudgeFit
 from bio_dose_functions import setup_t20_colour_list, denormalise_0_1

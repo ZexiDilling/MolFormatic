@@ -3,6 +3,30 @@ import PySimpleGUI as sg
 from info import unit_converter_list_mol, unit_converter_list_liquids, matrix_header
 
 
+def morgan_popup_layout(config, main_values):
+    sg.theme(config["GUI"]["theme"])
+
+    sub_searchs_text = 10
+    sub_search_input_fields = 15
+
+    col = sg.Frame("Morgan Values", [[
+        sg.Column([
+            [sg.Text("Morgan specific options", key="-MORGAN_POPUP_OPTIONS-")],
+            [sg.Checkbox(text="chirality", key="-MORGAN_POPUP_CHIRALITY-"),
+             sg.Checkbox(text="Features", key="-MORGAN_POPUP_FEATURES-")],
+            [sg.Text("n bits", key="-MORGAN_POPUP_BITS_TEXT-", size=sub_searchs_text),
+             sg.InputText(key="-MORGAN_POPUP_BITS-", size=sub_search_input_fields)],
+            [sg.Text("bound range", key="-MORGAN_POPUP_BOUND_TEXT-", size=sub_searchs_text),
+             sg.InputText(key="-MORGAN_POPUP_RANGE-", size=sub_search_input_fields)],
+            [sg.B("Apply", key="-MORGAN_POPUP_APPLY-"),
+             sg.B("Cancel", key="-CLOSE_POPUP-")]
+        ])
+    ]])
+
+    layout = [[col]]
+    return sg.Window("Morgan Values", layout, finalize=True, resizable=True)
+
+
 def table_popup_layout(config, table_name, table_headings, table_data):
     sg.theme(config["GUI"]["theme"])
     col = sg.Frame(table_name, [[
@@ -644,4 +668,20 @@ def bio_dose_response_set_up_layout(config, worklist, assay_name, run_name, dose
 
 
     return sg.Window("Dose Response", layout, finalize=True, resizable=True)
+
+
+def export_chooser_popup_layout():
+    layout = [
+        [sg.Checkbox("Excel", key="-EXPORT_EXCEL-"),
+         sg.Checkbox("CSV", key="-EXPORT_CSV-")],
+        [sg.B("OK", key="-EXPORT_OK-"),
+         sg.B("Cancel", key="-EXPORT_CANCEL")]
+    ]
+
+    return sg.Window("Export", layout, finalize=True, resizable=False)
+
+
+
+
+
 

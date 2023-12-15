@@ -1,13 +1,8 @@
 import tkinter as tk
 import tkinter.ttk as ttk
-from tkinter.messagebox import showinfo
-from PIL import Image
 from rdkit import Chem
-from rdkit.Chem import Draw
-from rdkit.Chem.Draw import MolDraw2D
 from rdkit.Chem import AllChem
 from rdkit.Chem.Draw import rdMolDraw2D
-import io
 
 
 class App(ttk.Frame):

@@ -11,7 +11,7 @@ from openpyxl.chart import (
 from statistics import mean
 
 from bio_report_setup import _fetch_smiles_data
-from excel_handler import insert_structure
+from file_type_handler_excel import insert_structure
 
 
 def _write_dose_readings(ws_readings, ws_initial_row, ws_reading_clm, temp_data, add_dose, add_state_data, replicates):

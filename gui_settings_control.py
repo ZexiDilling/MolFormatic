@@ -1,4 +1,4 @@
-import PySimpleGUI as sg
+from PySimpleGUI import WIN_CLOSED, Popup
 
 from config_dictionary import bio_final_report_setup_fetch, bio_plate_report_setup_fetch, ms_settings_fetch, plate_colouring_fetch
 from config_writer import ConfigWriter
@@ -390,7 +390,7 @@ class GUISettingsController:
 
         while True:
             event, values = window.read()
-            if event == sg.WIN_CLOSED or event == "-CANCEL-" and not default_sat:
+            if event == WIN_CLOSED or event == "-CANCEL-" and not default_sat:
                 break
 
             if event == "-CANCEL-" and default_sat:
@@ -423,7 +423,7 @@ class GUISettingsController:
                 self.cw.run(reports[report_counter], report_name)
                 self.final_setup_default, self.plate_setup_default, self.ms_settings_default, self.simple_settings \
                     = reports
-                sg.popup(f"New default values for {report_name}")
+                popup(f"New default values for {report_name}")
                 default_sat = True
 
             if event == "-SETTINGS_LOAD_DEFAULT-":

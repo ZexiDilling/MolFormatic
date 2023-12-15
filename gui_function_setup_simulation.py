@@ -1,6 +1,6 @@
 from PySimpleGUI import PopupError, Popup
 
-from csv_handler import CSVWriter, CSVReader, CSVConverter
+from file_type_handler_csv import CSVWriter, CSVReader, CSVConverter
 from file_handler import get_file_list
 
 

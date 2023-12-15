@@ -4,37 +4,7 @@ from info import clm_to_row_96, clm_to_row_384, clm_to_row_1536, row_to_clm_1536
 
 # Makes a dict over all tables in the software. It is used to make tables sortable.
 # Any tables in this dict, will be sortable by clicking the top bar.
-all_table_data = {"-COMPOUND_INFO_PLATE_TABLE-": None,
-                  "-BIO_INFO_OVERVIEW_TABLE-": None,
-                  "-BIO_INFO_OVERVIEW_AVG_TABLE-": None,
-                  "-BIO_INFO_OVERVIEW_STDEV_TABLE-": None,
-                  "-BIO_INFO_OVERVIEW_Z_PRIME_TABLE-": None,
-                  "-BIO_INFO_Z_PRIME_LIST_TABLE-": None,
-                  "-BIO_INFO_HIT_LIST_LOW_TABLE-": None,
-                  "-BIO_INFO_HIT_LIST_MID_TABLE-": None,
-                  "-BIO_INFO_HIT_LIST_HIGH_TABLE-": None,
-                  "-BIO_INFO_MATRIX_TABLE-": None,
-                  "-PURITY_INFO_OVERVIEW_TABLE-": None,
-                  "-PURITY_INFO_PURITY_OVERVIEW_TABLE-": None,
-                  "-PURITY_INFO_PEAK_TABLE-": None,
-                  "-PURITY_INFO_PURITY_PEAK_LIST_TABLE-": None,
-                  "-BIO_EXP_ASSAY_RUN_TABLE-": None,
-                  "-BIO_EXP_PLATE_TABLE-": None,
-                  "-BIO_EXP_COMPOUND_TABLE-": None,
-                  "-LC_MS_SAMPLE_TABLE-": None,
-                  "-PLATE_TABLE_TABLE-": None,
-                  "-PURITY_INFO_RAW_DATA_TABLE-": None,
-                  "-EXTRA_DATABASE_CUSTOMERS_TABLE-": None,
-                  "-EXTRA_DATABASE_VENDORS_TABLE-": None,
-                  "-EXTRA_DATABASE_AC_TABLE-": None,
-                  "-EXTRA_DATABASE_RESPONSIBLE_TABLE-": None,
-                  "-EXTRA_DATABASE_LOCATIONS_TABLE-": None,
-                  "-COMPOUND_INFO_INFO_MP_TABLE-": None,
-                  "-COMPOUND_INFO_INFO_DP_TABLE-": None,
-                  "-COMPOUND_INFO_INFO_ASSAY_TABLE-": None,
-                  "-COMPOUND_INFO_INFO_HITS_TABLE-": None,
-                  "-COMPOUND_INFO_INFO_PURITY_USED_TABLE-": None,
-                  }
+
 
 all_table_data_extra = {
     "-COMPOUND_INFO_INFO_MP_TABLE-": {"name": "Assay Table",
@@ -148,6 +118,7 @@ window_1_extra = {
 }
 
 all_data = None
+
 # BIO EXP TABLE CONSTANTS:
 window_tables = {"all_assays": None, "plate_bio_info": None}
 bio_info_tables = ["-BIO_EXP_TABLE_ASSAY_LIST_BOX-+-double click-",
@@ -195,6 +166,7 @@ def start_up_gui(config, window):
     well_dict = {}
     dose_colour_dict = {}
     colour_select = {}
+    sub_search_info = {}
     for keys in list(config["plate_colouring"].keys()):
         colour_select[keys] = config["plate_colouring"][keys]
 
@@ -211,6 +183,9 @@ def start_up_gui(config, window):
     window["-COMPOUND_INFO_INFO_ASSAY_TABLE-"].bind('<Double-Button-1>', "+-double click-")
     window["-COMPOUND_INFO_INFO_HITS_TABLE-"].bind('<Double-Button-1>', "+-double click-")
     window["-COMPOUND_INFO_INFO_PURITY_USED_TABLE-"].bind('<Double-Button-1>', "+-double click-")
+
+    # Search Menu
+    window["-SUB_SEARCH_TABLE-"].bind('<Double-Button-1>', "+-double click-")
 
     # Plate Tables
     window["-PLATE_TABLE_TABLE-"].bind('<Double-Button-1>', "+-double click-")
@@ -230,5 +205,6 @@ def start_up_gui(config, window):
     window.Element("-BIO_INFO_MATRIX_TABLE-").Widget.configure(displaycolumns=[])
     window.Element("-PLATE_TABLE_TABLE-").Widget.configure(displaycolumns=plate_table_table_heading_mp)
 
-    return well_dict_bio_info, well_dict, dose_colour_dict, colour_select, graph_bio_exp, lc_graph_showing
+    return well_dict_bio_info, well_dict, dose_colour_dict, colour_select, graph_bio_exp, lc_graph_showing, \
+           sub_search_info
 

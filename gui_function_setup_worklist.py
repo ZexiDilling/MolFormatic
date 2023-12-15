@@ -3,10 +3,10 @@ from pathlib import Path
 from natsort import natsorted
 from PySimpleGUI import PopupGetFile, PopupError, Popup, PopupYesNo
 
-from csv_handler import CSVWriter
+from file_type_handler_csv import CSVWriter
 from database_handler import DataBaseFunctions
 
-from excel_handler import well_compound_list
+from file_type_handler_excel import well_compound_list
 from bio_functions import bio_compound_info_from_worklist
 from database_functions import grab_table_data
 

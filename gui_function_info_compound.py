@@ -1,8 +1,6 @@
 from PySimpleGUI import PopupError
 
 from database_functions import grab_table_data
-from start_up_values import all_table_data
-
 
 def update_overview_compound(dbf, config, window, values, compound_id):
     if not compound_id:
@@ -38,11 +36,11 @@ def update_overview_compound(dbf, config, window, values, compound_id):
         assay_plate = []
         plate_score = {}
         for assays in assay_compound_table_data:
-            assay_plate.append(assays[3])
-            plate_score[assays[3]] = {"score": round(float(assays[5]), 2),
-                                      "well": assays[4],
-                                      "conc": assays[7],
-                                      "approved": assays[9]}
+            assay_plate.append(assays[4])
+            plate_score[assays[4]] = {"score": round(float(assays[6]), 2),
+                                      "well": assays[5],
+                                      "conc": assays[8],
+                                      "approved": assays[10]}
         assay_plate_table_data, _ = grab_table_data(config, "biological_plate_data", assay_plate,
                                                     specific_rows=None,
                                                     search_list_clm="plate_name")
@@ -143,10 +141,5 @@ def update_overview_compound(dbf, config, window, values, compound_id):
         # window["-COMPOUND_INFO_INFO_TRANSFERS_TABLE-"].update(values=updated_transfer_table_data)
         window["-COMPOUND_INFO_INFO_PURITY_USED_TABLE-"].update(values=updated_purify_table_data)
 
-        all_table_data["-COMPOUND_INFO_INFO_MP_TABLE-"] = updated_mp_table_data
-        all_table_data["-COMPOUND_INFO_INFO_DP_TABLE-"] = updated_dp_table_data
-        all_table_data["-COMPOUND_INFO_INFO_ASSAY_TABLE-"] = updated_assay_table_data
-        all_table_data["-COMPOUND_INFO_INFO_HITS_TABLE-"] = updated_hit_table_data
-        all_table_data["-COMPOUND_INFO_INFO_PURITY_USED_TABLE-"] = updated_purify_table_data
     else:
         PopupError(f'No compound data for:\n "{compound_id}"')

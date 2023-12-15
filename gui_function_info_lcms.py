@@ -2,7 +2,7 @@ from PySimpleGUI import LISTBOX_SELECT_MODE_SINGLE, LISTBOX_SELECT_MODE_MULTIPLE
 from matplotlib import pyplot as plt
 
 from lcms_functions import get_peak_information, lcms_plotting, add_start_end_time, lcms_ops, grab_sample_data
-from start_up_values import window_1_lcms, all_table_data
+from start_up_values import window_1_lcms
 
 
 def sample_selection_mode_update(window, values):
@@ -50,13 +50,13 @@ def lcms_calculation(config, window, values):
 
             sample_data, _ = grab_sample_data(window_1_lcms["sample_data_file"], window_1_lcms["purity_data"], config)
 
-            all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"], \
-            purity_peak_list_table_data = lcms_ops(sample_data, window_1_lcms["purity_data"], peak_information, ms_mode,
-                                                   delta_mass, mz_threshold, peak_amounts, mass)
+            temp_table_data, purity_peak_list_table_data = lcms_ops(sample_data, window_1_lcms["purity_data"],
+                                                                    peak_information, ms_mode, delta_mass, mz_threshold,
+                                                                    peak_amounts, mass)
 
             add_start_end_time(purity_peak_list_table_data, sample_peak_dict)
             window["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"]. \
-                update(values=all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"])
+                update(values=temp_table_data)
             return purity_peak_list_table_data, peak_table_data
     else:
         PopupError("Missing sample Information - Please select data")
@@ -80,15 +80,16 @@ def lcms_drawing(check, window, values, event, peak_table_data, lc_graph_showing
         elif event == "-PURITY_INFO_PURITY_OVERVIEW_TABLE-" and values["-PURITY_INFO_GRAPH_SHOWING-"]:
             lc_method = lc_graph_showing[0]
             window["-PURITY_INFO_GRAPH_SHOWING-"].update(value=lc_method)
-            print(f'All table data - purity info: {all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"]}')
-            window["-PURITY_INFO_MZ-"].update(value=all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"][values[
-                "-PURITY_INFO_PURITY_OVERVIEW_TABLE-"][0]][1])
-            window_1_lcms["purity_info_samples"] = [all_table_data["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"][values[
-                "-PURITY_INFO_PURITY_OVERVIEW_TABLE-"][0]][0]]
-            all_table_data["-PURITY_INFO_PURITY_PEAK_LIST_TABLE-"] = \
-                purity_peak_list_table_data[window_1_lcms["purity_info_samples"][0]]
+            temp_overview_table_data = window["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"].get()
+
+            window["-PURITY_INFO_MZ-"].update(value=temp_overview_table_data[
+                values["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"][0]][1])
+
+            window_1_lcms["purity_info_samples"] = [temp_overview_table_data[
+                                                        values["-PURITY_INFO_PURITY_OVERVIEW_TABLE-"][0]][0]]
+
             window["-PURITY_INFO_PURITY_PEAK_LIST_TABLE-"].update(
-                values=all_table_data["-PURITY_INFO_PURITY_PEAK_LIST_TABLE-"])
+                values=purity_peak_list_table_data[window_1_lcms["purity_info_samples"][0]])
             window["-PURITY_INFO_PEAK_LIST_SAMPLE_TEXT-"].update(value=window_1_lcms["purity_info_samples"][0])
             window["-PURITY_INFO_PEAK_LIST_SAMPLE-"].update(value=window_1_lcms["purity_info_samples"])
 
@@ -96,11 +97,14 @@ def lcms_drawing(check, window, values, event, peak_table_data, lc_graph_showing
             lc_method = lc_graph_showing[3]
             window["-PURITY_INFO_GRAPH_SHOWING-"].update(value=lc_method)
             window_1_lcms["purity_info_samples"] = values["-PURITY_INFO_PEAK_LIST_SAMPLE-"]
-            window_1_lcms["purity_info_rt_start"] = all_table_data["-PURITY_INFO_PURITY_PEAK_LIST_TABLE-"][
+
+            temp_peak_table_data = window["-PURITY_INFO_PURITY_PEAK_LIST_TABLE-"].get()
+
+            window_1_lcms["purity_info_rt_start"] = temp_peak_table_data[
                 values["-PURITY_INFO_PURITY_PEAK_LIST_TABLE-"][0]][4]
             window["-PURITY_INFO_RT_START-"].update(value=window_1_lcms["purity_info_rt_start"])
 
-            window_1_lcms["purity_info_rt_end"] = all_table_data["-PURITY_INFO_PURITY_PEAK_LIST_TABLE-"][
+            window_1_lcms["purity_info_rt_end"] = temp_peak_table_data[
                 values["-PURITY_INFO_PURITY_PEAK_LIST_TABLE-"][0]][5]
             window["-PURITY_INFO_RT_END-"].update(value=window_1_lcms["purity_info_rt_end"])
 
@@ -112,7 +116,8 @@ def lcms_drawing(check, window, values, event, peak_table_data, lc_graph_showing
         # Set size of the canvas figure
 
         elif event == "-PURITY_INFO_DRAW_PEAKS-":
-            for data in all_table_data["-PURITY_INFO_PEAK_TABLE-"]:
+            temp_table_data = window["-PURITY_INFO_PEAK_TABLE-"].get()
+            for data in temp_table_data:
                 peak = data[1]
                 start = data[3]
                 end = data[4]
@@ -120,11 +125,12 @@ def lcms_drawing(check, window, values, event, peak_table_data, lc_graph_showing
                 window_1_lcms["update_purity_info_peak_table"] = False
 
         elif event == "-PURITY_INFO_PEAK_TABLE-" and values["-PURITY_INFO_PEAK_TABLE-"]:
+            temp_table_data = window["-PURITY_INFO_PEAK_TABLE-"].get()
             purity_info_samples = [
-                all_table_data["-PURITY_INFO_PEAK_TABLE-"][values["-PURITY_INFO_PEAK_TABLE-"][0]][0]]
-            peak = all_table_data["-PURITY_INFO_PEAK_TABLE-"][values["-PURITY_INFO_PEAK_TABLE-"][0]][1]
-            start = all_table_data["-PURITY_INFO_PEAK_TABLE-"][values["-PURITY_INFO_PEAK_TABLE-"][0]][3]
-            end = all_table_data["-PURITY_INFO_PEAK_TABLE-"][values["-PURITY_INFO_PEAK_TABLE-"][0]][4]
+                temp_table_data[values["-PURITY_INFO_PEAK_TABLE-"][0]][0]]
+            peak = temp_table_data[values["-PURITY_INFO_PEAK_TABLE-"][0]][1]
+            start = temp_table_data[values["-PURITY_INFO_PEAK_TABLE-"][0]][3]
+            end = temp_table_data[values["-PURITY_INFO_PEAK_TABLE-"][0]][4]
             window_1_lcms["canvas_lines"]["peak_lines"][peak] = {"start": start, "end": end}
 
             if values["-PURITY_INFO_RADIO_PEAKS_UV-"]:
@@ -223,11 +229,10 @@ def lcms_drawing(check, window, values, event, peak_table_data, lc_graph_showing
                     temp_peak_table_data = ""
 
             if window_1_lcms["update_purity_info_peak_table"]:
-                all_table_data["-PURITY_INFO_PEAK_TABLE-"] = temp_peak_table_data
-                window["-PURITY_INFO_PEAK_TABLE-"].update(values=all_table_data["-PURITY_INFO_PEAK_TABLE-"])
-            all_table_data["-PURITY_INFO_RAW_DATA_TABLE-"] = \
-                window_1_lcms["purity_data"][purity_info_samples[0]]["peak_table_raw"][1]
-            window["-PURITY_INFO_RAW_DATA_TABLE-"].update(values=all_table_data["-PURITY_INFO_RAW_DATA_TABLE-"])
+                window["-PURITY_INFO_PEAK_TABLE-"].update(values=temp_peak_table_data)
+
+            window["-PURITY_INFO_RAW_DATA_TABLE-"].update(
+                values=window_1_lcms["purity_data"][purity_info_samples[0]]["peak_table_raw"][1])
 
             window_1_lcms["update_purity_info_peak_table"] = True
             window_1_lcms["purity_info_rt_start"] = None

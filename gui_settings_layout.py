@@ -1,4 +1,3 @@
-import PySimpleGUI
 import PySimpleGUI as sg
 import configparser
 

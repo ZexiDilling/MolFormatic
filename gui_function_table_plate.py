@@ -1,7 +1,7 @@
 from natsort import natsorted
 
 from database_functions import grab_table_data
-from start_up_values import plate_table_table_heading_mp, plate_table_table_heading_dp, all_table_data
+from start_up_values import plate_table_table_heading_mp, plate_table_table_heading_dp
 
 
 def table_group_tables(config, window, values):
@@ -85,12 +85,10 @@ def barcode_list_box_update(config, window, values):
                                                   "clm"],
                                               "use": True}}
 
-    all_table_data["-PLATE_TABLE_TABLE-"], _ = grab_table_data(config,
-                                                               table_dict[values["-PLATE_TABLE_CHOOSER-"]][
-                                                                   "table"], search_limiter)
+    temp_table_data, _ = grab_table_data(config, table_dict[values["-PLATE_TABLE_CHOOSER-"]]["table"], search_limiter)
 
     if values["-PLATE_TABLE_BARCODE_LIST_BOX-"]:
-        window["-PLATE_TABLE_TABLE-"].update(values=all_table_data["-PLATE_TABLE_TABLE-"])
+        window["-PLATE_TABLE_TABLE-"].update(values=temp_table_data)
     else:
         window["-PLATE_TABLE_TABLE-"].update(values=[])
 

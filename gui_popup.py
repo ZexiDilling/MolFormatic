@@ -7,17 +7,47 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from bio_dose_response import calculate_dilution_series
 from extra_functions import increment_text_string
-from file_xml_handler import convert_echo_to_db
+from file_type_handler_xml import convert_echo_to_db
 from bio_date_handler import BIOAnalyser
 from database_handler import DataBaseFunctions
 from info import plate_384_row, plate_96_row
 from lcms_visualization import Toolbar
 from gui_popup_layout import matrix_popup_layout, plate_layout_chooser_layout, dead_run_naming_layout, \
     assay_run_naming_layout, bio_dose_response_set_up_layout, bio_data_approval_table_layout, sample_checker_layout, \
-    new_headlines_layout, assay_generator_layout, table_popup_layout
-from start_up_values import all_table_data, all_table_data_extra
+    new_headlines_layout, assay_generator_layout, table_popup_layout, morgan_popup_layout, export_chooser_popup_layout
+from start_up_values import all_table_data_extra
 
 matplotlib.use('TkAgg')
+
+
+def export_chooser_popup():
+    window = export_chooser_popup_layout()
+
+    while True:
+        event, values = window.read()
+        if event == sg.WIN_CLOSED or event == "-CLOSE_POPUP-":
+            window.close()
+            return None, None
+
+        if event == "-EXPORT_OK-":
+            window.close()
+            return values["-EXPORT_EXCEL-"], values["-EXPORT_CSV-"]
+
+
+def morgan_popup(config, main_window, main_values):
+    window = morgan_popup_layout(config, main_values)
+
+    while True:
+        event, values = window.read()
+        if event == sg.WIN_CLOSED or event == "-CLOSE_POPUP-":
+            break
+
+        if event == "-MORGAN_POPUP_APPLY-":
+            main_window["-SUB_SEARCH_MORGAN_CHIRALITY-"].update(value=values["-MORGAN_POPUP_CHIRALITY-"])
+            main_window["-SUB_SEARCH_MORGAN_FEATURES-"].update(value=values["-MORGAN_POPUP_FEATURES-"])
+            main_window["-SUB_SEARCH_MORGAN_BITS-"].update(value=values["-MORGAN_POPUP_BITS-"])
+            main_window["-SUB_SEARCH_MORGAN_RANGE-"].update(value=values["-MORGAN_POPUP_RANGE-"])
+            window.close()
 
 
 def popup_select(the_list, select_multiple=False):
@@ -224,7 +254,6 @@ def sample_to_compound_name_controller(config, data_dict, fd, purity_sample_layo
                     sort_table(table_data[0:][:], (col_num_clicked, 0), search_reverse[event[0]][col_num_clicked])
 
                 window["-POP_SAMPLE_CHECKER_TABLE-"].update(new_table)
-                # all_table_data[clicked_table] = [all_table_data[clicked_table][0]] + new_table
                 table_data = new_table
 
 
@@ -306,7 +335,6 @@ def ms_raw_name_guard(raw_data_samples, excel_data_samples, db_data, config):
                     sort_table(table_data[0:][:], (col_num_clicked, 0), search_reverse[event[0]][col_num_clicked])
 
                 window["-POP_SAMPLE_CHECKER_TABLE-"].update(new_table)
-                # all_table_data[clicked_table] = [all_table_data[clicked_table][0]] + new_table
                 table_data = new_table
 
 
@@ -388,7 +416,6 @@ def new_headlines_popup(sort_table, right_headlines, wrong_headlines):
                     sort_table(table_data[0:][:], (col_num_clicked, 0), search_reverse[event[0]][col_num_clicked])
 
                 window["-POP_HEADLINE_TABLE-"].update(new_table)
-                # all_table_data[clicked_table] = [all_table_data[clicked_table][0]] + new_table
                 table_data = new_table
 
 
@@ -2351,7 +2378,7 @@ def bio_dose_response_set_up(config, worklist, assay_name, plate_reader_files, b
             window["-CALC_TABLE_STOCK-"].update(values=[[]])
 
 
-def popup_table(table):
+def popup_table(window, table):
     """
 
     :param table:
@@ -2361,7 +2388,7 @@ def popup_table(table):
     table = table.removesuffix("+-double click-")
     table_name = all_table_data_extra[table]["name"]
     table_headings = all_table_data_extra[table]["headings"]
-    table_data = all_table_data[table]
+    table_data = window[table].get()
 
     if table_data:
         window = table_popup_layout(config, table_name, table_headings, table_data)

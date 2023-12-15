@@ -3,7 +3,7 @@ from math import floor
 import PySimpleGUI as sg
 
 from database_functions import _get_list_of_names_from_database, _get_list_of_names_from_database_double_lookup
-from info import matrix_header, unit_converter_list, unit_converter_list_liquids, unit_converter_list_mol
+from info import matrix_header, unit_converter_list_liquids, unit_converter_list_mol
 
 
 class GUILayout:
@@ -67,7 +67,7 @@ class GUILayout:
         """
         ac = ["Academic", "Commercial"]
         # origin = [self.config["database_specific_commercial"][values] for values in self.config["database_specific_commercial"]]
-        subs_search_methods = list(self.config["structure_search_methode"].keys())
+        subs_search_methods = ["Finger Print", "Morgan", "Dice", "Skeleton"]
         plate_production = ["Mother Plates", "Daughter Plates"]
 
         col_1 = sg.Frame("Search", [[
@@ -98,26 +98,52 @@ class GUILayout:
                                                       disabled_readonly_background_color="#4D4D4D")]
             ])
         ]])
+        sub_search_headings = ["Compound ID", "Match Score", "Assay Score", "Smiles"]
 
+        sub_searchs_text = 15
+        sub_search_input_fields = 15
+        morgan_visible = False
         col_sub_search = sg.Frame("Structure Search", [[
             sg.Column([
-                [sg.Checkbox(text="Structure Search", key="-SUB_SEARCH-")],
-                [sg.Text("Smiles", size=self.standard_size),
-                 sg.InputText(key="-SUB_SEARCH_SMILES-", size=self.standard_size),
-                 sg.Button("Draw molecule", key="-SUB_SEARCH_DRAW_MOL-")],
-                [sg.Text("Search Method", size=self.standard_size),
+                [sg.Text("Smiles", size=sub_searchs_text),
+                 sg.InputText(key="-SUB_SEARCH_SMILES-", size=sub_search_input_fields+2),
+                 sg.Button("Draw molecule", key="-SUB_SEARCH_DRAW_MOL-"),
+                 sg.B("Add", key="-SUB_SEARCH_ADD_TO_LIST-",
+                      tooltip="Adds the smiles code to the list, to make it possible to search for multiple smiles")],
+                [sg.Table("", headings=["smiles"], key="-SUB_SEARCH_SMILES_LIST-", num_rows=3,
+                          col_widths=200, max_col_width=200, auto_size_columns=False),
+                 sg.B("Delete", key="-SUB_SEARCH_DELETE_SELECTED-", tooltip="Deletes selected smiles"),
+                 sg.B("Clear", key="-SUB_SEARCH_CLEAR_TABLE-")],
+                [sg.Text("Search Method", size=sub_searchs_text),
                  sg.DropDown(subs_search_methods, key="-SUB_SEARCH_METHOD-", default_value=subs_search_methods[0],
-                             enable_events=True)],
-                [sg.Text("Similarity Threshold", size=self.standard_size),
-                 sg.InputText(key="-SUB_SEARCH_THRESHOLD-", default_text=0, size=self.standard_size)],
+                             enable_events=True, size=sub_search_input_fields),
+                 sg.B("Morgan Values", key="-SUB_SEARCH_MORGAN_VALUES-", disabled=True)],
+                [sg.Text("Similarity Threshold", size=sub_searchs_text),
+                 sg.InputText(key="-SUB_SEARCH_THRESHOLD-", default_text=85, size=5),
+                 sg.Checkbox("Compound from Assay", key="-SUB_SEARCH_COMPOUND_FROM_ASSAY-", enable_events=True)],
+                [sg.DropDown(values=self.assay, key="-SUB_SEARCH_ASSAY-", default_value=self.assay[0],
+                             size=sub_searchs_text, disabled=True),
+                 sg.Checkbox("Approved Only", key="-SUB_SEARCH_APPROVED_ONLY-",
+                             tooltip="Will only include approved data from the selected screen if True", disabled=True),
+                 sg.Checkbox("Hits Only", key="-SUB_SEARCH_HITS_ONLY-",
+                             tooltip="Will only include Hits from the selected screen if True", disabled=True)],
+
                 [sg.HorizontalSeparator()],
-                [sg.Text("Morgan specific options", key="-SUB_SEARCH_MORGAN_OPTIONS-", visible=False)],
-                [sg.Checkbox(text="chirality", key="-SUB_SEARCH_MORGAN_CHIRALITY-", visible=False),
-                 sg.Checkbox(text="Features", key="-SUB_SEARCH_MORGAN_FEATURES-", visible=False)],
-                [sg.Text("n bits", key="-SUB_SEARCH_BITS_TEXT-", size=self.standard_size, visible=False),
-                 sg.InputText(key="-SUB_SEARCH_MORGAN_BITS-", size=self.standard_size, visible=False)],
-                [sg.Text("bound range", key="-SUB_SEARCH_BOUND_TEXT-", size=self.standard_size, visible=False),
-                 sg.InputText(key="-SUB_SEARCH_MORGAN_RANGE-", size=self.standard_size, visible=False)],
+
+                [sg.Table(values=[[]], headings=sub_search_headings, key="-SUB_SEARCH_TABLE-")],
+                [sg.B("Search", key="-SUB_SEARCH_BUTTON-"),
+                 sg.B("Export", key="-SUB_SEARCH_EXPORT-"),
+                 sg.T("Sample Amount:"),
+                 sg.T(key="-SUB_SEARCH_SAMPLE_AMOUNT-")],
+
+                # Morgan values should not be visible
+                [sg.Text("Morgan specific options", key="-SUB_SEARCH_MORGAN_OPTIONS-", visible=morgan_visible)],
+                [sg.Checkbox(text="chirality", key="-SUB_SEARCH_MORGAN_CHIRALITY-", visible=morgan_visible),
+                 sg.Checkbox(text="Features", key="-SUB_SEARCH_MORGAN_FEATURES-", visible=morgan_visible)],
+                [sg.Text("n bits", key="-SUB_SEARCH_BITS_TEXT-", size=sub_searchs_text, visible=morgan_visible),
+                 sg.InputText(key="-SUB_SEARCH_MORGAN_BITS-", size=sub_search_input_fields, visible=morgan_visible)],
+                [sg.Text("bound range", key="-SUB_SEARCH_BOUND_TEXT-", size=sub_searchs_text, visible=morgan_visible),
+                 sg.InputText(key="-SUB_SEARCH_MORGAN_RANGE-", size=sub_search_input_fields, visible=morgan_visible)],
             ])
         ]])
 

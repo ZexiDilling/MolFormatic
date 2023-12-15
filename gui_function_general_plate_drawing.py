@@ -3,12 +3,11 @@ from PySimpleGUI import PopupError, PopupGetText, PopupGetFolder, Popup, PopupYe
 
 from draw_basic import draw_plate
 from lcms_functions import plate_layout_to_excel
-from database_functions import update_database, delete_records_from_database, rename_record_in_the_database, \
-    get_plate_layout, _get_list_of_names_from_database
+from database_functions import update_database, _get_list_of_names_from_database
 from helpter_functions import int_guard
 from compound_plate_formatting import plate_layout_re_formate
-from start_up_values import window_1_plate_layout, draw_tool_values, clm_to_row_converter, plate_type_count, \
-    window_tables
+from start_up_values import window_1_plate_layout, draw_tool_values, clm_to_row_converter, plate_type_count
+
 
 
 def _on_up_grab_graph_list(values, temp_x, temp_y):

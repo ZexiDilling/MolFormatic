@@ -123,6 +123,7 @@ class DataBaseFunctions:
         table_row = f"UPDATE {source_table} SET volume = volume - {vol} WHERE {row_id} = {barcode_source} "
         self.submit_update(table_row)
 
+
     def update_database_items(self, source_table, table_data, index_key_data, index_key_headline):
         """
         Updates a row in the database
@@ -148,7 +149,6 @@ class DataBaseFunctions:
             table_row_string += f"{column} = '{formatted_value}', "
         table_row_string = table_row_string.removesuffix(", ")
         table_row_string += f" WHERE {index_key_headline} = {index_key_data}"
-
         self.submit_update(table_row_string)
 
     def rename_record_value(self, table, headline, old_value, new_value):
@@ -464,9 +464,14 @@ class DataBaseFunctions:
         :return: Rows of data, based on min_volume
         :rtype: dict
         """
-
-        selector = self._where_clause_writer(search_limiter)
-        temp_table = f"SELECT * FROM {table} {selector}"
+        if search_limiter:
+            selector = self._where_clause_writer(search_limiter)
+        else:
+            selector = None
+        if selector:
+            temp_table = f"SELECT * FROM {table} {selector}"
+        else:
+            temp_table = f"SELECT * FROM {table}"
         return self._row_creator(temp_table)
 
     def find_column_data(self, table, clm_header):

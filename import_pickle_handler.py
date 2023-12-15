@@ -1,6 +1,5 @@
 import pickle
 
-
 def df_writer(file_path, data):
 
     if guard(file_path, data):

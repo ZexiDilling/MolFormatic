@@ -1,7 +1,6 @@
 from openpyxl.styles.borders import Border, Side
 from openpyxl.worksheet.table import Table, TableStyleInfo
-from openpyxl.formatting.rule import ColorScaleRule
-from openpyxl.styles import PatternFill, Font, Alignment
+from openpyxl.styles import Font, Alignment
 
 import re
 

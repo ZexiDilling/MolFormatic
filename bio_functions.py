@@ -1,14 +1,14 @@
 from os.path import isfile
 from pathlib import Path
 
-import PySimpleGUI as sg
+from PySimpleGUI import PopupError, PopupYesNo
 
 from bio_data_functions import txt_to_xlsx, original_data_dict
 from bio_date_handler import BIOAnalyser
 from bio_dose_controller import dose_response_controller
 from bio_dose_excle_handler import dose_excel_controller
 from bio_report_setup import bio_final_report_controller
-from csv_handler import CSVReader
+from file_type_handler_csv import CSVReader
 from database_functions import get_number_of_rows, grab_table_data
 from database_handler import DataBaseFunctions
 from draw_basic import draw_plate
@@ -18,6 +18,7 @@ from helpter_functions import sort_table
 from gui_popup import new_headlines_popup, assay_run_naming, bio_data_approval_table, bio_dose_response_set_up, \
     dead_run_naming, plate_layout_chooser
 from info import matrix_header
+from start_up_table_layouts import responsible
 
 
 def bio_compound_info_from_worklist(config, bio_sample_list):
@@ -26,7 +27,6 @@ def bio_compound_info_from_worklist(config, bio_sample_list):
     with the source plate and source well. It is used to look up compounds in the database
     :param config: The config handler, with all the default information in the config file.
     :type config: configparser.ConfigParser
-    :param sg: module
     :param bio_sample_list: A list of files
     :type bio_sample_list: list
     :return: a dict over destiantion plates with source plate and source well for each well in the destination plate
@@ -65,7 +65,7 @@ def bio_compound_info_from_worklist(config, bio_sample_list):
             msg, file_headlines, sample_dict, all_destination_plates = CSVReader.echo_worklist_to_dict(
                 config, config_headline, files, right_headlines, new_headline, sample_dict, all_destination_plates)
         elif msg == "Not a CSV file":
-            sg.popup_error("Wrong file fomate!!!")              # ToDo sort out this guard so it dose not crash.
+            PopupError("Wrong file fomate!!!")              # ToDo sort out this guard so it dose not crash.
             continue
 
     return sample_dict, all_destination_plates
@@ -179,7 +179,7 @@ def bio_full_report(dbf, config, analyse_method, all_plate_data, output_folder,
                                 include_structure)
 
 
-def bio_experiment_to_database(config, assay_data, used_plates, all_plates_data, plate_analyse_methods, responsible,
+def bio_experiment_to_database(config, assay_name, assay_data, used_plates, all_plates_data, plate_analyse_methods, responsible,
                                bio_sample_dict, concentration, all_compound_data, sub_layouts, dismissed_plates,
                                dead_plates):
     """
@@ -363,6 +363,7 @@ def bio_experiment_to_database(config, assay_data, used_plates, all_plates_data,
                     temp_compound_data = {
                         "bio_data_id": bio_data_id,
                         "compound_id": compound_id,
+                        "assay_name": assay_name,
                         "assay_plate": plates,
                         "assay_well": wells,
                         "score": score,
@@ -378,6 +379,60 @@ def bio_experiment_to_database(config, assay_data, used_plates, all_plates_data,
                     compound_counter += 1
 
         print(f"{plate_index + 1} / {total_plate_amount} have been uploaded to the database - last plate was: {plates}")
+
+
+def _bio_database_single_point_importer(config, assay_name, all_destination_plates, used_plates, all_plates_data,
+                                        bio_sample_dict, analyse_method, plate_to_layout, archive_plates_dict,
+                                        concentration):
+
+    # Makes a popup to assign assay_run names to plates.
+    if len(all_destination_plates) > len(used_plates):
+        dead_run_check = PopupYesNo("Not all plates from worklist have data.\n"
+                                    "Do you wish to add plates without data to the database?")
+    else:
+        dead_run_check = "No"
+
+    # Adds dead plates to the all_plates_data dict for later use
+    if dead_run_check.casefold() == "yes":
+        dead_plates = _add_dead_plates(all_destination_plates, used_plates, all_plates_data, bio_sample_dict)
+        used_plates = all_destination_plates
+    else:
+        dead_plates = []
+
+    check, transfer_dict, dismissed_plates = assay_run_naming(config, all_plates_data, analyse_method,
+                                                              used_plates, assay_name, all_destination_plates,
+                                                              dead_run_check, bio_compound_info_from_worklist)
+    if check:
+        if len(dismissed_plates) == len(used_plates):
+            all_plates_are_dismissed = True
+        else:
+            all_plates_are_dismissed = False
+        # Set up values for the database.
+
+        # # Grabs the value for the assay from the database
+        assay_data_row = grab_table_data(config, table_name="assay", single_row=True,
+                                         data_value=assay_name, headline="assay_name")
+        plate_layout = assay_data_row[0][4]
+        plate_data = grab_table_data(config, table_name="plate_layout", single_row=True, data_value=plate_layout,
+                                     headline="plate_name")
+        plate_size = plate_data[0][2]
+        assay_data = {"assay_name": assay_data_row[0][2],
+                      "plate_layout": plate_layout,
+                      "z_prime_threshold": assay_data_row[0][5],
+                      "hit_threshold": assay_data_row[0][6],
+                      "plate_size": plate_size}
+
+        # Open a popup window where data can be checked before being added to the database.
+        all_plates_data, all_compound_data, plate_analyse_methods, sub_layouts = \
+            bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, plate_to_layout,
+                                    archive_plates_dict, transfer_dict, dismissed_plates, all_plates_are_dismissed,
+                                    dead_plates)
+
+        if type(all_plates_data) != str:
+            # Adds the approved data to the database
+            bio_experiment_to_database(config, assay_name, assay_data, used_plates, all_plates_data, plate_analyse_methods,
+                                       responsible, bio_sample_dict, concentration, all_compound_data, sub_layouts,
+                                       dismissed_plates, dead_plates)
 
 
 def bio_import_handler_single_point(dbf, config, bio_import_folder, plate_to_layout, analyse_method, bio_sample_dict,
@@ -398,55 +453,10 @@ def bio_import_handler_single_point(dbf, config, bio_import_folder, plate_to_lay
 
     # Check if the data should be added to the database
     if import_to_database_check:
-
-        # Makes a popup to assign assay_run names to plates.
-        if len(all_destination_plates) > len(used_plates):
-            dead_run_check = sg.PopupYesNo("Not all plates from worklist have data."
-                                           "Do you wish to add plates without data to the database?")
-        else:
-            dead_run_check = "No"
-
-        # Adds dead plates to the all_plates_data dict for later use
-        if dead_run_check.casefold() == "yes":
-            dead_plates = _add_dead_plates(all_destination_plates, used_plates, all_plates_data, bio_sample_dict)
-            used_plates = all_destination_plates
-        else:
-            dead_plates = []
-
-        check, transfer_dict, dismissed_plates = assay_run_naming(config, all_plates_data, analyse_method,
-                                                                  used_plates, assay_name, all_destination_plates,
-                                                                  dead_run_check, bio_compound_info_from_worklist)
-        if check:
-            if len(dismissed_plates) == len(used_plates):
-                all_plates_are_dismissed = True
-            else:
-                all_plates_are_dismissed = False
-            # Set up values for the database.
-
-            # # Grabs the value for the assay from the database
-            assay_data_row = grab_table_data(config, table_name="assay", single_row=True,
-                                             data_value=assay_name, headline="assay_name")
-            plate_layout = assay_data_row[0][4]
-            plate_data = grab_table_data(config, table_name="plate_layout", single_row=True, data_value=plate_layout,
-                                         headline="plate_name")
-            plate_size = plate_data[0][2]
-            assay_data = {"assay_name": assay_data_row[0][2],
-                          "plate_layout": plate_layout,
-                          "z_prime_threshold": assay_data_row[0][5],
-                          "hit_threshold": assay_data_row[0][6],
-                          "plate_size": plate_size}
-
-            # Open a popup window where data can be checked before being added to the database.
-            all_plates_data, all_compound_data, plate_analyse_methods, sub_layouts = \
-                bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, plate_to_layout,
-                                        archive_plates_dict, transfer_dict, dismissed_plates, all_plates_are_dismissed,
-                                        dead_plates)
-
-            if type(all_plates_data) != str:
-                # Adds the approved data to the database
-                bio_experiment_to_database(config, assay_data, used_plates, all_plates_data, plate_analyse_methods,
-                                           responsible, bio_sample_dict, concentration, all_compound_data, sub_layouts,
-                                           dismissed_plates, dead_plates)
+        _bio_database_single_point_importer(config, assay_name, all_destination_plates, used_plates, all_plates_data,
+                                            bio_sample_dict,
+                                            analyse_method, plate_to_layout, archive_plates_dict,
+                                            concentration)
 
     return
 

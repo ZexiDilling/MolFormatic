@@ -1,11 +1,8 @@
-
 from PySimpleGUI import PopupGetFile, popup_error, Popup, WIN_CLOSED
 
-from gui_function_setup_worklist import worklist_tab_clicked
 from helpter_functions import config_update, sort_table
 from gui_help_info_layout import info_help_window
 from gui_help_info_text import TextForInfo
-from start_up_values import all_table_data
 
 
 def menu_open(config, config_writer, window, gui_layout):
@@ -84,7 +81,8 @@ def help_info_controller(config):
 def sorting_the_tables(window, event, search_reverse):
     # TABLE CLICKED Event has value in format ('-TABLE=', '+CLICKED+', (row,col))
     # You can also call Table.get_last_clicked_position to get the cell clicked
-    if event[0] in all_table_data and all_table_data[event[0]]:
+    if event[0].endswith("TABLE-"):
+        temp_table_data = window[event[0]].get()
         clicked_table = event[0]
         try:
             search_reverse[clicked_table]
@@ -98,9 +96,8 @@ def sorting_the_tables(window, event, search_reverse):
                 search_reverse[clicked_table][col_num_clicked] = False
 
             new_table, search_reverse[clicked_table][col_num_clicked] = \
-                sort_table(all_table_data[clicked_table][0:][:], (col_num_clicked, 0),
+                sort_table(temp_table_data[0:][:], (col_num_clicked, 0),
                            search_reverse[clicked_table][col_num_clicked])
             window[clicked_table].update(new_table)
-            # all_table_data[clicked_table] = [all_table_data[clicked_table][0]] + new_table
-            all_table_data[clicked_table] = new_table
+
 

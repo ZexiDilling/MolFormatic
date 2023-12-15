@@ -1,16 +1,15 @@
 from datetime import date
 from os import mkdir
-
-import PySimpleGUI as sg
+from PySimpleGUI import TreeData
 import pandas as pd
 
 from bio_data_functions import well_row_col_type
-from chem_operators import ChemOperators
-from csv_handler import CSVWriter, CSVReader
+from chem_operators import mw_from_smiles
+from file_type_handler_csv import CSVWriter, CSVReader
 from database_controller import FetchData
 from database_functions import get_number_of_rows, update_database, grab_compound_table_data
 from database_handler import DataBaseFunctions
-from excel_handler import export_plate_layout
+from file_type_handler_excel import export_plate_layout
 from file_handler import get_file_list
 from lcms_data_handler import LCMSHandler
 from lcms_data_miner import dm_controller
@@ -91,6 +90,9 @@ def _compound_list(config, mp_amount, min_mp, samples_per_plate, ignore_active, 
         plated_compounds = [[test for row, test in data.items() if row == "compound_id"][0] for _, data in
                             fd.data_search(config["Tables"]["compound_mp_table"], None).items()]
 
+    print(f"plated_compounds - {plated_compounds}")
+    print(f"sample_amount - {sample_amount}")
+
     # Gets a list of compounds, based on search criteria
     items = fd.list_limiter(sample_amount, min_mp, samples_per_plate, source_table, sub_search, sub_search_methode,
                             smiles, threshold, ignore_active, plated_compounds, search_limiter)
@@ -109,18 +111,18 @@ def table_update_tree(mp_amount, min_mp, samples_per_plate, ignore_active, sub_s
     :type min_mp: bool
     :param samples_per_plate: amount of sample per plate
     :type samples_per_plate: int
-    :param ignore_active: If it should take into account witch compounds are allready in MotherPlates.
+    :param ignore_active: If it should take into account witch compounds are already in MotherPlates.
         True = All compounds, False = only compounds not found in MotherPlates
     :type ignore_active: bool
     :param sub_search: Is it uses structure search for finding the compounds:
     :type sub_search: bool
     :param smiles: smiles code for the structure search
-    :type smiles: str
+    :type smiles: str or None
     :param sub_search_methode: what method to use for the structure search
     :type sub_search_methode: str
     :param threshold: threshold value for how alike the compounds should be to the smiles code
     :type threshold: float
-    :param source_table: what table to look for compounds in. (not sure if this one makes sense...
+    :param source_table: what table to look for compounds in. (not sure if this one makes sense...)
     :type source_table: str
     :param config: The config handler, with all the default information in the config file.
     :type config: configparser.ConfigParser
@@ -144,17 +146,12 @@ def table_update_tree(mp_amount, min_mp, samples_per_plate, ignore_active, sub_s
 
     temp_all_data = _compound_list(config, mp_amount, min_mp, samples_per_plate, ignore_active, sub_search, smiles,
                                      sub_search_methode, threshold, source_table, fd, search_limiter)
-
+    print(temp_all_data)
     if not temp_all_data:
-        return None
+        return None, None, None, None
     else:
         for data_index, values in enumerate(temp_all_data):
             all_data[all_data_headlines[data_index]] = values
-
-        # if source_table == "join_main_mp":
-        #     rows = fd.list_to_rows(all_data["compound_list"], source_table)
-        # elif source_table == config["Tables"]["compound_main"]:
-        #     rows = fd.list_to_rows(all_data["compound_list"], source_table)
 
         if source_table == "join_main_mp":
             search_limiter["join_tables"][config["Tables"]["compound_mp_table"]]["compound_id"]["value"] = \
@@ -167,14 +164,17 @@ def table_update_tree(mp_amount, min_mp, samples_per_plate, ignore_active, sub_s
                                                   "operator": "IN",
                                                   "target_column": "compound_id",
                                                   "use": True}}
-        rows = {}
+        else:
+            print("HEJ!!!!!! something fucked up :D ")
 
+        rows = {}
+        print(f"amount of compounds: {len(all_data['compound_list'])}")
         temp_dict = fd.data_search(source_table, search_limiter_tree)
         for key, value in temp_dict.items():
+            # print(f"{key} - {value}")
             rows[key] = value
-
         counter = 0
-        treedata = sg.TreeData()
+        treedata = TreeData()
 
         for compound_id in rows:
 
@@ -604,7 +604,6 @@ def lcms_ops(sample_data, purity_data, peak_information, ms_mode, delta_mass, mz
 def grab_sample_data(sample_data_file, purity_data, config):
     if sample_data_file == "compound_data":
         dbf = DataBaseFunctions(config)
-        co = ChemOperators
         table = "compound_main"
         sample_data = {}
         for samples in purity_data:
@@ -615,7 +614,7 @@ def grab_sample_data(sample_data_file, purity_data, config):
                                    "use": True}}
             temp_table_data = dbf.return_table_data(table, Search_limiter)
             smiles = temp_table_data[int(samples)]["smiles"]
-            mass = co.mw_from_smiles(smiles)
+            mass = mw_from_smiles(smiles)
             sample_data[samples] = {"mass": mass}
         db_data = True
     elif sample_data_file:

@@ -1,6 +1,5 @@
 from math import floor
 
-
 from bio_heatmap import Heatmap
 from database_functions import _get_list_of_names_from_database_double_lookup
 from helpter_functions import int_guard

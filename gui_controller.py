@@ -10,8 +10,8 @@ from gui_function_info_bio import colour_chooser_update, bio_info_window_update,
     bio_info_plate_list_update, bio_info_plate_update, bio_info_canvas_clicked
 from gui_function_info_calculations import calculate_dose
 from gui_function_info_lcms import sample_selection_mode_update, lcms_calculation, lcms_drawing
-from gui_popup import popup_table
-from start_up_values import database_guard, all_table_data, compound_info_tables, window_1_lcms, \
+from gui_popup import popup_table, morgan_popup
+from start_up_values import database_guard, compound_info_tables, window_1_lcms, \
     start_up_gui, search_reverse, colour_chooser_buttons, bio_info_tables, assay_updater_list
 from gui_function_setup_extra import method_do_update, add_source_wells_update, execute_button_pressed, \
     database_tab_pressed, \
@@ -26,7 +26,8 @@ from gui_function_setup_plate_layout import plate_layout_draw_groups, colour_tar
 from gui_function_table_plate import plate_chooser_update, barcode_list_box_update, table_limiter_update, \
     table_group_tables, clear_plate_table_update
 from gui_function_setup_search import search_compound, sub_search_method_update_values, \
-    search_daughter_plates_update_values, search_mother_plates_update_values, search_sample_counter_update
+    search_daughter_plates_update_values, search_mother_plates_update_values, search_sample_counter_update, sub_search, \
+    from_assay_updater, list_box_update, sub_search_export_table
 from gui_function_setup_bio import bio_report_update, bio_report_hits_update, bio_report_smiles_update, \
     bio_report_threshold_update, bio_report_amount_update, bio_plate_layout, bio_compound_data_update, \
     bio_report_compound_id_update, bio_experiment_add_to_database_update, bio_combined_report_update, bio_settings, \
@@ -62,7 +63,8 @@ def main(config, queue_gui, queue_mol):
     window = gui_layout.full_layout()
     window.maximize()
 
-    well_dict_bio_info, well_dict, dose_colour_dict, colour_select, graph_bio_exp, lc_graph_showing = start_up_gui(config, window)
+    well_dict_bio_info, well_dict, dose_colour_dict, colour_select, graph_bio_exp, lc_graph_showing, sub_search_info\
+        = start_up_gui(config, window)
 
     while True:
         event, values = window.read(timeout=100)
@@ -98,9 +100,6 @@ def main(config, queue_gui, queue_mol):
         if event == "-SEARCH_AC-":
             search_compound(window, values, config)
 
-        if event == "-SUB_SEARCH_METHOD-":
-            sub_search_method_update_values(window, values)
-
         if event == "-SEARCH_PLATE_PRODUCTION-" and values["-SEARCH_PLATE_PRODUCTION-"] == "Daughter Plates":
             search_daughter_plates_update_values(window)
 
@@ -112,6 +111,30 @@ def main(config, queue_gui, queue_mol):
 
         if event == "-SUB_SEARCH_DRAW_MOL-":
             queue_mol.put(("start_draw_tool", values["-SUB_SEARCH_SMILES-"]))
+
+        if event == "-SUB_SEARCH_METHOD-":
+            sub_search_method_update_values(window, values, event)
+
+        if event == "-SUB_SEARCH_COMPOUND_FROM_ASSAY-":
+            from_assay_updater(window, values, event)
+
+        if event == "-SUB_SEARCH_MORGAN_VALUES-":
+            morgan_popup(config, window, values)
+
+        if event == "-SUB_SEARCH_ADD_TO_LIST-":
+            list_box_update(window, values)
+
+        if event == "-SUB_SEARCH_CLEAR_TABLE-":
+            window["-SUB_SEARCH_SMILES_LIST-"].update(values=[[]])
+
+        if event == "-SUB_SEARCH_BUTTON-":
+            sub_search_info = sub_search(dbf, config, window, values, sub_search_info)
+
+        if event == "-SUB_SEARCH_EXPORT-":
+            sub_search_export_table(window, values, sub_search_info)
+
+        if event == "-SUB_SEARCH_TABLE-+-double click-":
+            compound_table_double_click(dbf, config, window, values, event)
 
         #     WINDOW 1 - BIO DATA         ###
         if event == "-TAB_GROUP_ONE-" and values["-TAB_GROUP_ONE-"] == "Bio Data":
@@ -287,8 +310,8 @@ def main(config, queue_gui, queue_mol):
             simulation_run(window, values)
 
         #     WINDOW TABLES - COMPOUND TABLE      ###
-        if event == "-TREE_DB-":
-            compound_id = tree_database_update(config, window, values, compound_data)
+        # if event == "-TREE_DB-":
+        #     tree_database_update(config, window, values, compound_data)
 
         if event == "-C_TABLE_REFRESH-":
             treedata, all_data, compound_data, counter = compound_table_refreshed(config, window, values)
@@ -317,7 +340,7 @@ def main(config, queue_gui, queue_mol):
             compound_table_double_click(dbf, config, window, values, event)
 
         if event == "-BIO_EXP_EXPORT_COMPOUNDS-" and values["-BIO_EXP_PLATE_TABLE-"]:
-            bio_exp_compound_list(config, event, values)
+            bio_exp_compound_list(config, window, event, values)
 
         #   WINDOW TABLE - LC EXPERIMENT    ###
         if event == "-TABLE_TAB_GRP-":
@@ -327,7 +350,7 @@ def main(config, queue_gui, queue_mol):
             date_set_update(config, window, values)
 
         if event == "-LC_MS_TABLE_BATCH_LIST_BOX-":
-            batch_list_box_update(config, window, values, all_table_data)
+            batch_list_box_update(config, window, values)
 
         if event == "-LC_MS_SAMPLE_TABLE-+-double click-":
             print(f"DOUBLE CLICKING LC SAMPLE TABLE THINGY DATYA !!!!! - {event}")
@@ -367,7 +390,7 @@ def main(config, queue_gui, queue_mol):
             window["-SUB_SEARCH_SMILES-"].update(value=values["-COMPOUND_INFO_ID-"])
 
         if event in compound_info_tables:
-            popup_table(event)
+            popup_table(window, event)
 
         #   WINDOW 2 - BIO INFO         ###
         # Updating Sub setting data

@@ -34,13 +34,12 @@ def date_set_update(config, window, values):
     window["-LC_MS_TABLE_BATCH_LIST_BOX-"].update(values=table_data)
 
 
-def batch_list_box_update(config, window, values, all_table_data):
+def batch_list_box_update(config, window, values):
     batch_date = values["-LC_MS_TABLE_BATCH_LIST_BOX-"]
     batch = []
     for data in batch_date:
         batch.append(data[0])
     if batch:
-        all_table_data["-LC_MS_SAMPLE_TABLE-"], _ = grab_table_data(config, "lc_raw")
-
-        window["-LC_MS_SAMPLE_TABLE-"].update(values=all_table_data["-LC_MS_SAMPLE_TABLE-"])
+        tamp_table_data, _ = grab_table_data(config, "lc_raw")
+        window["-LC_MS_SAMPLE_TABLE-"].update(values=tamp_table_data)
 

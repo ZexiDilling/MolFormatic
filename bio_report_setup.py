@@ -1,8 +1,4 @@
-import tempfile
-
 from openpyxl import Workbook
-import numpy as np
-from openpyxl.styles import Font
 from rdkit import Chem
 from rdkit.Chem import Draw
 from openpyxl.drawing.image import Image as XLImage
@@ -10,7 +6,7 @@ import tempfile
 
 from config_dictionary import bio_final_report_setup_fetch
 from database_handler import DataBaseFunctions
-from excel_handler import insert_structure
+from file_type_handler_excel import insert_structure
 from import_openpyxl_handler import *
 from bio_data_functions import bar_chart, frequency_writer
 

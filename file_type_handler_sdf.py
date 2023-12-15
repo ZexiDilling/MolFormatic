@@ -1,16 +1,13 @@
 import configparser
 
-from rdkit.Chem import AllChem
 from rdkit import Chem
-from rdkit.Chem.rdmolfiles import MolFromMolBlock
-from chem_operators import ChemOperators
+from chem_operators import png_string
 
 
 class SDFReader:
 
     def __init__(self, config, fd, dbf):
         self.size = (100, 100)
-        self.co = ChemOperators()
         self.fd = fd
         self.dbf = dbf
         self.fact_cache = {}
@@ -86,6 +83,7 @@ class SDFReader:
                        "target_column": "origin",
                        "use": True}
         }
+
         # c = 0
         for idx, mol in enumerate(mols):
 
@@ -104,7 +102,7 @@ class SDFReader:
                 data[mol_id]["concentration"] = mol.GetProp("Concentration_mM")
                 data[mol_id]["ac_id"] = ac_id
                 data[mol_id]["origin_id"] = mol.GetProp("Origin ID")
-                data[mol_id]["mol_data"] = self.co.png_string(Chem.MolToSmiles(mol), self.size)
+                data[mol_id]["mol_data"] = png_string(Chem.MolToSmiles(mol), self.size)
                 # if c == 2982:
                 #     print("DATA IS OVER 2982 COMPOUNDS... IMPORT HAVE STOPPED... THIS IS FROM SDF_HANDLER")
                 #     return data

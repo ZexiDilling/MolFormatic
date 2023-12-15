@@ -1,7 +1,6 @@
 import configparser
 
 import start_up_table_layouts
-from start_up_table_layouts import *
 from database_handler import DataBaseFunctions
 from config_writer import ConfigWriter
 

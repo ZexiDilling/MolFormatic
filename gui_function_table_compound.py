@@ -3,7 +3,7 @@ from PySimpleGUI import Popup, PopupError, PopupGetText, TreeData
 from lcms_functions import table_update_tree, compound_export, dp_creator, compound_info_table_data
 from database_functions import grab_table_data
 from info import vol_converter
-from start_up_values import window_1_search, all_table_data
+from start_up_values import window_1_search
 
 
 def tree_database_update(config, window, values, compound_data):
@@ -35,26 +35,20 @@ def tree_database_update(config, window, values, compound_data):
     compound_id = compound_data[temp_id]["compound_id"]
 
     # Table updates:
-    all_table_data["-COMPOUND_INFO_ALL_PLATE_INFO_TABLE-"], all_table_data["-COMPOUND_INFO_MP_PLATE_INFO_TABLE-"], \
-        all_table_data["-COMPOUND_INFO_DP_PLATE_INFO_TABLE-"], all_table_data["-COMPOUND_INFO_BIO_INFO_TABLE-"], \
-        all_table_data["-COMPOUND_INFO_PURITY_INFO_TABLE-"] = compound_info_table_data(config, tree_sample)
+    temp_all_plate_info_data, temp_mp_info_table_data, temp_dp_info_table_data, temp_bio_info_table_data, \
+        temp_purity_info_table_data = compound_info_table_data(config, tree_sample)
 
-    window["-COMPOUND_INFO_ALL_PLATE_INFO_TABLE-"].update(
-        values=all_table_data["-COMPOUND_INFO_ALL_PLATE_INFO_TABLE-"])
-    window["-COMPOUND_INFO_MP_PLATE_INFO_TABLE-"].update(
-        values=all_table_data["-COMPOUND_INFO_MP_PLATE_INFO_TABLE-"])
-    window["-COMPOUND_INFO_DP_PLATE_INFO_TABLE-"].update(
-        values=all_table_data["-COMPOUND_INFO_DP_PLATE_INFO_TABLE-"])
-    window["-COMPOUND_INFO_BIO_INFO_TABLE-"].update(
-        values=all_table_data["-COMPOUND_INFO_BIO_INFO_TABLE-"])
-    window["-COMPOUND_INFO_PURITY_INFO_TABLE-"].update(
-        values=all_table_data["-COMPOUND_INFO_PURITY_INFO_TABLE-"])
+    window["-COMPOUND_INFO_ALL_PLATE_INFO_TABLE-"].update(values=temp_all_plate_info_data)
+    window["-COMPOUND_INFO_MP_PLATE_INFO_TABLE-"].update(values=temp_mp_info_table_data)
+    window["-COMPOUND_INFO_DP_PLATE_INFO_TABLE-"].update(values=temp_dp_info_table_data)
+    window["-COMPOUND_INFO_BIO_INFO_TABLE-"].update(values=temp_bio_info_table_data)
+    window["-COMPOUND_INFO_PURITY_INFO_TABLE-"].update(values=temp_purity_info_table_data)
 
     return compound_id
 
 
 def compound_table_refreshed(config, window, values):
-    print(window_1_search)
+
     if not window_1_search["compound_table_clear"]:
         if values["-SEARCH_ALL_COMPOUNDS-"]:
             values["-IGNORE_ACTIVE-"] = True
@@ -136,6 +130,7 @@ def compound_table_refreshed(config, window, values):
             table_data = table_update_tree(mp_amount, min_mp, samples_per_plate, ignore_active, sub_search,
                                            smiles,
                                            sub_search_methode, threshold, source_table, search_limiter, config)
+
             if table_data:
                 treedata, all_data, compound_data, counter = table_data
                 window['-TREE_DB-'].image_dict.clear()

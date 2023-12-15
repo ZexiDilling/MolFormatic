@@ -5,13 +5,13 @@ from pathlib import Path
 
 from bio_dose_response import calculate_dilution_series
 from chem_operators import ChemOperators
-from excel_handler import get_source_layout
+from file_type_handler_excel import get_source_layout
 
 from extra_functions import unit_converter
 import numpy as np
 
 from info import unit_converter_dict, unit_converter_list
-from csv_handler import CSVWriter
+from file_type_handler_csv import CSVWriter
 from database_handler import DataBaseFunctions
 
 

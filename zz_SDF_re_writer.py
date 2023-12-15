@@ -22,7 +22,6 @@ for molecule in supplier:
         #
         mol = Chem.MolFromSmiles(smiles)
 
-
         for header in prop_list:
             temp_prop = molecule.GetProp(header)
 

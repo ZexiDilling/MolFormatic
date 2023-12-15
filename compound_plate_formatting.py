@@ -1,5 +1,4 @@
 from info import mother_plate_layout as mpl
-from database_handler import *
 
 
 def mother_plate_generator(tube_dict, mp_name, volume=9):

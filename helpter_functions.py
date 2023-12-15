@@ -1,6 +1,6 @@
 from operator import itemgetter
 import time
-import PySimpleGUI as sg
+from PySimpleGUI import PopupError
 from natsort import natsorted
 
 from config_writer import ConfigWriter
@@ -61,7 +61,7 @@ def sort_table(table, cols, reverse):
         try:
             table = natsorted(table, key=itemgetter(col), reverse=reverse)
         except Exception as e:
-            sg.popup_error('Error in sort_table', 'Exception in sort_table', e)
+            PopupError('Error in sort_table', 'Exception in sort_table', e)
     reverse = not reverse
     return table, reverse
 

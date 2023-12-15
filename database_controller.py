@@ -1,13 +1,13 @@
-from chem_operators import ChemOperators
+from chem_operators import structure_search, png_string
 from math import ceil
 
 from database_handler import DataBaseFunctions
-from file_sdf_handler import SDFReader
-from csv_handler import CSVReader
+from file_type_handler_sdf import SDFReader
+from file_type_handler_csv import CSVReader
 from random import sample
 from operator import countOf
 from file_handler import get_file_list, file_list_distributor, move_files
-from file_xml_handler import xml_controller
+from file_type_handler_xml import xml_controller
 from lcms_data_handler import LCMSHandler
 
 
@@ -21,7 +21,6 @@ class FetchData:
         self.config = config
         self.dbf = DataBaseFunctions(config)
         self.dbf.create_connection()
-        self.co = ChemOperators()
         self.database = config["Database"]["database"]
 
     def __str__(self):
@@ -150,19 +149,12 @@ class FetchData:
 
         return plate_list
 
-    def sub_structure_search(self, search_limiter, smiles, threshold,
-                             methode="sub_structure_general", table="compound_main"):
+    def sub_structure_search_compound_list(self, search_limiter, table="compound_main"):
         """
         Structure search controller. Controls witch function to use and what table to look into
 
-        :param smiles: The smiles codes that needs to be compared
-        :type smiles: str
-        :param threshold: The threshold for how similar the compound needs to be to the main smiles code
-        :type threshold: int
         :param search_limiter: A dict with different values when searching for compounds
         :type search_limiter: dict
-        :param methode: What search method to use
-        :type methode: str
         :param table: What table to find the data
         :type table: str
         :return: Rows of data from the Database with compound that fits the sub structure search criteria.
@@ -172,8 +164,9 @@ class FetchData:
             rows = self.dbf.return_table_data(table, search_limiter)
         elif table == "join_main_mp":
             rows = self.dbf.join_table_controller(search_limiter)
+        else:
+            rows = None
 
-        rows = self.co.structure_search(methode, threshold, rows, smiles)
         return rows
 
     def data_search(self, table, search_limiter, search_list_clm=None, specific_rows=None):
@@ -225,11 +218,11 @@ class FetchData:
         Limits the list of compounds based on different criteria.
 
         :param sample_amount: how many samples is needed
-        :type sample_amount: int
+        :type sample_amount: int or None
         :param min_mp: If all the samples needs  to be from as few plates as possible
         :type min_mp: bool
         :param samples_per_plate: amount of samples per plate
-        :type samples_per_plate: int
+        :type samples_per_plate: int or None
         :param table: What table to find the data in
         :type table: str
         :param sub_search: True/False if it should be used or not
@@ -261,8 +254,8 @@ class FetchData:
             - dict
             - int
         """
-        compound_search = search_limiter[self.config["Tables"]["compound_main"]]
 
+        compound_search = search_limiter[self.config["Tables"]["compound_main"]]
         if compound_search["origin_id"]["use"]:
             origin_tables = self.config["Tables"]["compound_source"]
             rows = self.data_search(origin_tables, search_limiter[origin_tables])
@@ -273,29 +266,27 @@ class FetchData:
 
             if not compound_search["origin_id"]["value"]:
                 return None
-
         if sub_search:
-            rows = self.sub_structure_search(compound_search, smiles, threshold, sub_search_methode, table)
+            rows = self.sub_structure_search_compound_list(compound_search, table)
+            rows = structure_search(sub_search_methode, threshold, rows, smiles)
         else:
             if table == "join_main_mp":
                 temp_table = "compound_mp"
             else:
                 temp_table = table
             rows = self.data_search(temp_table, compound_search)
+
         if compound_search["volume"]["use"]:
             warnings = self._liquid_warning(rows, compound_search["volume"]["value"])
         else:
             warnings = None
-
         full_compound_list = self._rows_to_list(rows)
-
         if not ignore_active and plated_compounds != []:
             try:
                 full_compound_list = [compound for compound in full_compound_list if compound not in plated_compounds]
 
             except TypeError:
                 return None
-
         if sample_amount:
 
             if min_mp:
@@ -328,7 +319,6 @@ class FetchData:
             mp_mapping = self._plate_mapping("mp_plates", plate_set, "mp_barcode")
             plate_count = self._plate_counter(plate_count)
             all_the_things = limited_compound_list, warnings, row_data, mp_data, mp_mapping, plate_count
-
         return all_the_things
 
     def get_tubes(self):
@@ -363,7 +353,6 @@ class AddData:
         fd = FetchData(config)
         self.sdf_r = SDFReader(config, fd, self.dbf)
         self.csv_r = CSVReader()
-        self.co = ChemOperators()
 
     def __str__(self):
         """
@@ -530,12 +519,13 @@ class AddData:
         :type table: str
         :return: Compounds added to the main table.
         """
+
         for sdf_file in file_list:
             data = self.sdf_r.run(sdf_file)
 
             for compounds in data:
                 temp_compounds_data = self._key_name_chang(data[compounds])
-                temp_compounds_data["png"] = self.co.png_string(temp_compounds_data["smiles"])
+                temp_compounds_data["png"] = png_string(temp_compounds_data["smiles"])
                 temp_compounds_data = self._re_ordering_dict(temp_compounds_data, table)
                 temp_compounds_data["active"] = True
                 self.dbf.add_records_controller(table, temp_compounds_data)
