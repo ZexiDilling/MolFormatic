@@ -128,7 +128,8 @@ def sub_search(dbf, config, window, values, sub_search_info):
             smiles_target_list.append(smiles[0])
     else:
         smiles_target_list = [values["-SUB_SEARCH_SMILES-"]]
-    print(smiles_target_list)
+    if not smiles_target_list:
+        return sub_search_info
     sub_search_methode = values["-SUB_SEARCH_METHOD-"]
     if sub_search_methode.casefold() == "skeleton":
         threshold = None

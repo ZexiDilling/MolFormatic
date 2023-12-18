@@ -181,6 +181,8 @@ class FetchData:
         :rtype: dict
         """
 
+        print(search_limiter)
+        print(table)
         if table == "join_main_mp":
             rows = self.dbf.join_table_controller(search_limiter)
         else:
@@ -212,8 +214,8 @@ class FetchData:
 
         return rows
 
-    def list_limiter(self, sample_amount, min_mp, samples_per_plate, table, sub_search, sub_search_methode, smiles,
-                     threshold, ignore_active, plated_compounds, search_limiter):
+    def list_limiter(self, sample_amount, min_mp, samples_per_plate, source_table, ignore_active, plated_compounds,
+                     search_limiter):
         """
         Limits the list of compounds based on different criteria.
 
@@ -223,16 +225,8 @@ class FetchData:
         :type min_mp: bool
         :param samples_per_plate: amount of samples per plate
         :type samples_per_plate: int or None
-        :param table: What table to find the data in
-        :type table: str
-        :param sub_search: True/False if it should be used or not
-        :type sub_search: bool
-        :param sub_search_methode: What structure method should be used if sub_search is True
-        :type sub_search_methode: str or None
-        :param smiles: The smiles code to be used for the structure search.
-        :type smiles: str or None
-        :param threshold: How similar the compound needs to be to the smiles code
-        :type threshold: int or  None
+        :param source_table: What table to find the data in
+        :type source_table: str
         :param ignore_active: If the list needs to take into account compounds already in MotherPlates
         :type ignore_active: bool
         :param plated_compounds: list of compounds in MotherPlates
@@ -254,9 +248,10 @@ class FetchData:
             - dict
             - int
         """
-
         compound_search = search_limiter[self.config["Tables"]["compound_main"]]
+
         if compound_search["origin_id"]["use"]:
+
             origin_tables = self.config["Tables"]["compound_source"]
             rows = self.data_search(origin_tables, search_limiter[origin_tables])
             origin_id = []
@@ -266,20 +261,18 @@ class FetchData:
 
             if not compound_search["origin_id"]["value"]:
                 return None
-        if sub_search:
-            rows = self.sub_structure_search_compound_list(compound_search, table)
-            rows = structure_search(sub_search_methode, threshold, rows, smiles)
-        else:
-            if table == "join_main_mp":
-                temp_table = "compound_mp"
-            else:
-                temp_table = table
-            rows = self.data_search(temp_table, compound_search)
 
         if compound_search["volume"]["use"]:
             warnings = self._liquid_warning(rows, compound_search["volume"]["value"])
         else:
             warnings = None
+
+        if source_table == "join_main_mp":
+            temp_table = "compound_mp"
+        else:
+            temp_table = source_table
+        rows = self.data_search(temp_table, compound_search)
+
         full_compound_list = self._rows_to_list(rows)
         if not ignore_active and plated_compounds != []:
             try:
@@ -287,6 +280,7 @@ class FetchData:
 
             except TypeError:
                 return None
+
         if sample_amount:
 
             if min_mp:
@@ -307,18 +301,21 @@ class FetchData:
                 limited_compound_list = self._list_generator(sample_amount, temp_compound_list)
             else:
                 limited_compound_list = self._list_generator(sample_amount, full_compound_list)
-
         else:
             limited_compound_list = full_compound_list
         if not limited_compound_list:
             return None
-        if table == "compound_main":
+
+        if source_table == "compound_main":
             all_the_things = limited_compound_list, warnings
-        elif table == "join_main_mp":
+        elif source_table == "join_main_mp":
             row_data, mp_data, plate_set, plate_count = self._row_plate_data(rows, limited_compound_list)
             mp_mapping = self._plate_mapping("mp_plates", plate_set, "mp_barcode")
             plate_count = self._plate_counter(plate_count)
             all_the_things = limited_compound_list, warnings, row_data, mp_data, mp_mapping, plate_count
+        else:
+            all_the_things = None
+
         return all_the_things
 
     def get_tubes(self):

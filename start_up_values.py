@@ -2,10 +2,6 @@ import os
 
 from info import clm_to_row_96, clm_to_row_384, clm_to_row_1536, row_to_clm_1536, row_to_clm_384, row_to_clm_96
 
-# Makes a dict over all tables in the software. It is used to make tables sortable.
-# Any tables in this dict, will be sortable by clicking the top bar.
-
-
 all_table_data_extra = {
     "-COMPOUND_INFO_INFO_MP_TABLE-": {"name": "Assay Table",
                                       "headings": ["plate", "well", "vol"]},
@@ -183,6 +179,7 @@ def start_up_gui(config, window):
     window["-COMPOUND_INFO_INFO_ASSAY_TABLE-"].bind('<Double-Button-1>', "+-double click-")
     window["-COMPOUND_INFO_INFO_HITS_TABLE-"].bind('<Double-Button-1>', "+-double click-")
     window["-COMPOUND_INFO_INFO_PURITY_USED_TABLE-"].bind('<Double-Button-1>', "+-double click-")
+    window["-MAIN_COMPOUND_TABLE-"].bind('<Double-Button-1>', "+-double click-")
 
     # Search Menu
     window["-SUB_SEARCH_TABLE-"].bind('<Double-Button-1>', "+-double click-")

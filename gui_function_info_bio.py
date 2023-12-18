@@ -7,7 +7,7 @@ from start_up_values import draw_tool_values
 
 
 def colour_chooser_update(window, values, event):
-    if event != "None":
+    if values[event] != "None":
         window_name = event.replace("_TARGET-", "-")
         window[window_name].update(button_color=values[event])
 

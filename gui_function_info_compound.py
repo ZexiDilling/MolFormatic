@@ -2,6 +2,7 @@ from PySimpleGUI import PopupError
 
 from database_functions import grab_table_data
 
+
 def update_overview_compound(dbf, config, window, values, compound_id):
     if not compound_id:
         compound_id = values["-COMPOUND_INFO_ID-"]
@@ -46,18 +47,20 @@ def update_overview_compound(dbf, config, window, values, compound_id):
                                                     search_list_clm="plate_name")
 
         assay_runs = []
-        for plates in assay_plate_table_data:
-            assay_runs.append(plates[1])
+        if assay_plate_table_data:
+            for plates in assay_plate_table_data:
+                assay_runs.append(plates[1])
 
         assay_run_table_data, _ = grab_table_data(config, "assay_runs", assay_runs,
                                                   specific_rows=None, search_list_clm="run_name")
 
         assays = []
-        for runs in assay_run_table_data:
-            assays.append(runs[1])
+        if assay_run_table_data:
+            for runs in assay_run_table_data:
+                assays.append(runs[1])
+
         assay_table_data, _ = grab_table_data(config, "assay", assays, specific_rows=None,
                                               search_list_clm="assay_name")
-
         # Get data:
         amount_mp = len(mp_table_data)
         amount_dp = len(dp_table_data)
@@ -92,7 +95,8 @@ def update_overview_compound(dbf, config, window, values, compound_id):
                 ])
         else:
             updated_dp_table_data = [["No", "Data", "Found"]]
-        if len(assay_plate_table_data) != 0:
+
+        if assay_plate_table_data and len(assay_plate_table_data) != 0:
             for rows, row_data in enumerate(assay_plate_table_data):
                 assay_run = row_data[1]
                 plate = row_data[2]
@@ -108,7 +112,7 @@ def update_overview_compound(dbf, config, window, values, compound_id):
         else:
             updated_assay_table_data = [["No", "Data", "Found", "", ""]]
 
-        if len(assay_compound_table_data) != 0:
+        if assay_compound_table_data and len(assay_compound_table_data) != 0:
             for rows, row_data in enumerate(assay_compound_table_data):
                 if row_data[8] == 1:
                     amount_assay_hits += 1

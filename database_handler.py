@@ -123,7 +123,6 @@ class DataBaseFunctions:
         table_row = f"UPDATE {source_table} SET volume = volume - {vol} WHERE {row_id} = {barcode_source} "
         self.submit_update(table_row)
 
-
     def update_database_items(self, source_table, table_data, index_key_data, index_key_headline):
         """
         Updates a row in the database

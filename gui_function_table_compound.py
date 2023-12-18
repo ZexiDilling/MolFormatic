@@ -1,58 +1,14 @@
 from PySimpleGUI import Popup, PopupError, PopupGetText, TreeData
 
-from lcms_functions import table_update_tree, compound_export, dp_creator, compound_info_table_data
-from database_functions import grab_table_data
+from lcms_functions import table_update_tree, compound_export, dp_creator
 from info import vol_converter
 from start_up_values import window_1_search
 
 
-def tree_database_update(config, window, values, compound_data):
-    try:
-        temp_id = window.Element("-TREE_DB-").SelectedRows[0]
-    except IndexError:
-        pass
-    # temp_info = window.Element("-TREE_DB-").TreeData.tree_dict[temp_id].values'
-    tree_sample = compound_data[temp_id]["compound_id"]
-    window["-COMPOUND_INFO_ID-"].update(value=compound_data[temp_id]["compound_id"])
-    window["-COMPOUND_INFO_SMILES-"].update(value=compound_data[temp_id]["smiles"])
-    window["-COMPOUND_INFO_MP_VOLUME-"].update(value=compound_data[temp_id]["volume"])
-    window["-COMPOUND_INFO_PIC-"].update(data=compound_data[temp_id]["png"])
-    window["-COMPOUND_INFO_ORIGIN_ID-"].update(value=compound_data[temp_id]["origin_id"])
-    window["-COMPOUND_INFO_CONCENTRATION-"].update(value=compound_data[temp_id]["concentration"])
-
-    search_limiter_origin = {"academic_commercial": {"value": values["-SEARCH_AC-"],
-                                                     "operator": "IN",
-                                                     "target_column": "ac",
-                                                     "use": window_1_search["ac_use"]},
-                             "vendor_center": {"value": values["-SEARCH_ORIGIN-"],
-                                               "operator": "IN",
-                                               "target_column": "origin",
-                                               "use": window_1_search["origin_use"]}}
-    all_data_origin, _ = grab_table_data(config, "origin", search_limiter_origin)
-    window["-COMPOUND_INFO_AC-"].update(value=all_data_origin[0][1])
-    window["-COMPOUND_INFO_ORIGIN-"].update(value=all_data_origin[0][2])
-
-    compound_id = compound_data[temp_id]["compound_id"]
-
-    # Table updates:
-    temp_all_plate_info_data, temp_mp_info_table_data, temp_dp_info_table_data, temp_bio_info_table_data, \
-        temp_purity_info_table_data = compound_info_table_data(config, tree_sample)
-
-    window["-COMPOUND_INFO_ALL_PLATE_INFO_TABLE-"].update(values=temp_all_plate_info_data)
-    window["-COMPOUND_INFO_MP_PLATE_INFO_TABLE-"].update(values=temp_mp_info_table_data)
-    window["-COMPOUND_INFO_DP_PLATE_INFO_TABLE-"].update(values=temp_dp_info_table_data)
-    window["-COMPOUND_INFO_BIO_INFO_TABLE-"].update(values=temp_bio_info_table_data)
-    window["-COMPOUND_INFO_PURITY_INFO_TABLE-"].update(values=temp_purity_info_table_data)
-
-    return compound_id
-
-
 def compound_table_refreshed(config, window, values):
-
     if not window_1_search["compound_table_clear"]:
         if values["-SEARCH_ALL_COMPOUNDS-"]:
             values["-IGNORE_ACTIVE-"] = True
-            values["-SUB_SEARCH-"] = False
             values["-SEARCH_PLATE_AMOUNT_MAX-"] = True
             values["-SEARCH_IGNORE_VOLUME-"] = True
             values["-SEARCH_AC-"] = None
@@ -84,10 +40,6 @@ def compound_table_refreshed(config, window, values):
                 transferee_volume = None
 
             ignore_active = values["-SEARCH_IGNORE_PLATED_COMPOUNDS-"]
-            sub_search = values["-SUB_SEARCH-"]
-            smiles = values["-SUB_SEARCH_SMILES-"]
-            sub_search_methode = values["-SUB_SEARCH_METHOD-"]
-            threshold = float(values["-SUB_SEARCH_THRESHOLD-"])
             source_table = table
 
             if values["-SEARCH_AC-"]:
@@ -127,14 +79,14 @@ def compound_table_refreshed(config, window, values):
                                 "shared_data": "compound_id"}
             }
             min_mp = values["-SEARCH_MP_MINIMIZED-"]
-            table_data = table_update_tree(mp_amount, min_mp, samples_per_plate, ignore_active, sub_search,
-                                           smiles,
-                                           sub_search_methode, threshold, source_table, search_limiter, config)
+
+            table_data = table_update_tree(mp_amount, min_mp, samples_per_plate, ignore_active, source_table,
+                                           search_limiter, config)
 
             if table_data:
                 treedata, all_data, compound_data, counter = table_data
-                window['-TREE_DB-'].image_dict.clear()
-                window["-TREE_DB-"].update(treedata)
+                window['-MAIN_COMPOUND_TABLE-'].image_dict.clear()
+                window["-MAIN_COMPOUND_TABLE-"].update(treedata)
                 window["-C_TABLE_COUNT-"].update(f"Compounds: {counter}")
                 window["-C_TABLE_REFRESH-"].update(text="Clear Table")
                 window_1_search["compound_table_clear"] = True
@@ -146,17 +98,14 @@ def compound_table_refreshed(config, window, values):
                 else:
                     PopupError("Database is empty")
                     return None, None, None, None
-            #
-            # except ValueError:
-            #     sg.Popup("Fill in missing data")
 
     elif window_1_search["compound_table_clear"]:
-        window['-TREE_DB-'].image_dict.clear()
+        window['-MAIN_COMPOUND_TABLE-'].image_dict.clear()
         treedata = TreeData()
-        window['-TREE_DB-'].update(treedata)
+        window['-MAIN_COMPOUND_TABLE-'].update(treedata)
         window["-C_TABLE_REFRESH-"].update(text="Refresh")
         window["-C_TABLE_COUNT-"].update(f"Compounds: 0")
-        window['-TREE_DB-'].image_dict.clear()
+        window['-MAIN_COMPOUND_TABLE-'].image_dict.clear()
         window_1_search["compound_table_clear"] = False
         return None, None, None, None
 
@@ -203,3 +152,4 @@ def compound_table_export(dbf, config, window, values, all_data):
                 file_location = f"{values['-SEARCH_OUTPUT_FOLDER-']}/dp_output/"
 
         Popup(f"Done - files are located {file_location}")
+

@@ -45,8 +45,7 @@ def calculate_sample_amount(plate_amount, samples_per_plate=384):
         return None
 
 
-def _compound_list(config, mp_amount, min_mp, samples_per_plate, ignore_active, sub_search, smiles,
-                   sub_search_methode, threshold, source_table, fd, search_limiter):
+def _compound_list(config, mp_amount, min_mp, samples_per_plate, ignore_active, source_table, fd, search_limiter):
     """
     Generate list of compounds, based on number of motherplates only, or by sub_structure search.
     Generate comPOUND file for fecthing tubes from the comPOUND freezer.
@@ -80,6 +79,7 @@ def _compound_list(config, mp_amount, min_mp, samples_per_plate, ignore_active, 
         - list
         - list
     """
+
     if mp_amount:
         sample_amount = calculate_sample_amount(mp_amount, samples_per_plate)
     else:
@@ -90,18 +90,14 @@ def _compound_list(config, mp_amount, min_mp, samples_per_plate, ignore_active, 
         plated_compounds = [[test for row, test in data.items() if row == "compound_id"][0] for _, data in
                             fd.data_search(config["Tables"]["compound_mp_table"], None).items()]
 
-    print(f"plated_compounds - {plated_compounds}")
-    print(f"sample_amount - {sample_amount}")
-
     # Gets a list of compounds, based on search criteria
-    items = fd.list_limiter(sample_amount, min_mp, samples_per_plate, source_table, sub_search, sub_search_methode,
-                            smiles, threshold, ignore_active, plated_compounds, search_limiter)
+    items = fd.list_limiter(sample_amount, min_mp, samples_per_plate, source_table, ignore_active, plated_compounds,
+                            search_limiter)
 
     return items
 
 
-def table_update_tree(mp_amount, min_mp, samples_per_plate, ignore_active, sub_search, smiles, sub_search_methode,
-                      threshold, source_table, search_limiter, config):
+def table_update_tree(mp_amount, min_mp, samples_per_plate, ignore_active, source_table, search_limiter, config):
     """
     Updates the compound table with compounds depending on search criteria
 
@@ -114,14 +110,6 @@ def table_update_tree(mp_amount, min_mp, samples_per_plate, ignore_active, sub_s
     :param ignore_active: If it should take into account witch compounds are already in MotherPlates.
         True = All compounds, False = only compounds not found in MotherPlates
     :type ignore_active: bool
-    :param sub_search: Is it uses structure search for finding the compounds:
-    :type sub_search: bool
-    :param smiles: smiles code for the structure search
-    :type smiles: str or None
-    :param sub_search_methode: what method to use for the structure search
-    :type sub_search_methode: str
-    :param threshold: threshold value for how alike the compounds should be to the smiles code
-    :type threshold: float
     :param source_table: what table to look for compounds in. (not sure if this one makes sense...)
     :type source_table: str
     :param config: The config handler, with all the default information in the config file.
@@ -144,9 +132,8 @@ def table_update_tree(mp_amount, min_mp, samples_per_plate, ignore_active, sub_s
     all_data = {}
     all_data_headlines = ["compound_list", "liquid_warning_list", "row_data", "mp_data", "mp_mapping", "plate_count"]
 
-    temp_all_data = _compound_list(config, mp_amount, min_mp, samples_per_plate, ignore_active, sub_search, smiles,
-                                     sub_search_methode, threshold, source_table, fd, search_limiter)
-    print(temp_all_data)
+    temp_all_data = _compound_list(config, mp_amount, min_mp, samples_per_plate, ignore_active, source_table, fd,
+                                   search_limiter)
     if not temp_all_data:
         return None, None, None, None
     else:
@@ -168,7 +155,6 @@ def table_update_tree(mp_amount, min_mp, samples_per_plate, ignore_active, sub_s
             print("HEJ!!!!!! something fucked up :D ")
 
         rows = {}
-        print(f"amount of compounds: {len(all_data['compound_list'])}")
         temp_dict = fd.data_search(source_table, search_limiter_tree)
         for key, value in temp_dict.items():
             # print(f"{key} - {value}")
@@ -177,7 +163,6 @@ def table_update_tree(mp_amount, min_mp, samples_per_plate, ignore_active, sub_s
         treedata = TreeData()
 
         for compound_id in rows:
-
             temp_list = []
             for key in rows[compound_id]:
                 if key == "png":
@@ -189,7 +174,6 @@ def table_update_tree(mp_amount, min_mp, samples_per_plate, ignore_active, sub_s
                 treedata.Insert("", compound_id, "", temp_list, icon=temp_png)
             else:
                 treedata.Insert("", compound_id, "", temp_list, icon="")
-
         return treedata, all_data, rows, counter
 
 

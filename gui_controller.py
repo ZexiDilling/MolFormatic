@@ -12,7 +12,7 @@ from gui_function_info_calculations import calculate_dose
 from gui_function_info_lcms import sample_selection_mode_update, lcms_calculation, lcms_drawing
 from gui_popup import popup_table, morgan_popup
 from start_up_values import database_guard, compound_info_tables, window_1_lcms, \
-    start_up_gui, search_reverse, colour_chooser_buttons, bio_info_tables, assay_updater_list
+    start_up_gui, search_reverse, colour_chooser_buttons, bio_info_tables, assay_updater_list, all_data
 from gui_function_setup_extra import method_do_update, add_source_wells_update, execute_button_pressed, \
     database_tab_pressed, \
     database_responsible_import, database_customers_import, database_vendors_import, database_academia_company_import, \
@@ -35,7 +35,7 @@ from gui_function_setup_bio import bio_report_update, bio_report_hits_update, bi
     send_to_info_window, assay_drop_down_updates
 from gui_function_setup_database import update_compound, update_plates
 from gui_function_setup_simulation import simulation_input_update, simulation_run
-from gui_function_table_compound import tree_database_update, compound_table_refreshed, compound_table_export
+from gui_function_table_compound import compound_table_refreshed, compound_table_export
 from gui_function_table_bio import table_tab_group_pressed_update, experiment_table_assay_list_update, \
     experiment_table_assay_run_update, \
     experiment_table_plate_update, compound_table_double_click, \
@@ -310,10 +310,11 @@ def main(config, queue_gui, queue_mol):
             simulation_run(window, values)
 
         #     WINDOW TABLES - COMPOUND TABLE      ###
-        # if event == "-TREE_DB-":
-        #     tree_database_update(config, window, values, compound_data)
+        if event == "-MAIN_COMPOUND_TABLE-+-double click-":
+            compound_table_double_click(dbf, config, window, values, event)
 
         if event == "-C_TABLE_REFRESH-":
+            # sg.PopupError("This is wrong atm")
             treedata, all_data, compound_data, counter = compound_table_refreshed(config, window, values)
 
         if event == "-C_TABLE_EXPORT-":
@@ -470,7 +471,6 @@ def main(config, queue_gui, queue_mol):
         else:
             if event.endswith("+UP"):
                 well_dict = on_up(window, values, well_dict, dose_colour_dict, colour_select)
-
 
 
 if __name__ == "__main__":

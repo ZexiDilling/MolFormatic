@@ -1109,9 +1109,11 @@ class GUILayout:
 
         col_hit_mapping = sg.Column([
             [sg.T("Hit-Map Settings", relief="groove",
-                  tooltip="Below is  the upper and lower bound for each set. Top left is TH-1 lower bounder, "
-                          "to the right is TH-1 upper bound. First row is TH-1 and TH-2. Second row is TH-3 and TH-4 "
-                          "and so on")],
+                  tooltip="Below is  the upper and lower bound for each set.\n"
+                          " Top left is TH-1 lower bounder,\n "
+                          "to the right is TH-1 upper bound.\n "
+                          "First row is TH-1 and TH-2. \n"
+                          "Second row is TH-3 and TH-4 and so on")],
             [sg.HorizontalSeparator()],
             [sg.InputText(key="-BIO_INFO_PORA_TH_1_MIN_HIT_THRESHOLD-", size=5, enable_events=True,
                           default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_1_min")),
@@ -1157,6 +1159,7 @@ class GUILayout:
                           default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_10_min")),
              sg.InputText(key="-BIO_INFO_PORA_TH_10_MAX_HIT_THRESHOLD-", size=5, enable_events=True,
                           default_text=self.config["Settings_bio"].getfloat("final_report_pora_threshold_th_10_max"))],
+            [sg.B("Refresh", key="-BIO_INFO_HIT_REFRESH-")],
 
         ], key="-INFO_BIO_ROW_HIT-", vertical_alignment="top"
             # , size=(0, 0)
@@ -1576,7 +1579,7 @@ class GUILayout:
         raw_table_col = sg.Column([
             [sg.Text("Raw data")],
             [sg.Tree(data=treedata, headings=headlines, row_height=80, auto_size_columns=False, num_rows=4,
-                     col0_width=30, key="-TREE_DB-", show_expanded=True, expand_x=False,
+                     col0_width=30, key="-MAIN_COMPOUND_TABLE-", show_expanded=True, expand_x=False,
                      enable_events=True)]
         ])
 

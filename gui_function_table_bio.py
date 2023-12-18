@@ -54,7 +54,6 @@ def experiment_table_assay_list_update(dbf, config, window, values):
         window["-BIO_EXP_ASSAY_RUN_TABLE-"].update(values=bio_exp_assay_runs)
 
 
-
 def experiment_table_assay_run_update(config, window, values):
     if values["-BIO_EXP_ASSAY_RUN_TABLE-"]:
 
@@ -90,6 +89,7 @@ def experiment_table_plate_update(config, window, values):
 
 
 def bio_tables_double_clicked(dbf, config, window, values, event, well_dict_bio_info):
+
     temp_plate = None
     temp_run = None
     temp_assay = None
@@ -161,6 +161,8 @@ def bio_tables_double_clicked(dbf, config, window, values, event, well_dict_bio_
             window["-BIO_INFO_ASSAY_DROPDOWN-"].update(value=temp_assay)
             bio_info_window_update(dbf, window, values, assay=temp_assay)
             # window["-BIO_INFO_PLATES_DROPDOWN-"].update(value="All")
+
+    window["-TAB_GROUP_TWO-"].Widget.select(1)
     return well_dict_bio_info
 
 
@@ -190,14 +192,20 @@ def compound_table_double_click(dbf, config, window, values, event):
         else:
             temp_table_data = window["-SUB_SEARCH_TABLE-"].get()
             temp_compound_id = temp_table_data[table_row][0]
-
-        print(f"Clicked - {event}")
+    elif event == "-MAIN_COMPOUND_TABLE-+-double click-":
+        try:
+            window.Element("-MAIN_COMPOUND_TABLE-").SelectedRows[0]
+        except IndexError:
+            temp_compound_id = None
+        else:
+            temp_compound_id = window.Element("-MAIN_COMPOUND_TABLE-").SelectedRows[0]
     else:
         temp_compound_id = None
 
     if temp_compound_id:
         window["-TAB_GROUP_TWO-"].Widget.select(0)
         window["-COMPOUND_INFO_ID-"].update(value=temp_compound_id)
+        print(temp_compound_id)
         update_overview_compound(dbf, config, window, values, temp_compound_id)
     else:
         pass
@@ -206,11 +214,13 @@ def compound_table_double_click(dbf, config, window, values, event):
 def _update_bio_exp_plate_table(config, window, values, approval_check=False):
     table_name = "biological_plate_data"
     bio_exp_selected_runs = []
+    temp_table_data = window["-BIO_EXP_ASSAY_RUN_TABLE-"].get()
+    for temp_values in values["-BIO_EXP_ASSAY_RUN_TABLE-"]:
+        bio_exp_selected_runs.append(temp_table_data[temp_values][0])
     search_list_clm = "assay_run"
     selected_headlines = ["plate_name", "z_prime", "approval", "note", "analysed_method", "assay_run"]
     bio_exp_plate_data, _ = grab_table_data(config, table_name, bio_exp_selected_runs,
                                             specific_rows=selected_headlines, search_list_clm=search_list_clm)
-
     table_data = []
     if bio_exp_plate_data:
         for rows, row_data in enumerate(bio_exp_plate_data):
@@ -244,7 +254,11 @@ def _update_bio_exp_plate_table(config, window, values, approval_check=False):
 def _update_bio_exp_compound_table(config, window, values,
                                    threshold=False, compound_amount=False, approval_check=False, hit=False):
 
+    temp_plate_table_data = window["-BIO_EXP_PLATE_TABLE-"].get()
     bio_exp_selected_plates = []
+    for temp_values in values["-BIO_EXP_PLATE_TABLE-"]:
+        bio_exp_selected_plates.append(temp_plate_table_data[temp_values][0])
+
     table_name = "biological_compound_data"
     search_list_clm = "assay_plate"
     selected_headlines = ["compound_id", "score", "hit", "concentration", "approved", "assay_well", "note"]
@@ -335,5 +349,8 @@ def bio_exp_compound_list(config, window, event, values):
             break
     print("testing!!! ")
 
-#ToDo Write information for the whole dose-response module!!!
+# ToDo Write information for the whole dose-response module!!!
 
+
+if __name__ == "__main__":
+    pass
