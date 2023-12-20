@@ -169,8 +169,8 @@ def sub_search(dbf, config, window, values, sub_search_info):
     return sub_search_info
 
 
-def sub_search_export_table(window, values, sub_search_info):
-    export_excel, export_csv = export_chooser_popup()
+def sub_search_export_table(config, window, values, sub_search_info):
+    export_excel, export_csv = export_chooser_popup(config)
     print(f"export_excel - {export_excel}")
     print(f"export_csv - {export_csv}")
     if not export_excel and not export_csv:

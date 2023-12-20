@@ -5,7 +5,7 @@ from PySimpleGUI import PopupError, PopupYesNo
 
 from bio_data_functions import txt_to_xlsx, original_data_dict
 from bio_date_handler import BIOAnalyser
-from bio_dose_controller import dose_response_controller
+from bio_dose_calculator import dose_response_controller
 from bio_dose_excle_handler import dose_excel_controller
 from bio_report_setup import bio_final_report_controller
 from file_type_handler_csv import CSVReader
@@ -16,7 +16,7 @@ from extra_functions import unit_converter
 from file_handler import get_file_list
 from helpter_functions import sort_table
 from gui_popup import new_headlines_popup, assay_run_naming, bio_data_approval_table, bio_dose_response_set_up, \
-    dead_run_naming, plate_layout_chooser
+    dead_run_naming, plate_layout_chooser, bio_dose_response_approval
 from info import matrix_header
 from start_up_table_layouts import responsible
 
@@ -71,7 +71,7 @@ def bio_compound_info_from_worklist(config, bio_sample_list):
     return sample_dict, all_destination_plates
 
 
-def bio_data(dbf, config, folder, plate_to_layout, analysis_method,
+def bio_data(dbf, config, bio_import_folder, plate_to_layout, analysis_method,
              bio_sample_dict, save_location, add_compound_ids, write_to_excel=True):
 
     """
@@ -81,8 +81,8 @@ def bio_data(dbf, config, folder, plate_to_layout, analysis_method,
     :type dbf: class
     :param config: The config handler, with all the default information in the config file.
     :type config: configparser.ConfigParser
-    :param folder: The folder where the raw data is located
-    :type folder: str
+    :param bio_import_folder: The folder where the raw data is located
+    :type bio_import_folder: str
     :param plate_to_layout: Either the name of the default plate_layout that all plates are using or a dict over each
         plate and the layout for that place
     :type plate_to_layout: str or dict
@@ -101,7 +101,7 @@ def bio_data(dbf, config, folder, plate_to_layout, analysis_method,
     """
     # needs to reformat plate-layout to use well ID instead of numbers...
     bioa = BIOAnalyser(config)
-    file_list = get_file_list(folder)
+    file_list = get_file_list(bio_import_folder)
     all_plates_data = {}
     used_plates = []
 
@@ -458,17 +458,31 @@ def bio_import_handler_single_point(dbf, config, bio_import_folder, plate_to_lay
                                             analyse_method, plate_to_layout, archive_plates_dict,
                                             concentration)
 
-    return
+    return "Done"
 
 
-def dose_response_import_handler(config, assay_name, plate_reader_files, worklist, plate_layout, add_to_database,
-                                 excel_report, save_location,  include_id, include_pic, dose_out="uM"):
+def _grab_dose_data(file, file_list, all_dose_readings, plate_layout, dose_layout, dose_out):
+    file_list.append(file)
+    # Get raw data:
+    single_plate_data, well_row_col, well_type, barcode, date = original_data_dict(file, plate_layout)
+
+    temp_dose_readings = {}
+    all_dose_readings[barcode] = _dose_response_data_to_dict(temp_dose_readings, plate_layout, single_plate_data,
+                                                             barcode, dose_layout, dose_out)
+
+    all_dose_readings[barcode]["state_data"] = _dose_response_get_state_data(single_plate_data, well_type)
+
+    return all_dose_readings, file_list
+
+
+def dose_response_import_handler(config, assay_name, bio_import_folder, worklist, plate_layout, add_to_database,
+                                 excel_report, save_location, include_id, include_pic, dose_out="uM"):
     """
     The Dose response module for taking care of importing dose response data to the database.
     For now the reporting is also placed here... should maybe be moved somewhere else
     :param config:
-    :param plate_reader_files: A list of the file name of the plate reader data
-    :type plate_reader_files: list
+    :param bio_import_folder: A folder where plate-reader files is located
+    :type bio_import_folder: str
     :param worklist: The worklist for the echo
     :type worklist: str
     :param plate_layout: The layout for the plate.
@@ -488,11 +502,14 @@ def dose_response_import_handler(config, assay_name, plate_reader_files, worklis
     :return:
     """
 
+    plate_reader_files = get_file_list(bio_import_folder)
+
     check = bio_dose_response_set_up(config, worklist, assay_name, plate_reader_files, bio_compound_info_from_worklist)
 
     if type(check) == str:
         return check
     else:
+        return_text = "Done"
         all_data, dose_response_curve_shape, method_calc_reading_50, vol_needed_pure = check
 
         if include_id:
@@ -505,28 +522,30 @@ def dose_response_import_handler(config, assay_name, plate_reader_files, worklis
         all_dose_readings = {}
         file_list = []
         for file in plate_reader_files:
-            file_list.append(file)
-            # Get raw data:
-            single_plate_data, well_row_col, well_type, barcode, date = original_data_dict(file, plate_layout)
-
-            temp_dose_readings = {}
-            all_dose_readings[barcode] = _dose_response_data_to_dict(temp_dose_readings, plate_layout, single_plate_data,
-                                                                     barcode, dose_layout, dose_out)
-
-            all_dose_readings[barcode]["state_data"] = _dose_response_get_state_data(single_plate_data, well_type)
+            all_dose_readings, file_list = _grab_dose_data(file, file_list, all_dose_readings, plate_layout,
+                                                           dose_layout, dose_out)
 
         all_dose_data = {}
         for plates in all_dose_readings:
 
-            all_dose_data[plates] = dose_response_controller(config, dose_response_curve_shape,
+            all_dose_data[plates] = dose_response_controller(dose_response_curve_shape,
                                                              all_dose_readings[plates], method_calc_reading_50)
+
+        bio_dose_response_approval(config, all_data)
+
         if excel_report:
             dose_excel_controller(config, file_list, all_dose_data, plate_group_to_compound_id, save_location,
                                   include_id, include_pic)
 
+            return_text += f"\n Report have been made and saved here: {save_location}"
+
         if add_to_database:
 
             _add_dose_response_data_to_the_database(all_data)
+
+            return_text += "\n Data added to the database"
+
+        return return_text
 
 
 def _add_dose_response_data_to_the_database(all_data):

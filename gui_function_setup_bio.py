@@ -1,11 +1,11 @@
 import copy
-from PySimpleGUI import popup, popup_get_text, popup_error, popup_get_file
 
+from PySimpleGUI import popup, PopupGetText, PopupError, PopupGetFile, FolderBrowse
 
 from database_functions import _get_list_of_names_from_database
 from draw_basic import draw_plate
 from bio_functions import bio_compound_info_from_worklist, bio_import_handler_single_point, bio_dead_plate_handler, \
-    plate_layout_setup, set_colours
+    plate_layout_setup, set_colours, dose_response_import_handler
 from database_functions import grab_table_data
 from gui_popup import assay_generator
 from gui_settings_control import GUISettingsController
@@ -97,7 +97,7 @@ def bio_compound_data_update(window, values):
 def bio_combined_report_update(window, values):
     if values["-BIO_COMBINED_REPORT-"] and not values["-FINAL_BIO_NAME-"]:
 
-        final_report_name = popup_get_text("Final Report Name?")
+        final_report_name = PopupGetText("Final Report Name?")
         if final_report_name:
             window["-FINAL_BIO_NAME-"].update(value=final_report_name)
         else:
@@ -168,32 +168,28 @@ def bio_finaL_report_multi_conc(window, values):
 def bio_calculate(dbf, config, values):
     bio_breaker = False
     if not values["-BIO_PLATE_LAYOUT-"]:
-        popup_error("Please choose a plate layout")
-    elif not values["-BIO_IMPORT_FOLDER-"]:
-        popup_error("Please choose an import folder")
-    elif values["-BIO_COMBINED_REPORT-"] and not values["-BIO_EXPORT_FOLDER-"]:
-        popup_error("Please choose an export folder")
-    elif values["-BIO_EXPORT_TO_EXCEL-"] and not values["-BIO_EXPORT_FOLDER-"]:
-        popup_error("Please choose an export folder")
+        PopupError("Please choose a plate layout")
     elif values["-BIO_COMBINED_REPORT-"] and not values["-FINAL_BIO_NAME-"]:
-        popup_error("Please choose an Report name")
+        PopupError("Please choose an Report name")
     elif values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"] and not values["-BIO_ASSAY_NAME-"]:
-        popup_error("Please choose an Assay name")
+        PopupError("Please choose an Assay name")
     elif values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"] and not values["-BIO_RESPONSIBLE-"]:
-        popup_error("Please choose an Responsible ")
+        PopupError("Please choose an Responsible ")
     elif values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"] and not values["-BIO_FINAL_REPORT_CONCENTRATION_NUMBER-"]:
-        popup_error("Please write a concentration for the run")
+        PopupError("Please write a concentration for the run")
     elif values["-BIO_FINAL_REPORT_INCLUDE_HITS-"] and not values["-BIO_FINAL_REPORT_HIT_AMOUNT-"] \
             and values["-BIO_FINAL_REPORT_INCLUDE_HITS-"] and not values["-BIO_FINAL_REPORT_THRESHOLD-"]:
-        popup_error("Please either select amount of hits or the threshold for the score, if "
-                       "Hits are to be included in the report")
-    # Missing setting move moving files after analyse is done.
-    # elif not values["-BIO_ANALYSE_TYPE-"]:
-    #     popup_error("Please choose an analyse type")
+        PopupError("Please either select amount of hits or the threshold for the score,\n"
+                    "if Hits are to be included in the report")
+    elif not values["-BIO_ANALYSE_TYPE-"]:
+        PopupError("Please choose an analyse type")
+        # Missing setting move moving files after analyse is done.
     # ToDo add guards for wrong file-formate
     else:
-        # Sets values for different parametors
-        bio_import_folder = values["-BIO_IMPORT_FOLDER-"]
+        # Sets values for different
+        bio_import_folder = FolderBrowse("Please select the folder container the bio-data")
+        if not bio_import_folder:
+            return
         # default_plate_layout = archive_plates_dict[values["-BIO_PLATE_LAYOUT-"]]
         default_plate_layout = values["-BIO_PLATE_LAYOUT-"]
         include_hits = values["-BIO_FINAL_REPORT_INCLUDE_HITS-"]
@@ -210,85 +206,110 @@ def bio_calculate(dbf, config, values):
         export_to_excel = values["-BIO_EXPORT_TO_EXCEL-"]
         same_layout = values["-BIO_PLATE_LAYOUT_CHECK-"]
         include_structure = values["-BIO_FINAL_REPORT_INCLUDE_STRUCTURE-"]
+        try:
+            bio_export_folder = config["folders"]["output"]
+        except ValueError:
+            bio_export_folder = FolderBrowse("Please select your output folder")
+            # ToDo add folder to config file
 
-        bio_export_folder = values["-BIO_EXPORT_FOLDER-"] # TODO make a default output folder?
+        if not bio_export_folder:
+            return
 
         if not same_layout:
             # If there are difference between what layout each plate is using, or if you know some data needs
             # to be dismissed, you can choose different plate layout for each plate.
             plate_to_layout = plate_layout_setup(dbf, bio_import_folder, values["-BIO_PLATE_LAYOUT-"])
             if plate_to_layout is None:
-                bio_breaker = True
+                return
+                # bio_breaker = True
         else:
             # If all plate uses the same plate layout
             plate_to_layout = default_plate_layout
-        if not bio_breaker:
-            # If this is checked, it will ask for worklist, that can be converted to a sample dict,
-            # that can be used for finding sample info in the database.
-            if values["-BIO_COMPOUND_DATA-"]:
-                bio_sample_list = popup_get_file("Please select worklist files", multiple_files=True)
+        # if not bio_breaker:
+        # If this is checked, it will ask for worklist, that can be converted to a sample dict,
+        # that can be used for finding sample info in the database.
+        if values["-BIO_COMPOUND_DATA-"]:
+            worklist_file = PopupGetFile("Please select worklist files", multiple_files=True)
 
-                if bio_sample_list:
-                    bio_sample_list = bio_sample_list.split(";")
-                    bio_sample_dict, all_destination_plates = bio_compound_info_from_worklist(config, bio_sample_list)
-                else:
-                    bio_sample_dict = None
-                    bio_breaker = True
-                    all_destination_plates = []
+            if worklist_file:
+                worklist_file = worklist_file.split(";")
+                bio_sample_dict, all_destination_plates = bio_compound_info_from_worklist(config, worklist_file)
             else:
-                all_destination_plates = None
-                bio_sample_dict = None
-            if not bio_breaker:
+                # bio_sample_dict = None
+                # bio_breaker = True
+                # all_destination_plates = []
+                return
+        else:
+            all_destination_plates = None
+            bio_sample_dict = None
+            worklist_file = None
 
-                analyse_method = values["-BIO_ANALYSE_TYPE-"]
-                add_compound_ids = values["-BIO_REPORT_ADD_COMPOUND_IDS-"]
-                combined_report_check = values["-BIO_COMBINED_REPORT-"]
-                import_to_database_check = values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"]
-                responsible = values["-BIO_RESPONSIBLE-"]
-                assay_name = values["-BIO_ASSAY_NAME-"]
+        # if not bio_breaker:
 
-                if analyse_method.casefold() == "single":
-                    # Get concentration for the samples
-                    try:
-                        float(values["-BIO_FINAL_REPORT_CONCENTRATION_NUMBER-"])
-                    except ValueError:
-                        temp_concentration = float(popup_get_text("Please provide a concentration in uM ?? "
-                                                                     "\n numbers only"))
-                    else:
-                        temp_concentration = float(values["-BIO_FINAL_REPORT_CONCENTRATION_NUMBER-"])
+        analyse_method = values["-BIO_ANALYSE_TYPE-"]
+        add_compound_ids = values["-BIO_REPORT_ADD_COMPOUND_IDS-"]
+        combined_report_check = values["-BIO_COMBINED_REPORT-"]
+        import_to_database_check = values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"]
+        responsible = values["-BIO_RESPONSIBLE-"]
+        assay_name = values["-BIO_ASSAY_NAME-"]
 
-                    bio_import_handler_single_point(dbf, config, bio_import_folder, plate_to_layout, analyse_method,
-                                                    bio_sample_dict, bio_export_folder, add_compound_ids,
-                                                    export_to_excel, all_destination_plates,
+        if analyse_method.casefold() == "single":
+            # Get concentration for the samples
+            try:
+                float(values["-BIO_FINAL_REPORT_CONCENTRATION_NUMBER-"])
+            except ValueError:
+                temp_concentration = float(PopupGetText("Please provide a concentration in uM ?? "
+                                                          "\n numbers only"))
+            else:
+                temp_concentration = float(values["-BIO_FINAL_REPORT_CONCENTRATION_NUMBER-"])
+
+            check = bio_import_handler_single_point(dbf, config, bio_import_folder, plate_to_layout,
+                                                    analyse_method, bio_sample_dict, bio_export_folder,
+                                                    add_compound_ids, export_to_excel, all_destination_plates,
                                                     combined_report_check, import_to_database_check,
                                                     final_report_name, include_hits,
                                                     threshold, hit_amount, include_smiles, include_structure,
                                                     assay_name, responsible, temp_concentration)
 
-                elif analyse_method.casefold() == "dose response":
-                    print(f"HEY!!! - we are doing {analyse_method}")
+        elif analyse_method.casefold() == "dose response":
+            if not worklist_file:
+                worklist_file = PopupGetFile("Please select worklist files", multiple_files=True)
+                try:
+                    worklist_file = worklist_file.split(";")
+                except TypeError:
+                    return
 
-                popup("Done")
+            check = dose_response_import_handler(config, assay_name, bio_import_folder, worklist_file,
+                                                 plate_to_layout, import_to_database_check, export_to_excel,
+                                                 bio_export_folder,
+                                                 include_id=True, include_pic=True, dose_out="uM")
+        else:
+            check = f"{analyse_method} was selected\n" \
+                    f"No method is set-up to deal with this\n" \
+                    f"Please contact the admin"
+
+        if check:
+            popup(f"{check}")
 
 
 def bio_blank_run(config, window, values):
     # Adds data to the database for runs that have died before data have been produced.
     bio_breaker = False
     if not values["-BIO_PLATE_LAYOUT-"]:
-        popup_error("Please choose a plate layout")
+        PopupError("Please choose a plate layout")
     elif not values["-BIO_ASSAY_NAME-"]:
-        popup_error("Please choose an Assay name")
+        PopupError("Please choose an Assay name")
     elif not values["-BIO_RESPONSIBLE-"]:
-        popup_error("Please choose an Responsible ")
+        PopupError("Please choose an Responsible ")
 
     # Missing setting move moving files after analyse is done.
     # elif not values["-BIO_ANALYSE_TYPE-"]:
-    #     sg.popup_error("Please choose an analyse type")
+    #     sg.PopupError("Please choose an analyse type")
     else:
         default_plate_layout = values["-BIO_PLATE_LAYOUT-"]
-        bio_sample_list = popup_get_file("Please select worklist files", multiple_files=False)
-        if bio_sample_list is not None:
-            worklist = bio_sample_list
+        worklist_file = PopupGetFile("Please select worklist files", multiple_files=False)
+        if worklist_file is not None:
+            worklist = worklist_file
         else:
             worklist = None
             bio_breaker = True
@@ -303,13 +324,13 @@ def bio_blank_run(config, window, values):
 
 
 def send_to_info_window(config, window, values):
-    popup_error("Needs to be updated to do something else")
+    PopupError("Needs to be updated to do something else")
     # ToDO this needs to be updated to fit with the new formate of bio data!
     #
     # if not values["-BIO_PLATE_LAYOUT-"]:
-    #     sg.popup_error("Please choose a plate layout")
+    #     sg.PopupError("Please choose a plate layout")
     # elif not values["-BIO_IMPORT_FOLDER-"]:
-    #     sg.popup_error("Please choose an import folder")
+    #     sg.PopupError("Please choose an import folder")
     #
     # else:
     #     bio_import_folder = values["-BIO_IMPORT_FOLDER-"]

@@ -131,7 +131,7 @@ def main(config, queue_gui, queue_mol):
             sub_search_info = sub_search(dbf, config, window, values, sub_search_info)
 
         if event == "-SUB_SEARCH_EXPORT-":
-            sub_search_export_table(window, values, sub_search_info)
+            sub_search_export_table(config, window, values, sub_search_info)
 
         if event == "-SUB_SEARCH_TABLE-+-double click-":
             compound_table_double_click(dbf, config, window, values, event)

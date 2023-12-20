@@ -666,11 +666,11 @@ def bio_dose_response_set_up_layout(config, worklist, assay_name, run_name, dose
          sg.Button("Cancel", key="-WINDOW_DOSE_CANCELLED-", expand_x=text_size)]
     ]
 
-
     return sg.Window("Dose Response", layout, finalize=True, resizable=True)
 
 
-def export_chooser_popup_layout():
+def export_chooser_popup_layout(config):
+    sg.theme(config["GUI"]["theme"])
     layout = [
         [sg.Checkbox("Excel", key="-EXPORT_EXCEL-"),
          sg.Checkbox("CSV", key="-EXPORT_CSV-")],
@@ -680,6 +680,77 @@ def export_chooser_popup_layout():
 
     return sg.Window("Export", layout, finalize=True, resizable=False)
 
+
+def bio_dose_response_approval_layout(config, plate_table_data, plate_headings, compound_overview_table_data,
+                                      compound_overview_headings, compound_dose_table_data, compound_dose_headings,
+                                      method, dose_units, analyse_methods, calc_method):
+    sg.theme(config["GUI"]["theme"])
+    raw_table_col = sg.Frame("Please approve or dimiss plates", [[
+        sg.Column([
+            [sg.Table(values=plate_table_data, headings=plate_headings, auto_size_columns=False,
+                      key="-DOSE_APPROVAL_PLATE_TABLE-", enable_events=True, enable_click_events=True)],
+            [sg.Table(values=compound_overview_table_data, headings=compound_overview_headings, auto_size_columns=False,
+                      key="-DOSE_APPROVAL_COMPOUND_OVERVIEW_TABLE-", enable_events=True, enable_click_events=True)],
+            [sg.Table(values=compound_dose_table_data, headings=compound_dose_headings, auto_size_columns=False,
+                      key="-DOSE_APPROVAL_DOSE_COMPOUND_TABLE-", enable_events=True, enable_click_events=True)],
+
+            [sg.T("TO DO LIST:")],
+            [sg.T("GET difference between each point and the intended line")],
+            [sg.T("Make a difference avg")],
+            [sg.T("Make it possible to remove outliers")],
+            [sg.T("Mark samples as Hits")]
+        ])
+    ]])
+
+    text_size = 15
+    input_size = 7
+
+    dose_data_info = sg.Frame("Basic", [[
+        sg.Column([
+            [sg.T(f"{method} ({dose_units})", key="-DOSE_APPROVAL_METHOD_UNITS-", size=text_size),
+             sg.Input("", key="-DOSE_APPROVAL_METHOD_UNIT-", size=input_size)],
+            [sg.T("Rsquared", size=text_size),
+             sg.Input("", key="-DOSE_APPROVAL_R_SQUARED-", size=input_size)],
+            [sg.T("Hillslope", size=text_size),
+             sg.Input("", key="-DOSE_APPROVAL_HILLSLOPE-", size=input_size)],
+            [sg.T("n_low dose", size=text_size),
+             sg.Input("", key="-DOSE_APPROVAL_N_LOW_DOSE_DATA-", size=input_size)],
+            [sg.T("Std low dose", size=text_size),
+             sg.Input("", key="-DOSE_APPROVAL_STD_LOW_DOSE_DATA-", size=input_size)],
+            [sg.T("n high dose", size=text_size),
+             sg.Input("", key="-DOSE_APPROVAL_N_HIGH_DOSE_DATA-", size=input_size)],
+            [sg.T("Std high dose", size=text_size),
+             sg.Input("", key="-DOSE_APPROVAL_STD_HIGH_DOSE_DATA-", size=input_size)],
+            [sg.T("Dose conc. stepsize", size=text_size),
+             sg.Input("", key="-DOSE_APPROVAL_DOSE_CONC-", size=input_size)],
+            [sg.T("Slope at lowdose", size=text_size),
+             sg.Input("", key="-DOSE_APPROVAL_SLOP_LOW_DOSE-", size=input_size)],
+            [sg.T("Slope at highdose", size=text_size),
+             sg.Input("", key="-DOSE_APPROVAL_SLOP_HIGH_DOSE-", size=input_size)],
+            [sg.T("Sample", size=text_size),
+             sg.Input("", key="-DOSE_APPROVAL_SAMPLE-", size=input_size)],
+        ])
+    ]])
+
+    canvas_window = sg.Frame("Data", [[
+        sg.Column([
+            [sg.Canvas(key="-DOSE_APPROVAL_TOOLBAR-")],
+            [sg.Canvas(key="-DOSE_APPROVAL_CANVAS-", background_color="Grey", size=(500, 300))],
+            [sg.DropDown(values=analyse_methods, key="-DOSE_APPROVAL_ANALYSE_METHODS-", enable_events=True,
+                         default_value=analyse_methods[0]),
+             sg.DropDown(values=calc_method, key="-DOSE_APPROVAL_CALC_METHODS-", enable_events=True,
+                         default_value=calc_method[0]),
+             sg.Checkbox("Include Control", key="-DOSE_APPROVAL_INCLUDE_CONTROL-", default=True)]
+        ])
+    ]])
+
+    layout = [sg.vtop([raw_table_col, dose_data_info, canvas_window]),
+              [sg.Button("Done", key="-DOSE_DATA_APPROVED-", expand_x=True),
+               sg.B("DOSE", key="-DOSE_BUTTON-"),
+               sg.Button("Cancel", key="-WINDOW_TWO_CANCEL-", expand_x=True)]
+              ]
+
+    return sg.Window("Dose Response", layout, finalize=True, resizable=True)
 
 
 

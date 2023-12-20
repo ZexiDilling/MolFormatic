@@ -221,10 +221,12 @@ class GUILayout:
 
         col_bio_analysis = sg.Frame("Analyse setup", [[
             sg.Column([
-                [sg.FolderBrowse(button_text="Import Folder", key="-BIO_IMPORT_FOLDER-", target="-BIO_IMPORT_TARGET-")],
-                [sg.Text(key="-BIO_IMPORT_TARGET-", size=self.standard_size*2)],
-                [sg.FolderBrowse(button_text="Export Folder", key="-BIO_EXPORT_FOLDER-", target="-BIO_EXPORT_TARGET-")],
-                [sg.Text(key="-BIO_EXPORT_TARGET-", size=self.standard_size*2)],
+                # [sg.FolderBrowse(button_text="Import Folder", key="-BIO_IMPORT_FOLDER-",
+                # target="-BIO_IMPORT_TARGET-")],
+                # [sg.Text(key="-BIO_IMPORT_TARGET-", size=self.standard_size*2)],
+                # [sg.FolderBrowse(button_text="Export Folder", key="-BIO_EXPORT_FOLDER-",
+                # target="-BIO_EXPORT_TARGET-")],
+                # [sg.Text(key="-BIO_EXPORT_TARGET-", size=self.standard_size*2)],
                 [sg.Checkbox("Same layout for all plates?", key="-BIO_PLATE_LAYOUT_CHECK-", default=True,
                              tooltip="Will use the chosen platelayout in the dropdown for all plates if True, "
                                      "else there will be a popup where you can choose the layout for each plate. "
@@ -246,17 +248,6 @@ class GUILayout:
                           key="-BIO_INFO_SAMPLE_TYPE_RADIO_LAYOUT-"),
                  sg.Radio("Use Sample ID", group_id="-BIO_INFO_SAMPLE_TYPE_RADIO-",
                           key="-BIO_INFO_SAMPLE_TYPE_RADIO_ID-")],
-                # [sg.Checkbox("heatmap", key="-BIO_HEATMAP-")],
-                # [sg.Text("start Colour:", size=self.standard_size),
-                #  sg.DropDown(colours, key="-HEAT_START-", size=self.standard_size,
-                #              default_value=colours[0])],
-                # [sg.Text("Mid Colour:", size=self.standard_size),
-                #  sg.DropDown(colours, key="-HEAT_MID-", size=self.standard_size,
-                #              default_value=colours[13])],
-                # [sg.Text("End Colour:", size=self.standard_size),
-                #  sg.DropDown(colours, key="-HEAT_END-", size=self.standard_size,
-                #              default_value=colours[4])],
-                # [sg.Checkbox("State colours", key="-BIO_STATE-")],
                 [sg.Button("Calculate", key="-BIO_CALCULATE-",
                            tooltip="Will do calculations on all the files in the chosen folder. "
                                    "Data can be exported to Excel and/or imported to the Database"),
@@ -315,16 +306,6 @@ class GUILayout:
                                       "lower than the threshold will be included in the report"),
                  sg.InputText(key="-BIO_FINAL_REPORT_HIT_AMOUNT-", size=14, disabled=True,
                               tooltip="The Amount of sample to list. Will be sorted after lowest score")],
-                [sg.T("Concentration:", size=12),
-                 sg.Input("conc", key="-BIO_FINAL_REPORT_CONCENTRATION_NUMBER-", size=7,
-                          tooltip="The concentration of the samples, only takes numbers"),
-                 sg.DropDown(values=concentration_list, key="-BIO_FINAL_REPORT_CONCENTRATION_UNIT-", size=7,
-                             tooltip="The unit for the concentration", default_value=concentration_list[0]),
-                 sg.Button("Dose-Response", key="-BIO_FINAL_REPORT_CONCENTRATION_MULTIPLE-", size=12,
-                           tooltip="If there are different concentration for the plate-layout")]
-                # [sg.Button("Select Worklist", key="-BIO_SELECT_WORKLIST-",
-                #            tooltip="Use Control til select multiple files")],
-                # [sg.T(key="-BIO_SAMPLE_LIST_TARGET-")]
             ])
         ]])
 
@@ -356,7 +337,6 @@ class GUILayout:
                       key="-BIO_PLATE_LAYOUT_COLOUR_BOX_EMPTY-", relief="groove")],
             ])
         ]])
-
 
         layout = [sg.vtop([col_bio_analysis, col_extra, col_graph])]
 
@@ -1599,7 +1579,6 @@ class GUILayout:
         :return: A layout for the compound experiment-module in the table box
         :rtype: list
         """
-        responsible = [keys for keys in list(self.config["Responsible"].keys())]
 
         compound_table_data = []
         compound_table_headings = ["Compound ID", "score", "hit", "Concentration", "Well", "Note"]
@@ -1651,21 +1630,6 @@ class GUILayout:
                              tooltip="Will limit the data, to only show runs that have use the specific style")]
             ])
         ]])
-
-        # col_search = sg.Frame("Assays", [[
-        #     sg.Column([
-        #         [],
-        #         [sg.T("Assay Name", size=10), sg.Input(key="-BIO_EXP_ASSAY_NAME_SEARCH-", size=10)],
-        #         [sg.CalendarButton("Start date", key="-BIO_EXP_TABLE_DATE_START-", format="%Y-%m-%d", enable_events=True
-        #                            , target="-BIO_EXP_TABLE_DATE_START_TARGET-", size=(10, 1)),
-        #          sg.Input(key="-BIO_EXP_TABLE_DATE_START_TARGET-", size=10, enable_events=True)],
-        #         [sg.CalendarButton("End date", key="-BIO_EXP_TABLE_DATE_END-", format="%Y-%m-%d", enable_events=True,
-        #                            target="-BIO_EXP_TABLE_DATE_END_TARGET-", size=(10, 1)),
-        #          sg.Input(key="-BIO_EXP_TABLE_DATE_END_TARGET-", size=10)],
-        #         [sg.T("Responsible", size=10), sg.DropDown(responsible, key="-BIO_EXP_TABLE_RESPONSIBLE-", size=10)],
-        #         [sg.B("Refresh", key="-BIO_EXP_TABLE_REFRESH-")]
-        #     ])
-        # ]])
 
         layout = [sg.vtop([col_compound_table, col_plate_table])]
         return layout

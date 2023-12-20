@@ -5,6 +5,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+
 from bio_dose_response import calculate_dilution_series
 from extra_functions import increment_text_string
 from file_type_handler_xml import convert_echo_to_db
@@ -14,14 +15,15 @@ from info import plate_384_row, plate_96_row
 from lcms_visualization import Toolbar
 from gui_popup_layout import matrix_popup_layout, plate_layout_chooser_layout, dead_run_naming_layout, \
     assay_run_naming_layout, bio_dose_response_set_up_layout, bio_data_approval_table_layout, sample_checker_layout, \
-    new_headlines_layout, assay_generator_layout, table_popup_layout, morgan_popup_layout, export_chooser_popup_layout
+    new_headlines_layout, assay_generator_layout, table_popup_layout, morgan_popup_layout, export_chooser_popup_layout, \
+    bio_dose_response_approval_layout
 from start_up_values import all_table_data_extra
 
 matplotlib.use('TkAgg')
 
 
-def export_chooser_popup():
-    window = export_chooser_popup_layout()
+def export_chooser_popup(config):
+    window = export_chooser_popup_layout(config)
 
     while True:
         event, values = window.read()
@@ -1154,7 +1156,7 @@ def _draw_plate_on_graph(draw_plate, config, plate_data, analysed_method, graph,
 def __get_figure_for_drawing(canvas, figure):
     figure_canvas_agg = FigureCanvasTkAgg(figure, canvas)
     figure_canvas_agg.draw()
-    figure_canvas_agg.get_tk_widget().pack(side='top', fill='both', expand=1)
+    figure_canvas_agg.get_tk_widget().pack(side='top', fill='both', expand=2)
     return figure_canvas_agg
 
 
@@ -2378,6 +2380,222 @@ def bio_dose_response_set_up(config, worklist, assay_name, plate_reader_files, b
             window["-CALC_TABLE_STOCK-"].update(values=[[]])
 
 
+def _draw_dose_response_curve(window, plotting, sample_data, dose_response_canvas=None, toolbar=None):
+
+    canvas = window["-DOSE_APPROVAL_CANVAS-"].TKCanvas
+
+    fig, ax = plotting.controller(sample_data)
+    plot_style = __get_figure_for_drawing(canvas, fig)
+
+    try:
+        dose_response_canvas.get_tk_widget().forget()
+    except AttributeError:
+        print("Attribute Error for info canvas")
+
+        if dose_response_canvas is not None:
+            if not dose_response_canvas == plot_style:
+                fig = plt.gcf()
+                plt.close(fig)
+                dose_response_canvas.get_tk_widget().forget()
+            else:
+                plot_style.get_tk_widget().forget()
+
+    plot_style.draw()
+
+    if toolbar:
+        toolbar.destroy()
+
+    toolbar = Toolbar(plot_style, window["-DOSE_APPROVAL_TOOLBAR-"].TKCanvas)
+    toolbar.update()
+    plot_style.get_tk_widget().pack()
+
+    try:
+        window.refresh()
+    except AttributeError:
+        print("Canvas - AttributeError on window.refresh")
+
+    dose_response_canvas = plot_style
+
+    return dose_response_canvas, toolbar
+
+
+def _update_dose_response_values(window, temp_data):
+    if temp_data["EC50_calculable"]:
+        window["-DOSE_APPROVAL_METHOD_UNIT-"].update(value=round(temp_data["EC50"]["value"], 2))
+        window["-DOSE_APPROVAL_R_SQUARED-"].update(value=round(temp_data["rsquared"]["value"], 2))
+        window["-DOSE_APPROVAL_HILLSLOPE-"].update(value=round(temp_data["hillslope"]["value"], 2))
+        window["-DOSE_APPROVAL_N_LOW_DOSE_DATA-"].update(value=round(temp_data["n_lowdose_datapoints"]["value"], 2))
+        window["-DOSE_APPROVAL_STD_LOW_DOSE_DATA-"].update(value=round(temp_data["std_resp_lowdose_datapoints"]["value"], 2))
+        window["-DOSE_APPROVAL_N_HIGH_DOSE_DATA-"].update(value=round(temp_data["n_highdose_datapoints"]["value"], 2))
+        window["-DOSE_APPROVAL_STD_HIGH_DOSE_DATA-"].update(value=round(temp_data["std_resp_highdose_datapoints"]["value"], 2))
+        window["-DOSE_APPROVAL_DOSE_CONC-"].update(value=round(temp_data["doseconc_stepsize_at_EC50"]["value"], 2))
+        window["-DOSE_APPROVAL_SLOP_LOW_DOSE-"].update(value=round(temp_data["saxe_lowdose"]["value"], 2))
+        window["-DOSE_APPROVAL_SLOP_HIGH_DOSE-"].update(value=round(temp_data["saxe_highdose"]["value"], 2))
+    else:
+        window["-DOSE_APPROVAL_METHOD_UNIT-"].update(value="NA")
+        window["-DOSE_APPROVAL_R_SQUARED-"].update(value="NA")
+        window["-DOSE_APPROVAL_HILLSLOPE-"].update(value="NA")
+        window["-DOSE_APPROVAL_N_LOW_DOSE_DATA-"].update(value="NA")
+        window["-DOSE_APPROVAL_STD_LOW_DOSE_DATA-"].update(value="NA")
+        window["-DOSE_APPROVAL_N_HIGH_DOSE_DATA-"].update(value="NA")
+        window["-DOSE_APPROVAL_STD_HIGH_DOSE_DATA-"].update(value="NA")
+        window["-DOSE_APPROVAL_DOSE_CONC-"].update(value="NA")
+        window["-DOSE_APPROVAL_SLOP_LOW_DOSE-"].update(value="NA")
+        window["-DOSE_APPROVAL_SLOP_HIGH_DOSE-"].update(value="NA")
+
+
+def bio_dose_response_approval(config, all_data, dose_units, method, all_calculations):
+    # sg.PopupError("Missing popup to deal approve the data before resuming.")
+
+    plotting = PlottingDose(config, dose_label="", dose_units=dose_units, method=method)
+
+    control_approved = True
+    control_data = "ToDo"
+    calc_avg_diff = 1
+    threshold_diff_avg = 10
+    diff = 1
+    threshold_diff_outlier = 10
+    # Table setup:
+    BLANK_BOX = "☐"
+    CHECKED_BOX = "☑"
+    plate_headings = ["Plate", "Notes", "control", "approved"]
+    compound_headings = ["ID", "Sample_Amount", "avg_diff-TODO", "approved"]
+    compound_dose_headings = ["Conc.", "%", "target", "actual", "diff", "outlier"]
+    plate_table_data = []
+    all_compound_table_data = []
+    all_compound_dose_table_data = []
+    plate_data_dicts = {}
+    plate_all_compound_data_ditcs = {}
+    compound_data_dicts = {}
+    for plates in all_data:
+        plate_all_compound_data_ditcs[plates] = []
+        compound_table_data = []
+        temp_plate_table_data = [plates, "", control_data]
+        if control_approved:
+            temp_plate_table_data.append(CHECKED_BOX)
+        else:
+            temp_plate_table_data.append(BLANK_BOX)
+
+        plate_table_data.append(temp_plate_table_data)
+        for samples in all_data[plates]:
+            compound_dose_table_data = []
+            # if samples.casefold() != "control":
+            sample_amount = len(all_data[plates][samples]["reading"]["raw"])
+            temp_compound_table_data = [samples, sample_amount, calc_avg_diff]
+            if calc_avg_diff <= threshold_diff_avg:
+                temp_compound_table_data.append(CHECKED_BOX)
+            else:
+                temp_compound_table_data.append(BLANK_BOX)
+            all_compound_table_data.append(temp_compound_table_data)
+            compound_table_data.append(temp_compound_table_data)
+
+            for sample_counter in range(sample_amount):
+                consentration = all_data[plates][samples]["dose"]["raw"][sample_counter]
+                procent = "ToDo"
+                target = "ToDo"
+                actual = "ToDo"
+                temp_compound_dose_headings = [consentration, procent, target, actual, diff]
+                if diff <= threshold_diff_outlier:
+                    temp_compound_dose_headings.append(CHECKED_BOX)
+                else:
+                    temp_compound_dose_headings.append(BLANK_BOX)
+                compound_dose_table_data.append(temp_compound_dose_headings)
+                all_compound_dose_table_data.append(temp_compound_dose_headings)
+            plate_all_compound_data_ditcs[plates].append(compound_dose_table_data)      # ToDO Check this one
+            compound_data_dicts[samples] = compound_dose_table_data
+        plate_data_dicts[plates] = compound_table_data
+
+    dose_units = [dose_units]
+    calc_method = all_calculations
+    analyse_methods = [method]
+
+    # Sets stuff for drawing the dose response curve
+    dose_response_canvas = None
+    toolbar = None
+
+    window = bio_dose_response_approval_layout(config, plate_table_data, plate_headings, all_compound_table_data,
+                                               compound_headings, all_compound_dose_table_data, compound_dose_headings,
+                                               method, dose_units, analyse_methods, calc_method)
+
+    # Enabling double-clicking on the tables
+    window["-DOSE_APPROVAL_PLATE_TABLE-"].bind('<Double-Button-1>', "+-double click-")
+
+    window["-DOSE_APPROVAL_COMPOUND_OVERVIEW_TABLE-"].bind('<Double-Button-1>', "+-double click-")
+    window["-DOSE_APPROVAL_DOSE_COMPOUND_TABLE-"].bind('<Double-Button-1>', "+-double click-")
+
+    for plates in all_data:
+        dose_response_canvas, toolbar = _draw_dose_response_curve(window, plotting, all_data[plates], dose_response_canvas,
+                                                                  toolbar)
+        for samples in all_data[plates]:
+            _update_dose_response_values(window, all_data[plates][samples])
+
+    while True:
+        event, values = window.read()
+
+        if event == sg.WIN_CLOSED or event == "-WINDOW_TWO_CANCEL-":
+            # Grabs all the data from the table
+
+            window.close()
+            return "Cancelled"
+
+        if event == "-DOSE_DATA_APPROVED-":
+            window.close()
+            return "Done"
+
+        if event == "-DOSE_APPROVAL_PLATE_TABLE-+-double click-":
+            print("plate clicked - should update overview tables and dose compound table and canvas")
+
+        if event == "-DOSE_APPROVAL_COMPOUND_OVERVIEW_TABLE-+-double click-":
+            print("sample_row clicked - should update dose compound table and canvas. ")
+
+        if event == "-DOSE_APPROVAL_DOSE_COMPOUND_TABLE-+-double click-":
+            print("specific sampled clicked - Not sure what to do here... if it is needed or not ?? ")
+
+        if event[0] == "-DOSE_APPROVAL_PLATE_TABLE-" and event[2][1] == 3:
+            row_data = event[2][0]
+            try:
+                plate_table_data[row_data]
+            except TypeError:
+                pass
+            else:
+                if plate_table_data[row_data][3] == CHECKED_BOX:
+                    plate_table_data[row_data][3] = BLANK_BOX
+                else:
+                    plate_table_data[row_data][3] = CHECKED_BOX
+                window['-DOSE_APPROVAL_PLATE_TABLE-'].update(values=plate_table_data)
+
+        if event[0] == "-DOSE_APPROVAL_COMPOUND_OVERVIEW_TABLE-" and event[2][1] == 3:
+            row_data = event[2][0]
+            try:
+                compound_table_data[row_data]
+            except TypeError:
+                pass
+            else:
+                if compound_table_data[row_data][3] == CHECKED_BOX:
+                    compound_table_data[row_data][3] = BLANK_BOX
+                else:
+                    compound_table_data[row_data][3] = CHECKED_BOX
+                window['-DOSE_APPROVAL_COMPOUND_OVERVIEW_TABLE-'].update(values=compound_table_data)
+
+        if event[0] == "-DOSE_APPROVAL_DOSE_COMPOUND_TABLE-" and event[2][1] == 5:
+            row_data = event[2][0]
+            try:
+                compound_dose_table_data[row_data]
+            except TypeError:
+                pass
+            else:
+                if compound_dose_table_data[row_data][5] == CHECKED_BOX:
+                    compound_dose_table_data[row_data][5] = BLANK_BOX
+                else:
+                    compound_dose_table_data[row_data][5] = CHECKED_BOX
+                window['-DOSE_APPROVAL_DOSE_COMPOUND_TABLE-'].update(values=compound_dose_table_data)
+
+        if event == "-DOSE_BUTTON-":
+
+            dose_response_canvas, toolbar = _draw_dose_response_curve(window, plotting, all_data, dose_response_canvas,
+                                                                       toolbar)
+
+
 def popup_table(window, table):
     """
 
@@ -2404,11 +2622,45 @@ def popup_table(window, table):
 
 if __name__ == "__main__":
     import configparser
+    from bio_dose_calculator import dose_response_controller
+    from bio_dose_plotting import PlottingDose
 
     config = configparser.ConfigParser()
     config.read("config.ini")
-    worklist = None
-    assay_name = "Alpha_so"
-    destination_plates = ["test_1", "test_2", "Test_3"]
-    bio_compound_info_from_worklist = None
-    bio_dose_response_set_up(config, worklist, assay_name, destination_plates, bio_compound_info_from_worklist)
+
+    dose_response_curveshape = "S"
+    all_dose_data = {"plate_1": {"control": {
+        "reading": {"raw": [107.9699121, 103.5144308, 104.0479892, 104.3916889, 97.27653273, 90.69159613, 56.65732349,
+                            37.87317223, 19.78570689, 8.299916445, 11.36102686, 4.144031277, 5.013870229, 3.04536459,
+                            4.692352962, 7.622099516, 5.336804101, 9.853183031, 9.120045299, 4.869276415, 6.108990371,
+                            3.597853303, 5.994511486, 5.717414715]},
+        "dose": {"raw": [0, 0.043478261, 0.086956522, 0.130434783, 0.173913043, 0.217391304, 0.260869565, 0.304347826,
+                         0.347826087, 0.391304348, 0.434782609, 0.47826087, 0.52173913, 0.565217391, 0.608695652,
+                         0.652173913,
+                         0.695652174, 0.739130435, 0.782608696, 0.826086957, 0.869565217, 0.913043478, 0.956521739, 1]}
+
+    },
+        "sample": {
+            "reading": {
+                "raw": [109.3214119, 108.6611434, 102.3685731, 103.9247113, 104.9325289, 102.4206455, 98.47691972,
+                        102.5875971, 93.42962519, 76.20087959, 60.9377449, 45.92929776, 27.13356751, 15.82598671,
+                        12.67835439, 13.02441613, 10.35963326, 5.007706181, 6.146401995, 3.79602644, 4.418804534,
+                        9.61913024, 3.43543862, 5.886764018]},
+            "dose": {
+                "raw": [0, 0.043478261, 0.086956522, 0.130434783, 0.173913043, 0.217391304, 0.260869565, 0.304347826,
+                        0.347826087, 0.391304348, 0.434782609, 0.47826087, 0.52173913, 0.565217391, 0.608695652,
+                        0.652173913, 0.695652174, 0.739130435, 0.782608696, 0.826086957, 0.869565217, 0.913043478,
+                        0.956521739, 1]}
+        }}}
+    method_calc_reading_50 = "ec50 = (curve_max - curve_min)*0.5 + curve_min"
+    all_calculations = ["ec50 = (curve_max - curve_min)*0.5 + curve_min",
+                        "reading_50 = (resp_max - resp_min)*0.5",
+                        "ec50 = (resp_end - resp_start)*0.5",
+                        "reading_50 = (resp_start - resp_end)*0.5"]
+    dose_units = "mg/mL"
+    method = "EC50"
+    for plates in all_dose_data:
+        all_dose_data[plates] = dose_response_controller(dose_response_curveshape, all_dose_data[plates], method_calc_reading_50)
+
+    bio_dose_response_approval(config, all_dose_data, dose_units, method, all_calculations)
+    # pd = PlottingDose(config, all_dose_data)
