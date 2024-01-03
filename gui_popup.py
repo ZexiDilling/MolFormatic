@@ -3,6 +3,7 @@ import copy
 import matplotlib
 
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 
@@ -2451,16 +2452,14 @@ def bio_dose_response_approval(config, all_data, dose_units, method, all_calcula
 
     control_approved = True
     control_data = "ToDo"
-    calc_avg_diff = 1
     threshold_diff_avg = 10
-    diff = 1
     threshold_diff_outlier = 10
     # Table setup:
     BLANK_BOX = "☐"
     CHECKED_BOX = "☑"
     plate_headings = ["Plate", "Notes", "control", "approved"]
-    compound_headings = ["ID", "Sample_Amount", "avg_diff-TODO", "approved"]
-    compound_dose_headings = ["Conc.", "%", "target", "actual", "diff", "outlier"]
+    compound_headings = ["ID", "Sample_Amount", "avg_diff", "R²", "approved"]
+    compound_dose_headings = ["Conc.", "target", "actual", "diff", "outlier"]
     plate_table_data = []
     all_compound_table_data = []
     all_compound_dose_table_data = []
@@ -2468,6 +2467,8 @@ def bio_dose_response_approval(config, all_data, dose_units, method, all_calcula
     plate_all_compound_data_ditcs = {}
     compound_data_dicts = {}
     for plates in all_data:
+        ss_residual = 0
+        ss_total = 0
         plate_all_compound_data_ditcs[plates] = []
         compound_table_data = []
         temp_plate_table_data = [plates, "", control_data]
@@ -2478,10 +2479,31 @@ def bio_dose_response_approval(config, all_data, dose_units, method, all_calcula
 
         plate_table_data.append(temp_plate_table_data)
         for samples in all_data[plates]:
+            avg_diff = 0
             compound_dose_table_data = []
             # if samples.casefold() != "control":
             sample_amount = len(all_data[plates][samples]["reading"]["raw"])
-            temp_compound_table_data = [samples, sample_amount, calc_avg_diff]
+
+            for sample_counter in range(sample_amount):
+                consentration = all_data[plates][samples]["dose"]["raw"][sample_counter]
+                target = diff_dict[plates][samples]["theory_normalized"][sample_counter]
+                actual = diff_dict[plates][samples]["actual_normalized"][sample_counter]
+                diff = (target - actual)
+                ss_residual += np.sum(diff ** 2)
+                ss_total += np.sum((actual - np.mean(actual)) ** 2)
+                avg_diff += diff
+                temp_compound_dose_headings = [round(consentration, 2), round(target, 2), round(actual, 2),
+                                               round(diff, 2)]
+                if diff <= threshold_diff_outlier:
+                    temp_compound_dose_headings.append(CHECKED_BOX)
+                else:
+                    temp_compound_dose_headings.append(BLANK_BOX)
+
+                compound_dose_table_data.append(temp_compound_dose_headings)
+                all_compound_dose_table_data.append(temp_compound_dose_headings)
+            calc_avg_diff = round(avg_diff/sample_amount, 2)
+            r_squared = 1 - (ss_residual / ss_total)
+            temp_compound_table_data = [samples, sample_amount, calc_avg_diff, r_squared]
             if calc_avg_diff <= threshold_diff_avg:
                 temp_compound_table_data.append(CHECKED_BOX)
             else:
@@ -2489,18 +2511,7 @@ def bio_dose_response_approval(config, all_data, dose_units, method, all_calcula
             all_compound_table_data.append(temp_compound_table_data)
             compound_table_data.append(temp_compound_table_data)
 
-            for sample_counter in range(sample_amount):
-                consentration = all_data[plates][samples]["dose"]["raw"][sample_counter]
-                procent = "ToDo"
-                target = "ToDo"
-                actual = "ToDo"
-                temp_compound_dose_headings = [consentration, procent, target, actual, diff]
-                if diff <= threshold_diff_outlier:
-                    temp_compound_dose_headings.append(CHECKED_BOX)
-                else:
-                    temp_compound_dose_headings.append(BLANK_BOX)
-                compound_dose_table_data.append(temp_compound_dose_headings)
-                all_compound_dose_table_data.append(temp_compound_dose_headings)
+
             plate_all_compound_data_ditcs[plates].append(compound_dose_table_data)      # ToDO Check this one
             compound_data_dicts[samples] = compound_dose_table_data
         plate_data_dicts[plates] = compound_table_data
@@ -2659,8 +2670,57 @@ if __name__ == "__main__":
                         "reading_50 = (resp_start - resp_end)*0.5"]
     dose_units = "mg/mL"
     method = "EC50"
+    diff_dict = {}
     for plates in all_dose_data:
-        all_dose_data[plates] = dose_response_controller(dose_response_curveshape, all_dose_data[plates], method_calc_reading_50)
+        diff_dict[plates] = {}
+        all_dose_data[plates] = dose_response_controller(dose_response_curveshape, all_dose_data[plates],
+                                                         method_calc_reading_50, diff_dict[plates])
+    for plates in diff_dict:
+        for samples in diff_dict[plates]:
+            for data in diff_dict[plates][samples]:
+                print(data)
+                print(diff_dict[plates][samples][data])
+
+    # for plates in diff_dict:
+    #     for samples in diff_dict[plates]:
+    #         actual = np.array(diff_dict[plates][samples]['actual_normalized'])
+    #         theory = np.array(diff_dict[plates][samples]['theory_normalized'])
+    #
+    #         # Compute residuals
+    #         residuals = actual - theory
+    #
+    #         # Optionally, you might want to print or analyze the residuals
+    #         print("Residuals:", residuals)
+    #
+    # for plates, plate_data in diff_dict.items():
+    #     for samples, sample_data in plate_data.items():
+    #         # Extract data
+    #         actual = np.array(sample_data['actual_normalized'])
+    #         theory = np.array(sample_data['theory_normalized'])
+    #
+    #         # Compute residuals
+    #         residuals = actual - theory
+    #
+    #         # Create a 1x2 subplot grid
+    #         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    #
+    #         # Plot residuals against dose values
+    #         ax1.scatter(sample_data['dose_normalized'], residuals, label=f'Sample {samples}')
+    #         ax1.set_title(f'Residuals for Plate {plates}')
+    #         ax1.set_xlabel('Dose (Normalized)')
+    #         ax1.set_ylabel('Residuals')
+    #         ax1.axhline(y=0, color='black', linestyle='--', label='Zero Residuals')  # Add a line at y=0 for reference
+    #         ax1.legend()
+    #
+    #         # Plot histogram of residuals
+    #         ax2.hist(residuals, bins=20, orientation='horizontal', color='skyblue', edgecolor='black')
+    #         ax2.set_title('Histogram of Residuals')
+    #         ax2.set_xlabel('Frequency')
+    #
+    #         # Adjust layout for better spacing
+    #         plt.tight_layout()
+    #
+    #         plt.show()
 
     bio_dose_response_approval(config, all_dose_data, dose_units, method, all_calculations)
     # pd = PlottingDose(config, all_dose_data)

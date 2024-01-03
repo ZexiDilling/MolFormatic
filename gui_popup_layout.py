@@ -688,11 +688,14 @@ def bio_dose_response_approval_layout(config, plate_table_data, plate_headings, 
     raw_table_col = sg.Frame("Please approve or dimiss plates", [[
         sg.Column([
             [sg.Table(values=plate_table_data, headings=plate_headings, auto_size_columns=False,
-                      key="-DOSE_APPROVAL_PLATE_TABLE-", enable_events=True, enable_click_events=True)],
+                      key="-DOSE_APPROVAL_PLATE_TABLE-", enable_events=True, enable_click_events=True,
+                      justification="center")],
             [sg.Table(values=compound_overview_table_data, headings=compound_overview_headings, auto_size_columns=False,
-                      key="-DOSE_APPROVAL_COMPOUND_OVERVIEW_TABLE-", enable_events=True, enable_click_events=True)],
+                      key="-DOSE_APPROVAL_COMPOUND_OVERVIEW_TABLE-", enable_events=True, enable_click_events=True,
+                      justification="center")],
             [sg.Table(values=compound_dose_table_data, headings=compound_dose_headings, auto_size_columns=False,
-                      key="-DOSE_APPROVAL_DOSE_COMPOUND_TABLE-", enable_events=True, enable_click_events=True)],
+                      key="-DOSE_APPROVAL_DOSE_COMPOUND_TABLE-", enable_events=True, enable_click_events=True,
+                      justification="center")],
 
             [sg.T("TO DO LIST:")],
             [sg.T("GET difference between each point and the intended line")],

@@ -140,6 +140,7 @@ def hill_eq_brentq(xvalues_for_curve, hill_constants, y_value_curve_center):
 
     y = upper + (lower - upper) / (1 + (xvalues_for_curve / EC50) ** -hillslope)
 
+
     return y - y_value_curve_center
 
 
@@ -238,7 +239,6 @@ def denormalise_0_1(value_or_array, array_min, array_max):
     print(orig_array_mean)
     """
 
-
     if isinstance(value_or_array, list):
         raise ValueError('this function accepts arraylike data, not a list. '
                          'Please check data or convert list to numpy array')
@@ -274,13 +274,15 @@ def _calc_rsquared(f_vec, reading_normalized):
     return rsquared
 
 
-def _calc_residuals_mean(hill_constants, temp_data):
+def _calc_residuals_mean(hill_constants, temp_data, diff_dict):
     dose_normalized = temp_data["dose"]["normalized"]
     reading_normalized = temp_data["reading"]["normalized"]
     reading_min = temp_data["reading"]["min"]
     reading_max = temp_data["reading"]["max"]
     reading_fitted_dose_normalized = hill_eq(hill_constants, dose_normalized)
-
+    diff_dict["theory_normalized"] = reading_fitted_dose_normalized
+    diff_dict["actual_normalized"] = reading_normalized
+    diff_dict["dose_normalized"] = dose_normalized
     residuals_normalized = abs(reading_normalized - reading_fitted_dose_normalized)
 
     residuals_normalized_mean = residuals_normalized.mean()
@@ -396,7 +398,7 @@ def _cal_ec50_normalized(temp_data, dose_response_curveshape, method_calc_readin
     temp_data["curve_min_norm"] = {}
     temp_data["curve_max_norm"]["value"] = max(temp_data["reading"]["fitted_normalized"])
     temp_data["curve_min_norm"]["value"] = min(temp_data["reading"]["fitted_normalized"])
-
+    print(f"y50_normalized - {y50_normalized}")
     # dfe.loc["EC50_norm_bq{}".format(d),"%s_okay" % sLet]
     brentq_out_tuple = _calc_EC50_brent_eq(sample, temp_data["hill_constants"], temp_data["y50_normalized"]["value"])
     temp_data["EC50_norm_bq"] = {}

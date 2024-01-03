@@ -7,7 +7,8 @@ from bio_dose_functions import denormalise_0_1, _calc_EC50_brent_eq, _cal_ec50_n
     _calc_rsquared, normalise_0_1, residuals, hill_eq
 
 
-def _set_up(temp_data, hill_constants_guess):
+def _set_up(temp_data, hill_constants_guess, diff_dict):
+
     # make an array of >250 datapoints representing the x-axis of the curve
     temp_min = 0
     # max = settings["fitted_curve_xaxis_max"]
@@ -27,7 +28,7 @@ def _set_up(temp_data, hill_constants_guess):
     temp_data["rsquared"] = {}
     temp_data["rsquared"]["value"] = _calc_rsquared(infodict["fvec"], temp_data["reading"]["normalized"])
     temp_data["residuals_normalized_mean"] = {}
-    temp_data["residuals_normalized_mean"]["value"] = _calc_residuals_mean(hill_constants, temp_data)
+    temp_data["residuals_normalized_mean"]["value"] = _calc_residuals_mean(hill_constants, temp_data, diff_dict)
 
     # denormalise
     xmin = temp_data["dose"]["min"]
@@ -39,7 +40,8 @@ def _set_up(temp_data, hill_constants_guess):
     temp_data["reading"]["fitted_normalized"] = hill_eq(hill_constants, x_fitted_norm)
 
 
-def dose_response_controller(dose_response_curveshape, all_data, method_calc_reading_50):
+def dose_response_controller(dose_response_curveshape, all_data, method_calc_reading_50, diff_dict):
+
 
     if dose_response_curveshape == "S":
         hill_constants_guess = (0.0, 1.0, 0.5, 10.0)
@@ -47,13 +49,14 @@ def dose_response_controller(dose_response_curveshape, all_data, method_calc_rea
         hill_constants_guess = (1.0, 0.0, 0.5, 10.0)
 
     for samples in all_data:
+        diff_dict[samples] = {}
         if samples != "state_data":
             all_data[samples]["reading"]["normalized"], all_data[samples]["reading"]["min"], \
             all_data[samples]["reading"]["max"] = normalise_0_1(all_data[samples]["reading"]["raw"])
             all_data[samples]["dose"]["normalized"], all_data[samples]["dose"]["min"], all_data[samples]["dose"]["max"] = \
                 normalise_0_1(all_data[samples]["dose"]["raw"])
 
-            _set_up(all_data[samples], hill_constants_guess)
+            _set_up(all_data[samples], hill_constants_guess, diff_dict[samples])
 
             _cal_ec50_normalized(all_data[samples], dose_response_curveshape, method_calc_reading_50, samples)
 
