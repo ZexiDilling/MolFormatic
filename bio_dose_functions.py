@@ -144,7 +144,7 @@ def hill_eq_brentq(xvalues_for_curve, hill_constants, y_value_curve_center):
     return y - y_value_curve_center
 
 
-def normalise_0_1(data_list):
+def normalise_0_1(data_list, outliers):
     """ Normalise an array to values between 0 and 1.
 
     The following linear formula is used.
@@ -176,7 +176,10 @@ def normalise_0_1(data_list):
     normalised_array = normalise_0_1(original_array)[0]
     # for further usage examples, see the docstring for denormalise_0_1
     """
+
     arraylike = np.array(data_list)
+    if outliers is not None:
+        arraylike = np.delete(arraylike, outliers)
     array_min = np.min(arraylike)
     array_max = np.max(arraylike)
     normalised = (arraylike - array_min) / (array_max - array_min)
@@ -398,7 +401,6 @@ def _cal_ec50_normalized(temp_data, dose_response_curveshape, method_calc_readin
     temp_data["curve_min_norm"] = {}
     temp_data["curve_max_norm"]["value"] = max(temp_data["reading"]["fitted_normalized"])
     temp_data["curve_min_norm"]["value"] = min(temp_data["reading"]["fitted_normalized"])
-    print(f"y50_normalized - {y50_normalized}")
     # dfe.loc["EC50_norm_bq{}".format(d),"%s_okay" % sLet]
     brentq_out_tuple = _calc_EC50_brent_eq(sample, temp_data["hill_constants"], temp_data["y50_normalized"]["value"])
     temp_data["EC50_norm_bq"] = {}

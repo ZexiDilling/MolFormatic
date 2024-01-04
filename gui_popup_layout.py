@@ -681,19 +681,19 @@ def export_chooser_popup_layout(config):
     return sg.Window("Export", layout, finalize=True, resizable=False)
 
 
-def bio_dose_response_approval_layout(config, plate_table_data, plate_headings, compound_overview_table_data,
-                                      compound_overview_headings, compound_dose_table_data, compound_dose_headings,
+def bio_dose_response_approval_layout(config, plate_table_data, plate_headings,
+                                      compound_overview_headings, compound_dose_headings,
                                       method, dose_units, analyse_methods, calc_method):
     sg.theme(config["GUI"]["theme"])
-    raw_table_col = sg.Frame("Please approve or dimiss plates", [[
+    raw_table_col = sg.Frame("Please approve or dismiss plates", [[
         sg.Column([
             [sg.Table(values=plate_table_data, headings=plate_headings, auto_size_columns=False,
                       key="-DOSE_APPROVAL_PLATE_TABLE-", enable_events=True, enable_click_events=True,
                       justification="center")],
-            [sg.Table(values=compound_overview_table_data, headings=compound_overview_headings, auto_size_columns=False,
+            [sg.Table(values=[], headings=compound_overview_headings, auto_size_columns=False,
                       key="-DOSE_APPROVAL_COMPOUND_OVERVIEW_TABLE-", enable_events=True, enable_click_events=True,
                       justification="center")],
-            [sg.Table(values=compound_dose_table_data, headings=compound_dose_headings, auto_size_columns=False,
+            [sg.Table(values=[], headings=compound_dose_headings, auto_size_columns=False,
                       key="-DOSE_APPROVAL_DOSE_COMPOUND_TABLE-", enable_events=True, enable_click_events=True,
                       justification="center")],
 
@@ -707,6 +707,8 @@ def bio_dose_response_approval_layout(config, plate_table_data, plate_headings, 
 
     text_size = 15
     input_size = 7
+    if type(dose_units) == list:
+        dose_units = dose_units[0]
 
     dose_data_info = sg.Frame("Basic", [[
         sg.Column([

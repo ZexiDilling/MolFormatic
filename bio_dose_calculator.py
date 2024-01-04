@@ -7,7 +7,7 @@ from bio_dose_functions import denormalise_0_1, _calc_EC50_brent_eq, _cal_ec50_n
     _calc_rsquared, normalise_0_1, residuals, hill_eq
 
 
-def _set_up(temp_data, hill_constants_guess, diff_dict):
+def _set_up(temp_data, hill_constants_guess, diff_dict, outliers):
 
     # make an array of >250 datapoints representing the x-axis of the curve
     temp_min = 0
@@ -16,7 +16,10 @@ def _set_up(temp_data, hill_constants_guess, diff_dict):
     temp_max = 1.2
     temp_n_datapoints = 1000
     temp_data["dose"]["fitted_normalized"] = np.linspace(temp_min, temp_max, temp_n_datapoints)
-    temp_data["n_doseconc_tested"] = len(temp_data["dose"]["raw"])
+    if outliers:
+        temp_data["n_doseconc_tested"] = len(temp_data["dose"]["raw"]) - len(outliers)
+    else:
+        temp_data["n_doseconc_tested"] = len(temp_data["dose"]["raw"])
     hill_constants, cov, infodict, mesg, ier = leastsq(residuals, hill_constants_guess,
                                                        args=(hill_eq, temp_data["dose"]["normalized"],
                                                              temp_data["reading"]["normalized"]),
@@ -40,23 +43,31 @@ def _set_up(temp_data, hill_constants_guess, diff_dict):
     temp_data["reading"]["fitted_normalized"] = hill_eq(hill_constants, x_fitted_norm)
 
 
-def dose_response_controller(dose_response_curveshape, all_data, method_calc_reading_50, diff_dict):
-
+def dose_response_controller(dose_response_curveshape, all_data, method_calc_reading_50, diff_dict,
+                             specific_compound=None):
 
     if dose_response_curveshape == "S":
         hill_constants_guess = (0.0, 1.0, 0.5, 10.0)
     elif dose_response_curveshape == "Z":
         hill_constants_guess = (1.0, 0.0, 0.5, 10.0)
-
     for samples in all_data:
+        if specific_compound:
+            if samples not in specific_compound:
+                continue
         diff_dict[samples] = {}
         if samples != "state_data":
+            try:
+                all_data[samples]["outlier"]
+            except KeyError:
+                outlier = None
+            else:
+                outlier = all_data[samples]["outlier"]
             all_data[samples]["reading"]["normalized"], all_data[samples]["reading"]["min"], \
-            all_data[samples]["reading"]["max"] = normalise_0_1(all_data[samples]["reading"]["raw"])
+                all_data[samples]["reading"]["max"] = normalise_0_1(all_data[samples]["reading"]["raw"], outlier)
             all_data[samples]["dose"]["normalized"], all_data[samples]["dose"]["min"], all_data[samples]["dose"]["max"] = \
-                normalise_0_1(all_data[samples]["dose"]["raw"])
+                normalise_0_1(all_data[samples]["dose"]["raw"], outlier)
 
-            _set_up(all_data[samples], hill_constants_guess, diff_dict[samples])
+            _set_up(all_data[samples], hill_constants_guess, diff_dict[samples], outlier)
 
             _cal_ec50_normalized(all_data[samples], dose_response_curveshape, method_calc_reading_50, samples)
 
@@ -72,7 +83,6 @@ def dose_response_controller(dose_response_curveshape, all_data, method_calc_rea
             all_data[samples]["y50"]["value"] = denormalise_0_1(all_data[samples]["y50_normalized"]["value"],
                                                                 all_data[samples]["reading"]["min"],
                                                                 all_data[samples]["reading"]["max"])
-    print("calc done !!")
     return all_data
 
 
@@ -108,8 +118,10 @@ if __name__ == "__main__":
         }}}
     method_calc_reading_50 = "ec50 = (curve_max - curve_min)*0.5 + curve_min"
     all_dose_data = {}
+    outliers = [0, 4, 7]
     for plates in all_dose_data:
-        all_dose_data[plates] = dose_response_controller(dose_response_curveshape, all_dose_data[plates], method_calc_reading_50)
+        all_dose_data[plates] = dose_response_controller(dose_response_curveshape, all_dose_data[plates],
+                                                         method_calc_reading_50, outliers=outliers)
 
     from bio_dose_plotting import PlottingDose
     pd = PlottingDose(config, all_data)
