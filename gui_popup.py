@@ -1392,9 +1392,8 @@ def __update_compounds_approval(table_data, selected_plate, plate_status):
             row_data[4] = plate_status
 
 
-def bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, plate_to_layout, archive_plates_dict,
-                            transfer_dict, dismissed_plates,
-                            all_plates_are_dismissed, dead_plates):
+def bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, plate_to_layout,  transfer_dict,
+                            dismissed_plates, all_plates_are_dismissed, dead_plates):
     """
     The controller for the pop-up that comes when you are importing plate-reader data to the database
     :param draw_plate: A function for drawing plates
@@ -1405,10 +1404,6 @@ def bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, pla
     :type all_plates_data: dict
     :param plate_to_layout: a dicts for the plate_layout
     :type plate_to_layout: dict
-    :param archive_plates_dict: the dict over the layouys
-    :type archive_plates_dict: dict
-    :param bio_plate_report_setup: dict over what state wells should be in, to be printed on the report sheet.
-    :type bio_plate_report_setup: dict
     :param transfer_dict: data over wells that have been transferred and wells that have been skipped for each plate
     :type transfer_dict: dict
     :param dismissed_plates: A list of plates that have been dismissed
@@ -1424,14 +1419,14 @@ def bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, pla
 
     # ToDO add the option to click colours and change them in the different mappings!
     # Makes a copy of the dict as it will be changed doing the analyses of the data
-    temp_archive_plates_dict = copy.deepcopy(archive_plates_dict)
+    # temp_archive_plates_dict = copy.deepcopy(archive_plates_dict)
     table_row = None  # Make sure that it does not try to calculate stuff on empty data
     plate_analyse_methods = []  # What method are used for analysing plates
     plate_calculations = []  # What calculations have been done for each plate
     plate_table_data = []  # The data for all the plates
     compound_table_data = []  # The data for all the wells in the plates
     hist_data = {"all": []}  # The data for drawing the histogram
-    well_state_overview = {  # A dict over each state if it is included in the analysis or not
+    well_state_overview = {  # A dict over each state if it is included in   the analysis or not
         "sample": False,
         "blank": False,
         "max": False,

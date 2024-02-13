@@ -37,7 +37,7 @@ draw_tool_values = {
     "temp_draw_tool": None,
     "temp_selector": False,
     "well_off_set": 0,
-    }
+}
 
 bio_info_set_settings = {
     "bio_info_sub_setting_tab_mapping_calc": False,
@@ -92,8 +92,8 @@ window_1_lcms = {
     "purity_data_added_to_db": False,
     "update_purity_info_peak_table": True,
     "canvas_lines": {
-       "uv": None,
-       "peak_lines": {}
+        "uv": None,
+        "peak_lines": {}
     },
     "sample_data_file": None,
     "plot_style": None,
@@ -148,7 +148,10 @@ compound_info_tables = ["-COMPOUND_INFO_INFO_MP_TABLE-+-double click-",
 def database_guard(config, cw):
     try:
         if os.path.exists(config["Database"]["database"]):
-            db_active = True
+            if config["Database"]["database"] is not None:
+                db_active = True
+            else:
+                db_active = False
         else:
             cw.delete_all_info("Database")
             db_active = False
@@ -204,4 +207,3 @@ def start_up_gui(config, window):
 
     return well_dict_bio_info, well_dict, dose_colour_dict, colour_select, graph_bio_exp, lc_graph_showing, \
            sub_search_info
-

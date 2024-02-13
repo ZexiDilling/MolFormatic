@@ -50,13 +50,12 @@ class BIOAnalyser:
         """
         # Store the plate information in a dictionary, where each well is key-value pair.
         pw_dict = {}
-        for layout in self.plate:
-            for counter in self.plate[layout]:
-                # Check if the well information exists, skip it if it doesn't
-                try:
-                    pw_dict[self.plate[layout][counter]["well_id"]] = self.plate[layout][counter]["state"]
-                except TypeError:
-                    pass
+        for counter in self.plate:
+            # Check if the well information exists, skip it if it doesn't
+            try:
+                pw_dict[self.plate[counter]["well_id"]] = self.plate[counter]["state"]
+            except TypeError:
+                pass
 
         return pw_dict
 
@@ -408,13 +407,13 @@ class BIOAnalyser:
                 for headline_counter, headline in enumerate(headlines):
                     ws.cell(column=indent_col + headline_counter, row=row_counter, value=headline).font = Font(b=True)
                 row_counter += 1
-                for counter in self.plate["well_layout"]:
-                    for _ in self.plate["well_layout"][counter]:
+                for counter in self.plate:
+                    for _ in self.plate[counter]:
 
                         # looks through the plate layout, finds the state for each well and check if it needs to be added
                         # based on bool-statment from well_states_report
-                        if self.well_states_report[self.plate["well_layout"][counter]["state"]] and not added:
-                            well = self.plate["well_layout"][counter]["well_id"]
+                        if self.well_states_report[self.plate[counter]["state"]] and not added:
+                            well = self.plate[counter]["well_id"]
                             well_value = all_data["plates"][plate_analysed]["wells"][well]
                             ws.cell(column=indent_col + 1, row=row_counter, value=well)
                             ws.cell(column=indent_col + 2, row=row_counter,

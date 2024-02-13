@@ -341,8 +341,8 @@ def save_layout(dbf, config, window, values, well_dict):
         PopupError("Can't save layout with paint as well states")
     else:
         sample_type_check = PopupYesNo(f"You are about to save the layout with the style: \n "
-                                          f"{values['-RECT_SAMPLE_TYPE-']} \n"
-                                          f"Is that fine?")
+                                       f"{values['-RECT_SAMPLE_TYPE-']} \n"
+                                       f"Is that fine?")
 
         if sample_type_check.casefold() == "yes":
             # ToDo For Dose Response, add som guard functions for checking samples and so on
@@ -364,7 +364,8 @@ def save_layout(dbf, config, window, values, well_dict):
                     "style": values["-RECT_SAMPLE_TYPE-"],
                     "plate_layout": f"{temp_well_dict}"
                 }
-
+                print(temp_plate_layout_data)
+                print(temp_table)
                 update_database(config, temp_table, temp_plate_layout_data)
 
                 # Updates the plate_list and archive_plates_dict with the new plate

@@ -12,7 +12,7 @@ from gui_function_info_calculations import calculate_dose
 from gui_function_info_lcms import sample_selection_mode_update, lcms_calculation, lcms_drawing
 from gui_popup import popup_table, morgan_popup
 from start_up_values import database_guard, compound_info_tables, window_1_lcms, \
-    start_up_gui, search_reverse, colour_chooser_buttons, bio_info_tables, assay_updater_list, all_data
+    start_up_gui, search_reverse, colour_chooser_buttons, bio_info_tables, assay_updater_list
 from gui_function_setup_extra import method_do_update, add_source_wells_update, execute_button_pressed, \
     database_tab_pressed, \
     database_responsible_import, database_customers_import, database_vendors_import, database_academia_company_import, \
@@ -29,10 +29,10 @@ from gui_function_setup_search import search_compound, sub_search_method_update_
     search_daughter_plates_update_values, search_mother_plates_update_values, search_sample_counter_update, sub_search, \
     from_assay_updater, list_box_update, sub_search_export_table
 from gui_function_setup_bio import bio_report_update, bio_report_hits_update, bio_report_smiles_update, \
-    bio_report_threshold_update, bio_report_amount_update, bio_plate_layout, bio_compound_data_update, \
+    bio_report_threshold_update, bio_report_amount_update, bio_compound_data_update, \
     bio_report_compound_id_update, bio_experiment_add_to_database_update, bio_combined_report_update, bio_settings, \
     new_assay, assay_name_update, bio_finaL_report_multi_conc, bio_calculate, bio_blank_run, \
-    send_to_info_window, assay_drop_down_updates
+    send_to_info_window, assay_drop_down_updates, bio_plate_layout_trigger
 from gui_function_setup_database import update_compound, update_plates
 from gui_function_setup_simulation import simulation_input_update, simulation_run
 from gui_function_table_compound import compound_table_refreshed, compound_table_export
@@ -44,7 +44,6 @@ from gui_function_setup_worklist import worklist_tab_clicked, worklist_control_l
 from gui_layout import GUILayout
 from gui_function_general_plate_drawing import on_up, save_layout, delete_layout, rename_layout, draw_layout, on_move, \
     bio_canvas, export_layout
-
 
 def main(config, queue_gui, queue_mol):
     """
@@ -165,7 +164,7 @@ def main(config, queue_gui, queue_mol):
             bio_experiment_add_to_database_update(window, values)
 
         if event == "-BIO_PLATE_LAYOUT-":
-            well_dict = bio_plate_layout(dbf, config, window, values, well_dict)
+            well_dict = bio_plate_layout_trigger(dbf, config, window, values, well_dict)
 
         if event == "-BIO_COMBINED_REPORT-":
             bio_combined_report_update(window, values)

@@ -1,6 +1,6 @@
 import copy
 
-from PySimpleGUI import popup, PopupGetText, PopupError, PopupGetFile, FolderBrowse
+from PySimpleGUI import popup, PopupGetText, PopupError, PopupGetFile, PopupGetFolder
 
 from database_functions import _get_list_of_names_from_database
 from draw_basic import draw_plate
@@ -119,7 +119,17 @@ def bio_settings(config, window):
         set_colours(window, reports)
 
 
-def bio_plate_layout(dbf, config, window, values, well_dict):
+def bio_plate_layout_trigger(dbf, config, window, values, well_dict):
+    well_dict = _bio_plate_layout(dbf, config, window, values, well_dict)
+    _update_bio_canvas()
+    return well_dict
+
+
+def _update_bio_canvas():
+    pass
+
+
+def _bio_plate_layout(dbf, config, window, values, well_dict):
     if values["-BIO_PLATE_LAYOUT-"]:
         well_dict.clear()
         plate_data = dbf.find_data_single_lookup("plate_layout", values["-BIO_PLATE_LAYOUT-"], "layout_name")[0]
@@ -175,19 +185,17 @@ def bio_calculate(dbf, config, values):
         PopupError("Please choose an Assay name")
     elif values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"] and not values["-BIO_RESPONSIBLE-"]:
         PopupError("Please choose an Responsible ")
-    elif values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"] and not values["-BIO_FINAL_REPORT_CONCENTRATION_NUMBER-"]:
-        PopupError("Please write a concentration for the run")
     elif values["-BIO_FINAL_REPORT_INCLUDE_HITS-"] and not values["-BIO_FINAL_REPORT_HIT_AMOUNT-"] \
             and values["-BIO_FINAL_REPORT_INCLUDE_HITS-"] and not values["-BIO_FINAL_REPORT_THRESHOLD-"]:
         PopupError("Please either select amount of hits or the threshold for the score,\n"
-                    "if Hits are to be included in the report")
+                   "if Hits are to be included in the report")
     elif not values["-BIO_ANALYSE_TYPE-"]:
         PopupError("Please choose an analyse type")
         # Missing setting move moving files after analyse is done.
     # ToDo add guards for wrong file-formate
     else:
         # Sets values for different
-        bio_import_folder = FolderBrowse("Please select the folder container the bio-data")
+        bio_import_folder = PopupGetFolder("Please select the folder container the bio-data")
         if not bio_import_folder:
             return
         # default_plate_layout = archive_plates_dict[values["-BIO_PLATE_LAYOUT-"]]
@@ -209,7 +217,7 @@ def bio_calculate(dbf, config, values):
         try:
             bio_export_folder = config["folders"]["output"]
         except ValueError:
-            bio_export_folder = FolderBrowse("Please select your output folder")
+            bio_export_folder = PopupGetFolder("Please select your output folder")
             # ToDo add folder to config file
 
         if not bio_export_folder:
@@ -246,22 +254,19 @@ def bio_calculate(dbf, config, values):
 
         # if not bio_breaker:
 
-        analyse_method = values["-BIO_ANALYSE_TYPE-"]
+        analyse_method = (values["-BIO_ANALYSE_TYPE-"]).casefold()
         add_compound_ids = values["-BIO_REPORT_ADD_COMPOUND_IDS-"]
         combined_report_check = values["-BIO_COMBINED_REPORT-"]
         import_to_database_check = values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"]
         responsible = values["-BIO_RESPONSIBLE-"]
         assay_name = values["-BIO_ASSAY_NAME-"]
 
-        if analyse_method.casefold() == "single":
+        if analyse_method == "single":
             # Get concentration for the samples
             try:
-                float(values["-BIO_FINAL_REPORT_CONCENTRATION_NUMBER-"])
+                temp_concentration = float(PopupGetText("Please provide a concentration in uM ?? \n numbers only"))
             except ValueError:
-                temp_concentration = float(PopupGetText("Please provide a concentration in uM ?? "
-                                                          "\n numbers only"))
-            else:
-                temp_concentration = float(values["-BIO_FINAL_REPORT_CONCENTRATION_NUMBER-"])
+                return
 
             check = bio_import_handler_single_point(dbf, config, bio_import_folder, plate_to_layout,
                                                     analyse_method, bio_sample_dict, bio_export_folder,
@@ -271,14 +276,13 @@ def bio_calculate(dbf, config, values):
                                                     threshold, hit_amount, include_smiles, include_structure,
                                                     assay_name, responsible, temp_concentration)
 
-        elif analyse_method.casefold() == "dose response":
+        elif analyse_method == "dose response":
             if not worklist_file:
                 worklist_file = PopupGetFile("Please select worklist files", multiple_files=True)
                 try:
                     worklist_file = worklist_file.split(";")
                 except TypeError:
                     return
-
             check = dose_response_import_handler(config, assay_name, bio_import_folder, worklist_file,
                                                  plate_to_layout, import_to_database_check, export_to_excel,
                                                  bio_export_folder,

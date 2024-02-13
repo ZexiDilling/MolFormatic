@@ -137,6 +137,9 @@ def bio_data(dbf, config, bio_import_folder, plate_to_layout, analysis_method,
     return True, all_plates_data, date, used_plates, plate_layout_dict
 
 
+def _bio_reports():
+    return
+
 def bio_full_report(dbf, config, analyse_method, all_plate_data, output_folder,
                     final_report_name, include_hits, threshold, hit_amount, include_smiles, bio_sample_dict,
                     plate_to_layout, include_structure):
@@ -381,9 +384,8 @@ def bio_experiment_to_database(config, assay_name, assay_data, used_plates, all_
         print(f"{plate_index + 1} / {total_plate_amount} have been uploaded to the database - last plate was: {plates}")
 
 
-def _bio_database_single_point_importer(config, assay_name, all_destination_plates, used_plates, all_plates_data,
-                                        bio_sample_dict, analyse_method, plate_to_layout, archive_plates_dict,
-                                        concentration):
+def _bio_data_check(config, assay_name, all_destination_plates, used_plates, all_plates_data,
+                                        bio_sample_dict, analyse_method, plate_to_layout):
 
     # Makes a popup to assign assay_run names to plates.
     if len(all_destination_plates) > len(used_plates):
@@ -425,14 +427,12 @@ def _bio_database_single_point_importer(config, assay_name, all_destination_plat
         # Open a popup window where data can be checked before being added to the database.
         all_plates_data, all_compound_data, plate_analyse_methods, sub_layouts = \
             bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, plate_to_layout,
-                                    archive_plates_dict, transfer_dict, dismissed_plates, all_plates_are_dismissed,
-                                    dead_plates)
+                                    transfer_dict, dismissed_plates, all_plates_are_dismissed, dead_plates)
 
-        if type(all_plates_data) != str:
-            # Adds the approved data to the database
-            bio_experiment_to_database(config, assay_name, assay_data, used_plates, all_plates_data, plate_analyse_methods,
-                                       responsible, bio_sample_dict, concentration, all_compound_data, sub_layouts,
-                                       dismissed_plates, dead_plates)
+        return all_plates_data, all_compound_data, plate_analyse_methods, sub_layouts, assay_data, \
+               dismissed_plates, dead_plates
+    else:
+        return check
 
 
 def bio_import_handler_single_point(dbf, config, bio_import_folder, plate_to_layout, analyse_method, bio_sample_dict,
@@ -445,20 +445,31 @@ def bio_import_handler_single_point(dbf, config, bio_import_folder, plate_to_lay
         bio_data(dbf, config, bio_import_folder, plate_to_layout,
                  analyse_method, bio_sample_dict, bio_export_folder, add_compound_ids, export_to_excel)
 
-    # Check if there should be produced a combined report over all the data
-    if combined_report_check:
-        bio_full_report(dbf, config, analyse_method, all_plates_data, bio_export_folder, final_report_name,
-                        include_hits, threshold, hit_amount, include_smiles, bio_sample_dict, plate_to_layout,
-                        include_structure)
+    check = _bio_data_check(config, assay_name, all_destination_plates, used_plates, all_plates_data,
+                            bio_sample_dict, analyse_method, plate_to_layout)
 
-    # Check if the data should be added to the database
-    if import_to_database_check:
-        _bio_database_single_point_importer(config, assay_name, all_destination_plates, used_plates, all_plates_data,
-                                            bio_sample_dict,
-                                            analyse_method, plate_to_layout, archive_plates_dict,
-                                            concentration)
+    if type(check) != str:
+        all_plates_data, all_compound_data, plate_analyse_methods, sub_layouts, assay_data, \
+               dismissed_plates, dead_plates, report_check = check
 
-    return "Done"
+        if report_check:
+            _bio_reports()
+
+        # Check if there should be produced a combined report over all the data
+        if combined_report_check:
+            bio_full_report(dbf, config, analyse_method, all_plates_data, bio_export_folder, final_report_name,
+                            include_hits, threshold, hit_amount, include_smiles, bio_sample_dict, plate_to_layout,
+                            include_structure)
+
+        # Check if the data should be added to the database
+        if import_to_database_check:
+            bio_experiment_to_database(config, assay_name, assay_data, used_plates, all_plates_data,
+                                       plate_analyse_methods, responsible, bio_sample_dict, concentration,
+                                       all_compound_data, sub_layouts, dismissed_plates, dead_plates)
+
+        return "Done"
+    else:
+        return check
 
 
 def _grab_dose_data(file, file_list, all_dose_readings, plate_layout, dose_layout, dose_out):

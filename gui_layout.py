@@ -15,6 +15,7 @@ class GUILayout:
 
         plate_list = _get_list_of_names_from_database_double_lookup(dbf, table, column_headline, limiting_value,
                                                                     limiting_header)
+
         self.assay = _get_list_of_names_from_database(dbf, "assay", "assay_name")
         self.config = config
         self.standard_size = 20
@@ -151,61 +152,6 @@ class GUILayout:
 
         return layout
 
-    # def setup_1_mp_dp_update(self):
-    #     """
-    #
-    #     :return: A layour for the bio-module in the top box
-    #     :rtype: list
-    #     """
-    #     print("is this working?")
-    #     col_bio_analysis = sg.Frame("Analyse setup", [[
-    #         sg.Column([
-    #             [sg.Text("Plate Layout", size=self.standard_size),
-    #              sg.DropDown(sorted(self.plate_list), key="-MP_DP_UPDATE_PLATE_LAYOUT-", enable_events=True,
-    #                          size=self.standard_size)],
-    #
-    #         ])
-    #     ]])
-    #
-    #     col_extra = sg.Frame("Extra Settings", [[
-    #         sg.Column([
-    #         ])
-    #     ]])
-    #
-    #     col_graph = sg.Frame("Plate Layout", [[
-    #         sg.Column([
-    #             [sg.Graph(canvas_size=(250, 175), graph_bottom_left=(0, 0), graph_top_right=(250, 175),
-    #                       background_color='grey', key="-MP_DP_UPDATE_CANVAS-", enable_events=False, drag_submits=False,
-    #                       motion_events=False)],
-    #             [sg.Text("Sample:", size=self.standard_size),
-    #              sg.T(background_color=self.config["plate_colouring"]["sample"], size=10,
-    #                   key="-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_SAMPLE-", relief="groove")],
-    #             [sg.Text("Blank:", size=self.standard_size),
-    #              sg.T(background_color=self.config["plate_colouring"]["blank"], size=10,
-    #                   key="-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_BLANK-", relief="groove")],
-    #             [sg.Text("Maximum:", size=self.standard_size),
-    #              sg.T(background_color=self.config["plate_colouring"]["max"], size=10,
-    #                   key="-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_NAX-", relief="groove")],
-    #             [sg.Text("Minimum:", size=self.standard_size),
-    #              sg.T(background_color=self.config["plate_colouring"]["minimum"], size=10,
-    #                   key="-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_MINIMUM-", relief="groove")],
-    #             [sg.Text("Positive Control:", size=self.standard_size),
-    #              sg.T(background_color=self.config["plate_colouring"]["positive"], size=10,
-    #                   key="-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_POSITIVE-", relief="groove")],
-    #             [sg.Text("Negative Control:", size=self.standard_size),
-    #              sg.T(background_color=self.config["plate_colouring"]["negative"], size=10,
-    #                   key="-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_NEGATIVE-", relief="groove")],
-    #             [sg.Text("Empty:", size=self.standard_size),
-    #              sg.T(background_color=self.config["plate_colouring"]["empty"], size=10,
-    #                   key="-MP_DP_UPDATE_PLATE_LAYOUT_COLOUR_BOX_EMPTY-", relief="groove")],
-    #         ])
-    #     ]])
-    #
-    #
-    #     layout = [sg.vtop([col_bio_analysis, col_extra, col_graph])]
-    #
-    #     return layout
-
     def setup_1_bio(self):
         """
 
@@ -238,7 +184,7 @@ class GUILayout:
                  sg.DropDown(self.sample_style, key="-BIO_SAMPLE_TYPE-", default_value=self.sample_style[0],
                              size=self.standard_size, enable_events=True,
                              tooltip="This indicates how many times each sample is on the plate. "
-                                     "Choosing custome, will let you choose more than 3 times.")],
+                                     "Choosing custom, will let you choose more than 3 times.")],
                 [sg.Text("Analyse Style", size=self.standard_size),
                  sg.DropDown(self.analyse_style, key="-BIO_ANALYSE_TYPE-", size=self.standard_size, enable_events=True,
                              default_value=self.analyse_style[0],

@@ -133,12 +133,13 @@ def state_mapping(config, ws, translate_wells_to_cells, plate, init_row, free_co
     """
     # Iterate through the wells in the plate
     init_row_start = init_row  # save the initial starting row
-    for counter in plate["well_layout"]:
-        state = plate["well_layout"][counter]["state"]  # get the state of the current well
+    print(plate)
+    for counter in plate:
+        state = plate[counter]["state"]  # get the state of the current well
         cell_color = config["plate_colouring"][state]  # get the color for the current state
         cell_color = cell_color.replace("#", "")  # remove the "#" symbol from the color
         temp_cell = translate_wells_to_cells[
-            plate["well_layout"][counter]["well_id"]]  # get the cell for the current well
+            plate[counter]["well_id"]]  # get the cell for the current well
         # fill the cell with the color for the current state
         ws[temp_cell].fill = PatternFill("solid", fgColor=cell_color)
 
@@ -178,6 +179,8 @@ def heatmap(config, ws, pw_dict, translate_wells_to_cells, heatmap_colours):
     temp_list = [well for well in pw_dict if pw_dict[well] == "sample"]
 
     # add conditional formatting to the selected wells to create a heatmap
+    print(translate_wells_to_cells)
+    print(temp_list)
     ws.conditional_formatting.add(
         f"{translate_wells_to_cells[temp_list[0]]}:{translate_wells_to_cells[temp_list[-1]]}",
         ColorScaleRule(
