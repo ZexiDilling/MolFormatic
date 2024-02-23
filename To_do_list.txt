@@ -1,4 +1,11 @@
-SCore - database program: 
+Important:
+Fix data import
+fix Plate Layout save
+
+
+
+
+SCore - database program:
 
 Importing different compounds + data 
 	Needs to see the data, what they expect to see 

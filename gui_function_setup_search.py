@@ -70,7 +70,10 @@ def list_box_update(window, values):
     for row in smiles_list:
         for smiles in row:
             temp_smiles = [smiles]
-        new_smiles_list.append(temp_smiles)
+        try:
+            new_smiles_list.append(temp_smiles)
+        except UnboundLocalError:
+            pass
     # smiles_list.append(smiles)
     window["-SUB_SEARCH_SMILES_LIST-"].update(values=new_smiles_list)
     window["-SUB_SEARCH_SMILES-"].update(value="")

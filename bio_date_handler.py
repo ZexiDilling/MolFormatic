@@ -535,6 +535,7 @@ class BIOAnalyser:
             counter_row = self._write_plate(ws_data, counter_row, all_data, methode, well_row_col, pw_dict)
         self._report_writer_controller(wb, all_data, plate_name, bio_sample_dict, add_compound_ids)
         save_file = f"{save_location}/{plate_name}.xlsx"
+        print(f"File is here: {save_file}")
         wb.save(save_file)
 
     def bio_data_controller(self, ex_file, plate_layout, all_data, well_row_col, well_type, analysis_method, write_to_excel,

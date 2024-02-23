@@ -121,11 +121,12 @@ def bio_data(dbf, config, bio_import_folder, plate_to_layout, analysis_method,
             if temp_plate_layout_name == "skip":
                 continue
             else:
-                row_data = dbf.find_data_single_lookup("plate_layout", "testing", "layout_name")
+                row_data = dbf.find_data_single_lookup("plate_layout", plate_to_layout, "layout_name")
                 temp_plate_layout = eval(row_data[0][5])
                 all_data, well_row_col, well_type, barcode, date = original_data_dict(files, temp_plate_layout)
                 if not all_data:
                     return False
+
                 used_plates.append(barcode)
                 all_plates_data[barcode] = bioa.bio_data_controller(files, temp_plate_layout, all_data, well_row_col,
                                                                     well_type, analysis_method, write_to_excel,
@@ -388,19 +389,21 @@ def _bio_data_check(config, assay_name, all_destination_plates, used_plates, all
                                         bio_sample_dict, analyse_method, plate_to_layout):
 
     # Makes a popup to assign assay_run names to plates.
-    if len(all_destination_plates) > len(used_plates):
-        dead_run_check = PopupYesNo("Not all plates from worklist have data.\n"
-                                    "Do you wish to add plates without data to the database?")
-    else:
-        dead_run_check = "No"
+    print(used_plates)
+    print(all_destination_plates)
+    # if len(all_destination_plates) > len(used_plates):
+    #     dead_run_check = PopupYesNo("Not all plates from worklist have data.\n"
+    #                                 "Do you wish to add plates without data to the database?")
+    # else:
+    #     dead_run_check = "No"
 
     # Adds dead plates to the all_plates_data dict for later use
-    if dead_run_check.casefold() == "yes":
-        dead_plates = _add_dead_plates(all_destination_plates, used_plates, all_plates_data, bio_sample_dict)
-        used_plates = all_destination_plates
-    else:
-        dead_plates = []
-
+    # if dead_run_check.casefold() == "yes":
+    #     dead_plates = _add_dead_plates(all_destination_plates, used_plates, all_plates_data, bio_sample_dict)
+    #     used_plates = all_destination_plates
+    # else:
+    #     dead_plates = []
+    dead_run_check = "no"
     check, transfer_dict, dismissed_plates = assay_run_naming(config, all_plates_data, analyse_method,
                                                               used_plates, assay_name, all_destination_plates,
                                                               dead_run_check, bio_compound_info_from_worklist)

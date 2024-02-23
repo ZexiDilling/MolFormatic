@@ -359,8 +359,6 @@ class GUILayout:
         for keys in list(self.config["plate_colouring"].keys()):
             color_select[keys] = self.config["plate_colouring"][keys]
 
-
-
         col_graph = sg.Frame("Plate Layout", [[
             sg.Column([
                 [sg.Graph(canvas_size=(500, 350), graph_bottom_left=(0, 0), graph_top_right=(500, 350),

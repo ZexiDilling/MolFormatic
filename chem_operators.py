@@ -136,11 +136,11 @@ def structure_search(method, threshold, compound_data, smiles_target_list,
     :return: Rows from the database, with compounds under the threshold removed.
     :rtype: dict
     """
-
+    print()
     if method.casefold() == "skeleton":
         hit_list, compounds_to_keep = _skeleton_search(compound_data, smiles_target_list, unspecified, data_in_list)
     else:
-        hit_list, compounds_to_keep = _threshold_search(method, smiles_target_list[0], compound_data, threshold,
+        hit_list, compounds_to_keep = _threshold_search(method, smiles_target_list, compound_data, threshold,
                                                         morgan_values)
 
     return compounds_to_keep, hit_list

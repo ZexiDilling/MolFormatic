@@ -9,7 +9,6 @@ from compound_plate_formatting import plate_layout_re_formate
 from start_up_values import window_1_plate_layout, draw_tool_values, clm_to_row_converter, plate_type_count
 
 
-
 def _on_up_grab_graph_list(values, temp_x, temp_y):
     # makes a set, for adding wells, to avoid duplicates
     graphs_list = set()
@@ -361,7 +360,7 @@ def save_layout(dbf, config, window, values, well_dict):
                     "layout_name": temp_dict_name,
                     "plate_size": values["-PLATE-"],
                     "plate_mode": "placeholder",
-                    "style": values["-RECT_SAMPLE_TYPE-"],
+                    "style": values["-RECT_SAMPLE_TYPE-"].casefold(),
                     "plate_layout": f"{temp_well_dict}"
                 }
                 print(temp_plate_layout_data)
@@ -382,12 +381,12 @@ def delete_layout(dbf, window, values):
     else:
         # Set up values for the database, and deletes the record
         table = "plate_layout"
-        headline = "plate_name"
+        headline = "layout_name"
         data_value = values["-ARCHIVE_PLATES-"]
         dbf.delete_records(table, headline, data_value)
 
         # Grabs the updated data from the database
-        plate_list = _get_list_of_names_from_database(dbf, "plate_layout", "plate_name")
+        plate_list = _get_list_of_names_from_database(dbf, "plate_layout", "layout_name")
 
         # Updates the window with new values
         window["-ARCHIVE_PLATES-"].update(values=sorted(plate_list), value=plate_list[0])
@@ -395,8 +394,6 @@ def delete_layout(dbf, window, values):
 
 
 def rename_layout(dbf, window, values):
-    # ToDO FIX THIS so it can Rename layouts - It needs to rename main and all sub layouts -
-    #  Needs to take into account if layouts have been used by assays or other.
     if not values["-ARCHIVE_PLATES-"]:
         PopupError("Please select a layout to rename")
     else:
