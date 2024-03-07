@@ -8,6 +8,7 @@ from openpyxl.drawing.image import Image as XLImage
 import tempfile
 
 from extra_functions import unit_converter
+from gui_guards import file_type_guard
 from info import plate_384_row, plate_384_column
 
 
@@ -233,7 +234,7 @@ def purity_sample_layout_import(file, table_headings):
     return table_data
 
 
-def well_compound_list(file):
+def well_compound_list(file, multiple_controls=None):
     """
     Takes excel file with wells in clm 1, compound name in clm 2, volume in clm 3 in uL, barcode in clm 4,
     plate type in clm 5 and compound type in clm 6.
@@ -249,50 +250,80 @@ def well_compound_list(file):
     # # compound_data_org = {}
     # plate_name = plate_name.replace("-", "_").removesuffix(".xlsx")
     # compound_data[plate_name] = {}
-    wb = load_workbook(filename=file)
-    ws = wb.active
-    for row, data in enumerate(ws):
-        if row != 0:
 
-            for col, cells in enumerate(data):
-                if cells.value == None:
-                    continue
-                elif col == 0:
-                    temp_well = cells.value
-                elif col == 1:
-                    try:
-                        temp_compound = cells.value.casefold()
-                    except AttributeError:
-                        temp_compound = cells.value
-                elif col == 2:
-                    try:
-                        # calculates volume in nL
-                        temp_volume = float(cells.value) * 1000
-                    except (ValueError, TypeError):
-                        # return "Value_Error on volume column"
-                        pass
-                elif col == 3:
-                    temp_plate_name = cells.value.casefold()
+    if file_type_guard(file, [".xlsx"]):
+        wb = load_workbook(filename=file)
+        ws = wb.active
+        for row, data in enumerate(ws):
+            if row != 0:
+                temp_compound_trans_vol = None
+                temp_compound_group = None
+                for col, cells in enumerate(data):
 
-                elif col == 4:
-                    temp_plate_type = cells.value.casefold()
+                    if cells.value == None:
+                        continue
+                    elif col == 0:
+                        temp_well = cells.value
+                    elif col == 1:
+                        try:
+                            temp_compound = cells.value.casefold()
+                        except AttributeError:
+                            temp_compound = cells.value
+                    elif col == 2:
+                        try:
+                            # calculates volume in nL
+                            temp_volume = float(cells.value) * 1000
+                        except (ValueError, TypeError):
+                            # return "Value_Error on volume column"
+                            pass
+                    elif col == 3:
+                        temp_plate_name = cells.value.casefold()
 
-                elif col == 5:
-                    temp_compound_type = cells.value.casefold()
+                    elif col == 4:
+                        temp_plate_type = cells.value.casefold()
 
-                    try:
-                        compound_data[temp_compound_type]
+                    elif col == 5:
+                        temp_compound_type = cells.value.casefold()
 
-                    except KeyError:
-                        compound_data[temp_compound_type] = {"well_vol": {temp_well: temp_volume},
-                                                             "compound": temp_compound,
-                                                             "barcode": temp_plate_name,
-                                                             "plate_type": temp_plate_type}
-                    else:
-                        compound_data[temp_compound_type]["well_vol"][temp_well] = temp_volume
+                        compound_data = __dict_setup(compound_data, temp_compound_type, temp_well, temp_volume,
+                                                     temp_compound, temp_plate_name, temp_plate_type,
+                                                     temp_compound_group, temp_compound_trans_vol)
+
+                    elif col == 6:
+                        temp_compound_trans_vol = cells.value
+
+                    elif col == 7:
+                        temp_compound_group = cells.value
+
+                        compound_data = __dict_setup(compound_data, temp_compound_type, temp_well, temp_volume,
+                                                     temp_compound, temp_plate_name, temp_plate_type,
+                                                     temp_compound_group, temp_compound_trans_vol)
+        print(compound_data)
+        return compound_data
+    else:
+        return "Wrong File Format, please use .xlsx"
+
+
+def __dict_setup(compound_data, temp_compound_type, temp_well, temp_volume, temp_compound, temp_plate_name,
+                 temp_plate_type, temp_compound_group, temp_compound_trans_vol):
+
+
+    try:
+        compound_data[temp_compound_type]
+
+    except KeyError:
+
+        compound_data[temp_compound_type] = {"well_vol": {temp_well: temp_volume},
+                                             "compound": temp_compound,
+                                             "barcode": temp_plate_name,
+                                             "plate_type": temp_plate_type,
+                                             "trans_vol": {temp_compound_group: temp_compound_trans_vol},
+                                             }
+    else:
+        compound_data[temp_compound_type]["well_vol"][temp_well] = temp_volume
+        compound_data[temp_compound_type]["trans_vol"][temp_compound_group] = temp_compound_trans_vol
 
     return compound_data
-
 
 def insert_structure(worksheet):
     """

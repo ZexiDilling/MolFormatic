@@ -9,27 +9,34 @@ from database_handler import DataBaseFunctions
 from file_type_handler_excel import well_compound_list
 from bio_functions import bio_compound_info_from_worklist
 from database_functions import grab_table_data
+from gui_guards import file_type_guard
 
 
 def worklist_control_layout_update(window, values):
     worklist_layout = PopupGetFile("Please select a worklist layout file")
-    worklist_data = well_compound_list(worklist_layout)
-    for well_state in worklist_data:
-        well_state = well_state.casefold()
-        if well_state == "positive":
-            window["-WORKLIST_USE_POSITIVE_CONTROL-"].update(value=True)
-            window["-WORKLIST_POSITIVE_CONTROL_ID-"].update(disabled=False,
-                                                            value=worklist_data[well_state]["compound"])
-        if well_state == "negative":
-            window["-WORKLIST_USE_NEGATIVE_CONTROL-"].update(value=True)
-            window["-WORKLIST_NEGATIVE_CONTROL_ID-"].update(disabled=False,
-                                                            value=worklist_data[well_state]["compound"])
-        if well_state == "bonus":
-            window["-WORKLIST_USE_BONUS_COMPOUND-"].update(value=True)
-            window["-WORKLIST_BONUS_COMPOUND_ID-"].update(disabled=False,
-                                                          value=worklist_data[well_state]["compound"])
+    if worklist_layout:
+        worklist_data = well_compound_list(worklist_layout)
+        if type(worklist_data) != str:
 
-    window["-WORKLIST_CONTROL_LAYOUT_TARGET-"].update(value=worklist_layout)
+            for well_state in worklist_data:
+                well_state = well_state.casefold()
+                if well_state == "positive":
+                    window["-WORKLIST_USE_POSITIVE_CONTROL-"].update(value=True)
+                    window["-WORKLIST_POSITIVE_CONTROL_ID-"].update(disabled=False,
+                                                                    value=worklist_data[well_state]["compound"])
+                if well_state == "negative":
+                    window["-WORKLIST_USE_NEGATIVE_CONTROL-"].update(value=True)
+                    window["-WORKLIST_NEGATIVE_CONTROL_ID-"].update(disabled=False,
+                                                                    value=worklist_data[well_state]["compound"])
+                if well_state == "bonus":
+                    window["-WORKLIST_USE_BONUS_COMPOUND-"].update(value=True)
+                    window["-WORKLIST_BONUS_COMPOUND_ID-"].update(disabled=False,
+                                                                  value=worklist_data[well_state]["compound"])
+
+            window["-WORKLIST_CONTROL_LAYOUT_TARGET-"].update(value=worklist_layout)
+
+        else:
+            PopupError(worklist_data)
 
 
 def worklist_tab_clicked(config, window):
@@ -53,7 +60,8 @@ def worklist_generator(dbf, config, window, values, worklist_mp_plates_list):
     if not values["-WORKLIST_PLATE_LAYOUT-"]:
         PopupError("Please select a plate layout")
 
-    elif not values["-WORKLIST_MP_LIST-"] and not values["-WORKLIST_USE_ALL_MOTHERPLATES-"]:
+    elif not values["-WORKLIST_MP_LIST-"] and not values["-WORKLIST_USE_ALL_MOTHERPLATES-"] and \
+            not values["-WORKLIST_USE_NO_MOTHERPLATES-"]:
         PopupError("Please select witch MotherPlates to use")
 
     elif not values["-WORKLIST_PLATE_AMOUNT-"]:
@@ -97,7 +105,7 @@ def worklist_generator(dbf, config, window, values, worklist_mp_plates_list):
         else:
             mps = values["-WORKLIST_MP_LIST-"]
 
-        if not values["-WORKLIST_ASSAY_LIST-"]:
+        if not values["-WORKLIST_ASSAY_LIST-"] and not values["-WORKLIST_USE_NO_MOTHERPLATES-"]:
             assays = None
             mp_check = PopupYesNo("Have any of the MotherPlates been used for for this production before?")
             if mp_check.casefold() == "yes":
@@ -139,10 +147,14 @@ def worklist_generator(dbf, config, window, values, worklist_mp_plates_list):
 
             control_samples = {"positive":
                                    {"use": values["-WORKLIST_USE_POSITIVE_CONTROL-"],
-                                    "sample": values["-WORKLIST_POSITIVE_CONTROL_ID-"]},
+                                    "sample": values["-WORKLIST_POSITIVE_CONTROL_ID-"],
+                                    "multiple_concentration": values["-WORKLIST_POSITIVE_CONTROL_MULTIPLE_CONC-"],
+                                    "fill_up": values["-WORKLIST_USE_BONUS_COMPOUND-"]},
                                "negative":
                                    {"use": values["-WORKLIST_USE_NEGATIVE_CONTROL-"],
-                                    "sample": values["-WORKLIST_NEGATIVE_CONTROL_ID-"]},
+                                    "sample": values["-WORKLIST_NEGATIVE_CONTROL_ID-"],
+                                    "multiple_concentration": False,
+                                    "fill_up": values["-WORKLIST_USE_BONUS_COMPOUND-"]},
                                "max": {"use": False},
                                "minimum": {"use": False},
                                "blank": {"use": False},
@@ -162,21 +174,27 @@ def worklist_generator(dbf, config, window, values, worklist_mp_plates_list):
             worklist_analyse_method = values["-WORKLIST_SAMPLE_STYLE-"]
             sample_direction = values["-WORKLIST_DROPDOWN_SAMPLE_DIRECTION-"]
 
-            assay_name = values["-WORKLIST_ASSAY_NAME-"]
-            plate_amount = int(values["-WORKLIST_PLATE_AMOUNT-"])
-            initial_plate = int(values["-WORKLIST_INITIAL_PLATE-"])
-            volume = float(values["-WORKLIST_VOLUME-"])
-            file, msg = generate_worklist(config, plate_amount, mps, plate_layout, used_plate_well_dict,
-                                          assay_name, initial_plate, volume, worklist_analyse_method,
-                                          sample_direction, control_layout, control_samples,
-                                          bonus_compound)
-
-            if not file:
-                PopupError("Something crashed up")
-            elif type(msg) == str:
-                Popup(f"{msg} - File still created with fewer plates, saved here {file}")
+            leading_zeroes = values["-WORKLIST_LEADING_ZEROES-"]
+            try:
+                leading_zeroes_amount = int(values["-WORKLIST_LEADING_ZEROES_AMOUNT-"])
+            except ValueError:
+                PopupError("Leading zeroes only takes in hole numbers")
             else:
-                Popup(f"Worklist have been created and saved here: {file}")
+                assay_name = values["-WORKLIST_ASSAY_NAME-"]
+                plate_amount = int(values["-WORKLIST_PLATE_AMOUNT-"])
+                initial_plate = int(values["-WORKLIST_INITIAL_PLATE-"])
+                volume = float(values["-WORKLIST_VOLUME-"])
+                file, msg = generate_worklist(config, plate_amount, mps, plate_layout, used_plate_well_dict,
+                                              assay_name, initial_plate, leading_zeroes, leading_zeroes_amount, volume,
+                                              worklist_analyse_method, sample_direction, control_layout, control_samples,
+                                              bonus_compound)
+
+                if not file and type(msg) == str:
+                    PopupError(msg)
+                if type(msg) == str:
+                    Popup(f"{msg} - File still created with fewer plates, saved here {file}")
+                else:
+                    Popup(f"Worklist have been created and saved here: {file}")
 
 
 def _get_motherplates_with_wells_from_worklist_dict(used_plate_well_dict):
@@ -221,8 +239,12 @@ def _get_motherplate_layout(config, mps):
     for mp in mps:
         plate_data_dict[mp] = []
         temp_rows = dbf.find_data_single_lookup(table, mp, clm_header)
+        headlines = dbf.grab_table_headers(table)
+        headline_number = headlines.index("mp_well")
+
         for data in temp_rows:
-            temp_well = temp_rows[data]["mp_well"]
+
+            temp_well = data[headline_number]
             plate_data_dict[mp].append(temp_well)
 
     return plate_data_dict
@@ -252,8 +274,9 @@ def _get_free_wells(mps_layout, motherplate_dict):
     return free_wells
 
 
-def generate_worklist(config, plate_amount, mps, plate_layout, used_plate_well_dict, assay_name, initial_plate, volume,
-                      worklist_analyse_method, sample_direction, control_layout, control_samples, bonus_compound):
+def generate_worklist(config, plate_amount, mps, plate_layout, used_plate_well_dict, assay_name, initial_plate,
+                      leading_zeroes, leading_zeroes_amount, volume, worklist_analyse_method, sample_direction,
+                      control_layout, control_samples, bonus_compound):
     """
     Generates a worklist based on a plate-layout and data from MotherPlates.
 
@@ -303,21 +326,17 @@ def generate_worklist(config, plate_amount, mps, plate_layout, used_plate_well_d
 
     if not control_layout:
         control_bonus_source = None
-    elif control_layout.suffix == ".xlsx":
+    elif file_type_guard(control_layout, [".xlsx"]):
         control_bonus_source = well_compound_list(control_layout)
-        if type(control_bonus_source) == str:
-            return control_bonus_source
-    elif control_layout.suffix == ".txt":
-        pass            # ToDo add these ?
-    elif control_layout.suffix == ".csv":
-        pass            # ToDo add these ?
     else:
-        return "error: wrong file format for Control Layout"
+        return None, "error: wrong file format for Control Layout"
     # destination_dict = _from_plate_layout_to_destination_dict(plate_layout, assay_name, plate_amount, initial_plate)
     csv_w = CSVWriter()
-    file, msg = csv_w.worklist_writer(config, plate_layout, mps, free_well_dict, assay_name, plate_amount,
-                                      initial_plate, volume, sample_direction, worklist_analyse_method,
-                                      control_bonus_source, control_samples, bonus_compound)
+    print(f"plate_layout - {plate_layout}")
+    file, msg = csv_w.worklist_writer_controller(config, plate_layout, mps, free_well_dict, assay_name, plate_amount,
+                                                 initial_plate, leading_zeroes, leading_zeroes_amount, volume,
+                                                 sample_direction, worklist_analyse_method, control_bonus_source,
+                                                 control_samples, bonus_compound)
 
     if type(msg) == str:
         print(msg)

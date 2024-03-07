@@ -43,7 +43,8 @@ from gui_function_table_bio import table_tab_group_pressed_update, experiment_ta
 from gui_function_setup_worklist import worklist_tab_clicked, worklist_control_layout_update, worklist_generator
 from gui_layout import GUILayout
 from gui_function_general_plate_drawing import on_up, save_layout, delete_layout, rename_layout, draw_layout, on_move, \
-    bio_canvas, export_layout
+    bio_canvas, export_layout, bio_canvas_group_labeling
+
 
 def main(config, queue_gui, queue_mol):
     """
@@ -278,7 +279,7 @@ def main(config, queue_gui, queue_mol):
             execute_button_pressed(dbf, config, window, values)
 
         if event == "-EXTRA_SUB_TABS-":
-            print(event)
+            print(f"-EXTRA_SUB_TABS- event - {event}")
 
         if event == "-EXTRA_SUB_DATABASE_TABS-":
             database_tab_pressed(config, window, values, db_active)
@@ -459,6 +460,9 @@ def main(config, queue_gui, queue_mol):
             if event.endswith("+MOVE") and type(event) != tuple:
                 on_move(window, values, graph_bio_exp, well_dict, well_dict_bio_info)
 
+        if event.startswith("Group"):
+            well_dict = bio_canvas_group_labeling(event, values, well_dict)
+
         if event == "-RECT_BIO_CANVAS-":
             bio_canvas(values)
 
@@ -483,7 +487,6 @@ if __name__ == "__main__":
 
     while True:
         msg, smiles = queue_mol.get()
-        print(smiles)
         if msg is None:
             break
         elif msg == "start_draw_tool":

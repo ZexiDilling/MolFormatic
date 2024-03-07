@@ -1,3 +1,6 @@
+from pathlib import Path
+
+
 def guard_purity_data_wavelength(wavelength):
     wavelength_strings = ["all"]
     # Check if value is int or str
@@ -16,3 +19,18 @@ def guard_purity_data_wavelength(wavelength):
             return False, f"Only following values are usable strings: {wavelength_strings} "
 
     return True, wavelength_data
+
+
+def file_type_guard(file, types):
+    if type(file) == str:
+        for file_types in types:
+            if file.endswith(file_types):
+                return True
+    elif isinstance(file, Path):
+
+        for file_types in types:
+            if file.suffix == file_types:
+                return True
+    else:
+        return False
+

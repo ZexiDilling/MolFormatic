@@ -89,6 +89,13 @@ def _on_up_well_handler(values, well_dict, new_graphs_list, temp_sample_amount, 
         temp_well = wells
         wells = wells - draw_tool_values["well_off_set"]
 
+        try:
+            int(values["-PLATE_LAYOUT_GROUP-"].strip("Group "))
+        except ValueError:
+            group_number = 0
+        else:
+            group_number = int(values["-PLATE_LAYOUT_GROUP-"].strip("Group "))
+
         if window_1_plate_layout["temp_draw_tool"] == "dose":
             try:
                 well_dict[wells]["state"]
@@ -96,6 +103,7 @@ def _on_up_well_handler(values, well_dict, new_graphs_list, temp_sample_amount, 
                 PopupError("Sorry, can't deal with different plate types in a row")
                 break
             else:
+
                 if well_dict[wells]["state"] == "sample":
                     # if temp_replicate > replicates:
                     #     replicates = 1
@@ -114,7 +122,7 @@ def _on_up_well_handler(values, well_dict, new_graphs_list, temp_sample_amount, 
                             window_1_plate_layout["graph_plate"].Widget.itemconfig(wells, fill=colour)
 
                             well_dict[wells]["colour"] = colour
-                            well_dict[wells]["group"] = 0
+                            well_dict[wells]["group"] = group_number
                             well_dict[wells]["replicate"] = 0
                             well_dict[wells]["concentration"] = 0
                             continue
@@ -130,7 +138,7 @@ def _on_up_well_handler(values, well_dict, new_graphs_list, temp_sample_amount, 
                         window_1_plate_layout["graph_plate"].Widget.itemconfig(wells, fill=colour)
 
                         well_dict[wells]["colour"] = colour
-                        well_dict[wells]["group"] = 0
+                        well_dict[wells]["group"] = group_number
                         well_dict[wells]["replicate"] = 0
                         well_dict[wells]["concentration"] = 0
                         continue
@@ -162,7 +170,7 @@ def _on_up_well_handler(values, well_dict, new_graphs_list, temp_sample_amount, 
             except KeyError:
                 pass
             else:
-                well_dict[wells]["group"] = 0
+                well_dict[wells]["group"] = group_number
                 well_dict[wells]["replicate"] = 0
                 well_dict[wells]["concentration"] = 0
 
@@ -170,42 +178,48 @@ def _on_up_well_handler(values, well_dict, new_graphs_list, temp_sample_amount, 
 
 
 def on_up(window, values, well_dict, dose_colour_dict, colour_select):
-    if draw_tool_values["temp_selector"] and draw_tool_values["plate_active"]:
 
-        # Dose response values
-        if draw_tool_values["temp_draw_tool"] == "dose":
-            temp_dilutions = int_guard(window, values["-DOSE_DILUTIONS-"], 0)
-            temp_sample_amount = int_guard(window, values["-DOSE_SAMPLE_AMOUNT-"], 0)
-            temp_sample_group = int_guard(window, values["-SAMPLE_CHOOSER_DROPDOWN-"], 1)
-            replicates = int_guard(window, values["-DOSE_REPLICATES-"], 1)
-            concentration_count = 0
-            replicate_loop = int_guard(window, values["-REPLICATE_CHOOSER_DROPDOWN-"], 1)
-        else:
-            temp_dilutions = temp_sample_amount = temp_sample_group = \
-                replicates = replicate_loop = concentration_count = 0
+    try:
+        draw_tool_values["temp_selector"] and draw_tool_values["plate_active"]
+    except KeyError:
+        pass
+    else:
+        if draw_tool_values["temp_selector"] and draw_tool_values["plate_active"]:
 
-        if draw_tool_values["temp_draw_tool"] == "dose" and temp_sample_amount == 0 and temp_dilutions == 0:
-            pass
-        else:
-
-            temp_x, temp_y = _on_up_x_y(draw_tool_values["start_point"], draw_tool_values["end_point"],
-                                        draw_tool_values["x"], draw_tool_values["y"])
-
-            new_graphs_list = _on_up_grab_graph_list(values, temp_x, temp_y)
-
-            well_dict = _on_up_well_handler(values, well_dict, new_graphs_list, temp_sample_amount, temp_dilutions,
-                                            temp_sample_group, replicate_loop, replicates, dose_colour_dict,
-                                            concentration_count, colour_select)
-
-            # Reset or sets the sample tool counter
-            if temp_sample_group >= temp_sample_amount:
-                temp_sample_group = 1
+            # Dose response values
+            if draw_tool_values["temp_draw_tool"] == "dose":
+                temp_dilutions = int_guard(window, values["-DOSE_DILUTIONS-"], 0)
+                temp_sample_amount = int_guard(window, values["-DOSE_SAMPLE_AMOUNT-"], 0)
+                temp_sample_group = int_guard(window, values["-SAMPLE_CHOOSER_DROPDOWN-"], 1)
+                replicates = int_guard(window, values["-DOSE_REPLICATES-"], 1)
+                concentration_count = 0
+                replicate_loop = int_guard(window, values["-REPLICATE_CHOOSER_DROPDOWN-"], 1)
             else:
-                temp_sample_group += 1
-            window["-SAMPLE_CHOOSER_DROPDOWN-"].update(value=temp_sample_group)
+                temp_dilutions = temp_sample_amount = temp_sample_group = \
+                    replicates = replicate_loop = concentration_count = 0
 
-            if window_1_plate_layout["temp_draw_tool"] == "dose":
-                window["-RECT_SAMPLE_TYPE-"].update(value="Dose Response")
+            if draw_tool_values["temp_draw_tool"] == "dose" and temp_sample_amount == 0 and temp_dilutions == 0:
+                pass
+            else:
+
+                temp_x, temp_y = _on_up_x_y(draw_tool_values["start_point"], draw_tool_values["end_point"],
+                                            draw_tool_values["x"], draw_tool_values["y"])
+
+                new_graphs_list = _on_up_grab_graph_list(values, temp_x, temp_y)
+
+                well_dict = _on_up_well_handler(values, well_dict, new_graphs_list, temp_sample_amount, temp_dilutions,
+                                                temp_sample_group, replicate_loop, replicates, dose_colour_dict,
+                                                concentration_count, colour_select)
+
+                # Reset or sets the sample tool counter
+                if temp_sample_group >= temp_sample_amount:
+                    temp_sample_group = 1
+                else:
+                    temp_sample_group += 1
+                window["-SAMPLE_CHOOSER_DROPDOWN-"].update(value=temp_sample_group)
+
+                if window_1_plate_layout["temp_draw_tool"] == "dose":
+                    window["-RECT_SAMPLE_TYPE-"].update(value="Dose Response")
 
     # deletes the rectangle used for selection
     if draw_tool_values["prior_rect"]:
@@ -363,8 +377,6 @@ def save_layout(dbf, config, window, values, well_dict):
                     "style": values["-RECT_SAMPLE_TYPE-"].casefold(),
                     "plate_layout": f"{temp_well_dict}"
                 }
-                print(temp_plate_layout_data)
-                print(temp_table)
                 update_database(config, temp_table, temp_plate_layout_data)
 
                 # Updates the plate_list and archive_plates_dict with the new plate
@@ -417,6 +429,28 @@ def rename_layout(dbf, window, values):
                 pass
             else:
                 window["-BIO_PLATE_LAYOUT-"].update(values=sorted(plate_list), value="")
+
+
+def bio_canvas_group_labeling(event, values, well_dict):
+    """
+    Changes the group liable of a well by right-clicking on it
+    :param event:
+    :param values:
+    :param well_dict:
+    :return:
+    """
+    group_name = event
+    temp_well = window_1_plate_layout["graph_plate"].get_figures_at_location(values['-RECT_BIO_CANVAS-'])[0]
+    look_up_well = temp_well - draw_tool_values["well_off_set"]
+    try:
+        well_dict[look_up_well]["well_id"]
+    except (KeyError or UnboundLocalError):
+        return well_dict
+    else:
+
+        well_dict[look_up_well]["group"] = group_name.strip("Group ")
+
+    return well_dict
 
 
 def bio_canvas(values):

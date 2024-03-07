@@ -474,14 +474,155 @@ class CSVWriter:
                                              source_well, source_plate, temp_compound_id])
         for states in missing_vol:
             missing_vol[states], _, _, _ = unit_converter(missing_vol[states], old_unit_out=False, new_unit_out="u",
-                                                                 as_list=True)
+                                                          as_list=True)
         print(f"missing_vol - {missing_vol}uL")
         print(file)
 
     @staticmethod
-    def worklist_writer(config, plate_layout, mps, free_well_dict, assay_name, plate_amount, initial_plate, volume,
-                        sample_direction, worklist_analyse_method, control_bonus_source, control_samples,
-                        bonus_compound):
+    def _worklist_writer(file, plate_layout, headlines, plate_amount, assay_name, initial_plate, leading_zeroes,
+                         leading_zeroes_amount, mps, mp_plate_counter, free_well_dict, volume, control_samples,
+                         bonus_compound, control_bonus_source, config):
+
+        bonus_name = "bonus"
+
+        with open(file, "w", newline="\n") as csv_file:
+
+            csv_writer = csv.writer(csv_file, delimiter=";")
+            csv_writer.writerow(headlines)
+
+            for plate in range(plate_amount):
+                plate_name_counter = plate + initial_plate
+                if leading_zeroes:
+                    width = max(leading_zeroes_amount, len(str(plate_name_counter)))
+                    destination_plate = f"{assay_name}_{str(plate_name_counter).zfill(width)}"
+                else:
+
+                    destination_plate = f"{assay_name}_{plate_name_counter}"
+                for counter in plate_layout:
+
+                    destination_well = plate_layout[counter]["well_id"]
+                    well_state = plate_layout[counter]["state"]
+
+                    # Check if the well is suppose to have samples in it, and if it does, add sample from MotherPlates
+                    if well_state == "sample":
+                        # Check if there are any wells left, that have not been used, else it skips to the next plate
+                        source_plate = mps[mp_plate_counter]
+                        while len(free_well_dict[source_plate]) == 0:
+                            print(source_plate)
+                            mp_plate_counter += 1
+                            mp_well_counter = 0
+                            if mp_plate_counter == len(mps):
+                                msg = "Not Enough MotherPlates"
+                                return file, msg
+
+                            source_plate = mps[mp_plate_counter]
+
+                        source_well = free_well_dict[source_plate][mp_well_counter]
+
+                        # Writes the data to a CSV file
+                        csv_writer.writerow([destination_plate, destination_well, volume,
+                                             source_well, source_plate])
+                        mp_well_counter += 1
+                        if mp_well_counter >= len(free_well_dict[source_plate]):
+                            mp_plate_counter += 1
+                            mp_well_counter = 0
+                            if mp_plate_counter == len(mps):
+                                msg = "Not Enough MotherPlates"
+                                return file, msg
+
+                    else:
+
+                        if control_samples[well_state]["use"] or bonus_compound[well_state]:
+
+                            try:
+                                control_samples[well_state]["sample"]
+                            except KeyError:
+                                print(bonus_compound)
+
+                                name = bonus_name
+                            else:
+                                name = control_samples[well_state]["sample"]
+
+                            found_vol = False
+                            if name != bonus_name and control_samples[well_state]["multiple_concentration"]:
+                                temp_group = plate_layout[counter]["group"]
+                                for temp_names in control_bonus_source:
+                                    if temp_names.startswith("pos"):
+                                        if int(temp_group) in control_bonus_source[temp_names]["trans_vol"]:
+                                            trans_volume = control_bonus_source[temp_names]["trans_vol"][int(temp_group)]
+                                            found_vol = True
+                                            name = temp_names
+                                            break
+
+                                if not found_vol:
+                                    trans_volume = volume
+                            else:
+                                if control_bonus_source[name]["trans_vol"]:
+                                    temp_group = plate_layout[counter]["group"]
+                                    try:
+                                        control_bonus_source[name]["trans_vol"][int(temp_group)]
+                                    except KeyError:
+                                        trans_volume = volume
+                                    else:
+                                        trans_volume = control_bonus_source[name]["trans_vol"][int(temp_group)]
+
+                                else:
+                                    trans_volume = volume
+
+                            try:
+                                control_bonus_source[name]
+                            except KeyError:
+                                print(f"temp_group - {temp_group}")
+                                print(f"name - {name}")
+                                print(f"control_bonus_source - {control_bonus_source}")
+                                return f'Wrong naming scheme on the control layout - "{name}" could not be found'
+                            else:
+                                temp_plate_type = control_bonus_source[name]["plate_type"]
+
+                            temp_barcode = control_bonus_source[name]["barcode"]
+                            dead_vol = \
+                                config["plate_types_values"][temp_plate_type].split(",")[0]
+                            dead_vol = float(dead_vol)
+                            got_compound = True
+                            for well in control_bonus_source[name]["well_vol"]:
+                                if control_bonus_source[name]["well_vol"][well] >= dead_vol + trans_volume:
+                                    source_well = well
+                                    source_plate = temp_barcode
+                                    control_bonus_source[name]["well_vol"][well] -= trans_volume
+                                    got_compound = True
+                                    break
+                                else:
+                                    source_well = f"Missing volume for {name}"
+                                    source_plate = temp_barcode
+                                    got_compound = False
+                            if not got_compound:
+                                print(f"Missing compound for {name}")
+                            csv_writer.writerow([destination_plate, destination_well, trans_volume,
+                                                 source_well, source_plate])
+                            if name != bonus_name and control_samples[well_state]["fill_up"] and trans_volume < volume:
+                                new_trans_volume = volume - trans_volume
+                                for well in control_bonus_source[bonus_name]["well_vol"]:
+                                    if control_bonus_source[bonus_name]["well_vol"][well] >= dead_vol + new_trans_volume:
+                                        source_well = well
+                                        source_plate = temp_barcode
+                                        control_bonus_source[bonus_name]["well_vol"][well] -= new_trans_volume
+                                        got_compound = True
+                                        break
+                                    else:
+                                        source_well = f"Missing volume for {control_bonus_source[bonus_name]['compound']}"
+                                        source_plate = temp_barcode
+                                        got_compound = False
+                                if not got_compound:
+                                    print(f"Missing compound for {control_bonus_source[bonus_name]['compound']}")
+                                csv_writer.writerow([destination_plate, destination_well, new_trans_volume,
+                                                     source_well, source_plate])
+
+        return None
+
+    def worklist_writer_controller(self, config, plate_layout, mps, free_well_dict, assay_name, plate_amount,
+                                   initial_plate, leading_zeroes, leading_zeroes_amount, volume,
+                                   sample_direction, worklist_analyse_method, control_bonus_source, control_samples,
+                                   bonus_compound):
         """
         Writes a worklist to use with plateButler
         :param config: The config handler, with all the default information in the config file.
@@ -542,76 +683,15 @@ class CSVWriter:
             file = path / f"{file_name}.csv"
             file_name_counter += 1
         file.touch()
-        with open(file, "w", newline="\n") as csv_file:
 
-            csv_writer = csv.writer(csv_file, delimiter=";")
-            csv_writer.writerow(headlines)
+        msg = self._worklist_writer(file, plate_layout, headlines, plate_amount, assay_name, initial_plate,
+                                    leading_zeroes, leading_zeroes_amount, mps, mp_plate_counter, free_well_dict,
+                                    volume, control_samples, bonus_compound, control_bonus_source, config)
 
-            for plate in range(plate_amount):
-                destination_plate = f"{assay_name}_{plate + initial_plate}"
-                for counter in plate_layout:
-
-                    destination_well = plate_layout[counter]["well_id"]
-                    well_state = plate_layout[counter]["state"]
-
-                    # Check if the well is suppose to have samples in it, and if it does, add sample from MotherPlates
-                    if well_state == "sample":
-                        # Check if there are any wells left, that have not been used, else it skips to the next plate
-                        source_plate = mps[mp_plate_counter]
-                        while len(free_well_dict[source_plate]) == 0:
-                            print(source_plate)
-                            mp_plate_counter += 1
-                            mp_well_counter = 0
-                            if mp_plate_counter == len(mps):
-                                msg = "Not Enough MotherPlates"
-                                return file, msg
-
-                            source_plate = mps[mp_plate_counter]
-
-                        source_well = free_well_dict[source_plate][mp_well_counter]
-
-                        # Writes the data to a CSV file
-                        csv_writer.writerow([destination_plate, destination_well, volume,
-                                             source_well, source_plate])
-                        mp_well_counter += 1
-                        if mp_well_counter >= len(free_well_dict[source_plate]):
-                            mp_plate_counter += 1
-                            mp_well_counter = 0
-                            if mp_plate_counter == len(mps):
-                                msg = "Not Enough MotherPlates"
-                                return file, msg
-
-                    else:
-                        if control_samples[well_state]["use"] or bonus_compound[well_state]:
-                            try:
-                                control_compound = control_bonus_source[well_state]["compound"]
-                            except KeyError:
-                                control_compound = control_bonus_source["bonus"]["compound"]
-                                well_state = "bonus"
-
-                            temp_plate_type = control_bonus_source[well_state]["plate_type"]
-                            temp_barcode = control_bonus_source[well_state]["barcode"]
-                            dead_vol = \
-                                config["plate_types_values"][temp_plate_type].split(",")[0]
-                            dead_vol = float(dead_vol)
-                            got_compound = True
-                            for well in control_bonus_source[well_state]["well_vol"]:
-                                if control_bonus_source[well_state]["well_vol"][well] >= dead_vol + volume:
-                                    source_well = well
-                                    source_plate = temp_barcode
-                                    control_bonus_source[well_state]["well_vol"][well] -= volume
-                                    got_compound = True
-                                    break
-                                else:
-                                    source_well = f"Missing volume for {well_state}"
-                                    source_plate = temp_barcode
-                                    got_compound = False
-                            if not got_compound:
-                                print(f"Missing compound for {well_state}")
-                            csv_writer.writerow([destination_plate, destination_well, volume,
-                                                 source_well, source_plate])
-
-        return file, None
+        if type(msg) == str:
+            return None, msg
+        else:
+            return file, None
 
 
 class CSVReader:
@@ -909,6 +989,7 @@ class CSVReader:
                         plate_list.append(line_data[0])
 
         return plate_list
+
 
 class CSVConverter:
 

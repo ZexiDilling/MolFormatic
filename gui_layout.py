@@ -30,7 +30,7 @@ class GUILayout:
         self.lable_style = "solid"
         self.show_input_style = "sunken"
         self.plate_type = ["plate_96", "plate_384", "plate_1536"]
-
+        self.group_number_list = [f"Group {counter}" for counter in range(1, 20)]
     @staticmethod
     def menu_top():
         """
@@ -359,11 +359,14 @@ class GUILayout:
         for keys in list(self.config["plate_colouring"].keys()):
             color_select[keys] = self.config["plate_colouring"][keys]
 
+
+        plate_layout_mouse_menu = [[], ["Group", self.group_number_list]]
+
         col_graph = sg.Frame("Plate Layout", [[
             sg.Column([
                 [sg.Graph(canvas_size=(500, 350), graph_bottom_left=(0, 0), graph_top_right=(500, 350),
                           background_color='grey', key="-RECT_BIO_CANVAS-", enable_events=True, drag_submits=True,
-                          motion_events=True)],
+                          motion_events=True, right_click_menu=plate_layout_mouse_menu)],
                 [sg.DropDown(values=self.plate_type, default_value=self.plate_type[1], key="-PLATE-"),
                  sg.B("Draw Plate", key="-DRAW-"),
                  # sg.B("Add sample layout", key="-DRAW_SAMPLE_LAYOUT-"),
@@ -408,6 +411,8 @@ class GUILayout:
                                        target="-PLATE_LAYOUT_COLOUR_CHOSE_TARGET-"),
                  sg.Input(key="-PLATE_LAYOUT_COLOUR_CHOSE_TARGET-", visible=False, enable_events=True, disabled=True,
                           default_text="#ffffff")],
+                [sg.DropDown(self.group_number_list, key="-PLATE_LAYOUT_GROUP-",
+                             default_value=self.group_number_list[0])]
                 # [sg.Radio('Erase', 1, key='-ERASE-', enable_events=True)],
                 # [sg.Radio('Move Stuff', 1, key='-MOVE-', enable_events=True)],
 
@@ -487,6 +492,7 @@ class GUILayout:
                  sg.InputText(key="-WORKLIST_ASSAY_NAME-", size=input_size_long,
                               tooltip="The name of the assay. "
                                       "Will be used for destination plate names, and folder name")],
+                [sg.InputText(key="-WORKLIST_LEADING_ZEROES_AMOUNT-", default_text="0", size=input_size_short)],
                 [sg.Text("Plate Amount:", size=text_size_short),
                  sg.InputText(key="-WORKLIST_PLATE_AMOUNT-", size=input_size_short,
                               tooltip="How many Destination plates should there be. "
@@ -494,7 +500,7 @@ class GUILayout:
                 [sg.T("Initial Plate:", size=text_size_short),
                  sg.InputText(key="-WORKLIST_INITIAL_PLATE-", size=input_size_short, default_text="1",
                               tooltip="What number should the Destination Plate start at for this worklist")],
-                [sg.T("Volume:", size=text_size_short),
+                [sg.T("Volume (nL):", size=text_size_short),
                  sg.InputText(key="-WORKLIST_VOLUME-", size=input_size_short,
                               tooltip="How much volume needs to be added to each well, in nL")],
                 [sg.Text("Plate Layout:", size=text_size_short),
@@ -505,8 +511,7 @@ class GUILayout:
             ])
         ]])
 
-
-        sample_directions = ["Vertical", "Horizontale"]
+        sample_directions = ["Vertical", "Horizontal"]
         col_advance_setup = sg.Frame("Extra settings", [[
             sg.Column([
                 [sg.T("Sample Style", size=text_size_long),
@@ -526,12 +531,15 @@ class GUILayout:
                  sg.InputText(key="-WORKLIST_POSITIVE_CONTROL_ID-", size=input_size_long, disabled=True,
                               tooltip="Use the ID for compound. "
                                       "The ID should fit with the naming scheme in the Plate Layout file")],
+                [sg.Checkbox("Multiple concentration?", key="-WORKLIST_POSITIVE_CONTROL_MULTIPLE_CONC-",
+                             enable_events=True,
+                             tooltip="If you are using the same positive control with different concentrations")],
                 [sg.Checkbox("Use Negative Control?", key="-WORKLIST_USE_NEGATIVE_CONTROL-", enable_events=True)],
                 [sg.T("Positive Control ID:", size=text_size_long),
                  sg.InputText(key="-WORKLIST_NEGATIVE_CONTROL_ID-", size=input_size_long, disabled=True,
                               tooltip="Use the ID for compound. "
                                       "The ID should fit with the naming scheme in the Plate Layout file")],
-                [sg.Checkbox("Use Bonus Compound", key="-WORKLIST_USE_BONUS_COMPOUND-", enable_events=True,
+                [sg.Checkbox("Use Dilution Compound", key="-WORKLIST_USE_BONUS_COMPOUND-", enable_events=True,
                              tooltip="This will add this compound to all selected well states")],
                 [sg.Text("Compound Name:", size=text_size_long),
                  sg.InputText(key="-WORKLIST_BONUS_COMPOUND_ID-", size=input_size_long, disabled=True,
@@ -560,7 +568,8 @@ class GUILayout:
                             tooltip="Multiple plates can be selected")],
                 [sg.Checkbox("Use all", key="-WORKLIST_USE_ALL_MOTHERPLATES-",
                              tooltip="Will use as many MP as needed, in order. Will compare to previous worklist, "
-                                     "and skipp any duplicated compounds.")]
+                                     "and skipp any duplicated compounds."),
+                 sg.Checkbox("Use None", key="-WORKLIST_USE_NO_MOTHERPLATES-")]
             ])
         ]])
 
@@ -1735,7 +1744,7 @@ class GUILayout:
         tab_group_2 = self.layout_tab_group_2()
         table_block = self.layout_tab_group_tables()
         menu = self.menu_top()
-        mouse_right_click, right_click_options = self.menu_mouse()
+        # mouse_right_click, right_click_options = self.menu_mouse()
         # col_1_1 = [[sg.Frame(layout=tab_group_1, title="X-1", size=(x_size*2, y_size))]]
         # col_1_2 = [[sg.Frame(layout=table_block, title="Table", size=(x_size*2, y_size*2))]]
         # col_2 = [[sg.Frame(layout=tab_group_2, title="X-2", size=(x_size, window_size[1]))]]
@@ -1750,4 +1759,6 @@ class GUILayout:
                 ], orientation="h")
         ]]
 
-        return sg.Window("MolFormatic", layout_complete, finalize=True, resizable=True, right_click_menu=right_click_options)
+        # return sg.Window("MolFormatic", layout_complete, finalize=True, resizable=True, right_click_menu=right_click_options)
+
+        return sg.Window("MolFormatic", layout_complete, finalize=True, resizable=True,)
