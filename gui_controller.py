@@ -10,7 +10,7 @@ from gui_function_info_bio import colour_chooser_update, bio_info_window_update,
     bio_info_plate_list_update, bio_info_plate_update, bio_info_canvas_clicked
 from gui_function_info_calculations import calculate_dose
 from gui_function_info_lcms import sample_selection_mode_update, lcms_calculation, lcms_drawing
-from gui_popup import popup_table, morgan_popup
+from gui_popup import popup_table, morgan_popup, database_fetcher_creator
 from start_up_values import database_guard, compound_info_tables, window_1_lcms, \
     start_up_gui, search_reverse, colour_chooser_buttons, bio_info_tables, assay_updater_list
 from gui_function_setup_extra import method_do_update, add_source_wells_update, execute_button_pressed, \
@@ -58,6 +58,9 @@ def main(config, queue_gui, queue_mol):
     global bio_info_clicked
     config_writer = ConfigWriter(config)
     db_active = database_guard(config, config_writer)
+    if not db_active:
+        database_fetcher_creator(config, config_writer)
+
     dbf = DataBaseFunctions(config)
     gui_layout = GUILayout(config, dbf)
     window = gui_layout.full_layout()
@@ -240,7 +243,7 @@ def main(config, queue_gui, queue_mol):
             delete_layout(dbf, window, values)
 
         if event == "-RENAME_LAYOUT-":
-            rename_layout(dbf, window, values)
+            rename_layout(dbf, config, window, values)
 
         #     WINDOW 1 - UPDATE Database      ###
         if event == "-UPDATE_COMPOUND-":

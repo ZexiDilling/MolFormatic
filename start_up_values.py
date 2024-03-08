@@ -144,6 +144,7 @@ compound_info_tables = ["-COMPOUND_INFO_INFO_MP_TABLE-+-double click-",
                         "-COMPOUND_INFO_INFO_HITS_TABLE-+-double click-",
                         "-COMPOUND_INFO_INFO_PURITY_USED_TABLE-+-double click-"]
 
+plate_layout_dropdowns = ["-ARCHIVE_PLATES-", "-WORKLIST_PLATE_LAYOUT-", "-BIO_PLATE_LAYOUT-"]
 
 def database_guard(config, cw):
     try:
@@ -158,6 +159,8 @@ def database_guard(config, cw):
     except KeyError:
         db_active = False
     return db_active
+
+
 
 
 def start_up_gui(config, window):

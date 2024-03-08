@@ -1,11 +1,9 @@
 import PySimpleGUI as sg
 import copy
 import matplotlib
-
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-
 
 from bio_dose_response import calculate_dilution_series
 from extra_functions import increment_text_string
@@ -18,7 +16,7 @@ from lcms_visualization import Toolbar
 from gui_popup_layout import matrix_popup_layout, plate_layout_chooser_layout, dead_run_naming_layout, \
     assay_run_naming_layout, bio_dose_response_set_up_layout, bio_data_approval_table_layout, sample_checker_layout, \
     new_headlines_layout, assay_generator_layout, table_popup_layout, morgan_popup_layout, export_chooser_popup_layout, \
-    bio_dose_response_approval_layout
+    bio_dose_response_approval_layout, popup_three_box_solution_layout
 from start_up_values import all_table_data_extra
 
 matplotlib.use('TkAgg')
@@ -2749,6 +2747,31 @@ def popup_table(window, table):
                 return
 
 
+def database_fetcher_creator(config, cw):
+    print("MIssing a database. and missing to make this popup to deal with that :D ")
+    pass
+
+
+def popup_three_box_solution(config, name, question, box_1, box_2):
+
+
+    window = popup_three_box_solution_layout(config, name, question, box_1, box_2)
+
+    while True:
+        event, values = window.read()
+
+        if event == sg.WIN_CLOSED or event == "-TABLE_POPUP_CANCEL-":
+            window.close()
+            return "cancel"
+        if event == "-TABLE_POPUP_BOX_1-":
+            window.close()
+            return "box_1"
+
+        if event == "-TABLE_POPUP_BOX_2-":
+            window.close()
+            return "box_2"
+
+
 if __name__ == "__main__":
     import configparser
     from bio_dose_calculator import dose_response_controller
@@ -2843,3 +2866,4 @@ if __name__ == "__main__":
 
     bio_dose_response_approval(config, all_dose_data, dose_units, method, all_calculations)
     # pd = PlottingDose(config, all_dose_data)
+

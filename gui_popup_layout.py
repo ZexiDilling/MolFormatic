@@ -27,6 +27,20 @@ def morgan_popup_layout(config, main_values):
     return sg.Window("Morgan Values", layout, finalize=True, resizable=True)
 
 
+def popup_three_box_solution_layout(config, name, question, box_1, box_2):
+    sg.theme(config["GUI"]["theme"])
+    col = sg.Column([
+            [sg.Text(question)]
+            [sg.Button(box_1, key="-TABLE_POPUP_BOX_1-"),
+             sg.Button(box_2, key="-TABLE_POPUP_BOX_2-"),
+             sg.Button("Cancel", key="-TABLE_POPUP_CANCEL-")]
+    ])
+
+    layout = [[col]]
+    return sg.Window(name, layout, finalize=True, resizable=True)
+
+
+
 def table_popup_layout(config, table_name, table_headings, table_data):
     sg.theme(config["GUI"]["theme"])
     col = sg.Frame(table_name, [[

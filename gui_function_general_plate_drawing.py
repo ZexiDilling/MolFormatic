@@ -2,11 +2,13 @@ import copy
 from PySimpleGUI import PopupError, PopupGetText, PopupGetFolder, Popup, PopupYesNo
 
 from draw_basic import draw_plate
+from gui_popup import popup_three_box_solution
 from lcms_functions import plate_layout_to_excel
-from database_functions import update_database, _get_list_of_names_from_database
+from database_functions import update_database, _get_list_of_names_from_database, rename_record_in_the_database
 from helpter_functions import int_guard
 from compound_plate_formatting import plate_layout_re_formate
-from start_up_values import window_1_plate_layout, draw_tool_values, clm_to_row_converter, plate_type_count
+from start_up_values import window_1_plate_layout, draw_tool_values, clm_to_row_converter, plate_type_count, \
+    plate_layout_dropdowns
 
 
 def _on_up_grab_graph_list(values, temp_x, temp_y):
@@ -353,37 +355,63 @@ def save_layout(dbf, config, window, values, well_dict):
     elif any("paint" in stuff.values() for stuff in well_dict.values()):
         PopupError("Can't save layout with paint as well states")
     else:
-        sample_type_check = PopupYesNo(f"You are about to save the layout with the style: \n "
-                                       f"{values['-RECT_SAMPLE_TYPE-']} \n"
-                                       f"Is that fine?")
+        name = "Overwrite or New layout?"
+        box_1 = "Overwrite"
+        box_2 = "New"
+        question=f"Do you wish to overwrite {values['-ARCHIVE_PLATES-']}-layout?"
+        if values["-ARCHIVE_PLATES-"]:
+            overwrite_check = popup_three_box_solution(
+                config, name=name, box_1=box_1, box_2=box_2, question=question)
+        else:
+            overwrite_check = box_2
+        if overwrite_check == box_2:
+            sample_type_check = PopupYesNo(f"You are about to save the layout with the style: \n "
+                                           f"{values['-RECT_SAMPLE_TYPE-']} \n"
+                                           f"Is that fine?")
 
-        if sample_type_check.casefold() == "yes":
-            # ToDo For Dose Response, add som guard functions for checking samples and so on
+            if sample_type_check.casefold() == "yes":
+                # ToDo For Dose Response, add som guard functions for checking samples and so on
+                temp_well_dict = {}
+                temp_dict_name = PopupGetText("Name plate layout")
+                if temp_dict_name:
+                    for index, well_counter in enumerate(well_dict):
+                        temp_well_dict[index + 1] = copy.deepcopy(well_dict[well_counter])
+
+                    # saves the layout to the Database
+                    # setting up the data for importing the new plate_layout to the database
+                    temp_table = "plate_layout"
+                    # ToDo add plate model ??
+                    temp_plate_layout_data = {
+                        "layout_name": temp_dict_name,
+                        "plate_size": values["-PLATE-"],
+                        "plate_mode": "placeholder",
+                        "style": values["-RECT_SAMPLE_TYPE-"].casefold(),
+                        "plate_layout": f"{temp_well_dict}"
+                    }
+                    update_database(config, temp_table, temp_plate_layout_data)
+                else:
+                    return
+        elif overwrite_check == box_1:
             temp_well_dict = {}
-            temp_dict_name = PopupGetText("Name plate layout")
 
-            if temp_dict_name:
-                for index, well_counter in enumerate(well_dict):
-                    temp_well_dict[index + 1] = copy.deepcopy(well_dict[well_counter])
+            for index, well_counter in enumerate(well_dict):
+                temp_well_dict[index + 1] = copy.deepcopy(well_dict[well_counter])
+            
+            table = "plate_layout",
+            headline_for_changing_value = "plate_layout"
+            headline_for_indicator_value = "layout_name" 
+            indicator_value = values['-ARCHIVE_PLATES-'] 
+            new_value = f"{temp_well_dict}"
 
-                # saves the layout to the Database
-                # setting up the data for importing the new plate_layout to the database
-                temp_table = "plate_layout"
-                # ToDo add plate model ??
-                temp_plate_layout_data = {
-                    "layout_name": temp_dict_name,
-                    "plate_size": values["-PLATE-"],
-                    "plate_mode": "placeholder",
-                    "style": values["-RECT_SAMPLE_TYPE-"].casefold(),
-                    "plate_layout": f"{temp_well_dict}"
-                }
-                update_database(config, temp_table, temp_plate_layout_data)
+            rename_record_in_the_database(table, headline_for_changing_value, headline_for_indicator_value,
+                                          indicator_value, new_value)
+        else:
+            return
 
-                # Updates the plate_list and archive_plates_dict with the new plate
-                plate_list = _get_list_of_names_from_database(dbf, "plate_layout", "plate_name")
+        update_plate_layout_dropdowns(window, dbf)
 
-                # Updates the window with new values
-                window["-ARCHIVE_PLATES-"].update(values=sorted(plate_list), value=plate_list[0])
+
+
 
 
 def delete_layout(dbf, window, values):
@@ -397,15 +425,10 @@ def delete_layout(dbf, window, values):
         data_value = values["-ARCHIVE_PLATES-"]
         dbf.delete_records(table, headline, data_value)
 
-        # Grabs the updated data from the database
-        plate_list = _get_list_of_names_from_database(dbf, "plate_layout", "layout_name")
-
-        # Updates the window with new values
-        window["-ARCHIVE_PLATES-"].update(values=sorted(plate_list), value=plate_list[0])
-        # window["-BIO_PLATE_LAYOUT-"].update(values=sorted(plate_list), value="")
+        update_plate_layout_dropdowns(window, dbf)
 
 
-def rename_layout(dbf, window, values):
+def rename_layout(dbf, config, window, values):
     if not values["-ARCHIVE_PLATES-"]:
         PopupError("Please select a layout to rename")
     else:
@@ -413,22 +436,15 @@ def rename_layout(dbf, window, values):
         if temp_dict_name:
             # Updates the database with new values
             table = "plate_layout"
-            headline = "plate_name"
-            old_value = values["-ARCHIVE_PLATES-"]
+            headline_for_changing_value = "plate_name"
+            headline_for_indicator_value = "plate_name"
+            indicator_value = values["-ARCHIVE_PLATES-"]
             new_value = temp_dict_name
-            dbf.rename_record_value(table, headline, old_value, new_value)
+            
+            rename_record_in_the_database(config, table, headline_for_changing_value, headline_for_indicator_value,
+                                          indicator_value, new_value)
 
-            # Grabs the updated data from the database
-            plate_list = _get_list_of_names_from_database(dbf, "plate_layout", "plate_name")
-
-            # Updates the window with new values
-            window["-ARCHIVE_PLATES-"].update(values=sorted(plate_list), value=plate_list[0])
-            try:
-                window["-BIO_PLATE_LAYOUT-"]
-            except KeyError:
-                pass
-            else:
-                window["-BIO_PLATE_LAYOUT-"].update(values=sorted(plate_list), value="")
+            update_plate_layout_dropdowns(window, dbf)
 
 
 def bio_canvas_group_labeling(event, values, well_dict):
@@ -474,7 +490,9 @@ def bio_canvas(values):
                            fill_color="", line_color="white")
 
 
-
-
+def update_plate_layout_dropdowns(window, dbf):
+    plate_list = _get_list_of_names_from_database(dbf, "plate_layout", "plate_name")
+    for dropdown in plate_layout_dropdowns:
+        window[dropdown].update(values=sorted(plate_list), value=plate_list[0])
 
 

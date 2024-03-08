@@ -150,20 +150,23 @@ class DataBaseFunctions:
         table_row_string += f" WHERE {index_key_headline} = {index_key_data}"
         self.submit_update(table_row_string)
 
-    def rename_record_value(self, table, headline, old_value, new_value):
+    def rename_record_value(self, table, headline_for_changing_value, headline_for_indicator_value, indicator_value,
+                            new_value):
         """
         Renames a record based on the name of value of the record
         :param table: The table where the data is located
         :type table: str
-        :param headline: the column headline for the data that needs to be changed
-        :type headline: str
-        :param old_value: The old value, that needs to be changed from
-        :type old_value: str
+        :param headline_for_changing_value: the column headline for the data that needs to be changed
+        :type headline_for_changing_value: str
+        :param headline_for_indicator_value: The headling for the indicator value
+        :type headline_for_indicator_value: str
+        :param indicator_value: A value to find the right row from
+        :type indicator_value: str
         :param new_value: The new value, that eeds to be changed to
         :type new_value: str
         :return: An updated database
         """
-        table_update = f"UPDATE {table} SET {headline} = '{new_value}' WHERE {headline} = '{old_value}'"
+        table_update = f"UPDATE {table} SET {headline_for_changing_value} = '{new_value}' WHERE {headline_for_indicator_value} = '{indicator_value}'"
         self.submit_update(table_update)
 
     def find_data_double_lookup(self, table, data_1_value, data_2_value, data_1_headline, data_2_headline):
@@ -517,15 +520,6 @@ class DataBaseFunctions:
 
 
 if __name__ == "__main__":
-    config = configparser.ConfigParser()
-    config.read("config.ini")
-    dbf = DataBaseFunctions(config)
-    table_name = "compound_mp"
-    barcode_name = "mp_barcode"
-    id_name = "mp_well"
-    barcode = "MP2022-001"
-    id_number = "q3"
-    sample_id = dbf.find_data_double_lookup(table_name, barcode, id_number, barcode_name, id_name)
-    print(sample_id[0][3])
+    pass
 
 

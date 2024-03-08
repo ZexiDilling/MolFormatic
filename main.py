@@ -10,6 +10,7 @@ def main_controller():
 
     config = configparser.ConfigParser()
     config.read("config.ini")
+
     queue_gui = Queue()
     queue_mol = Queue()
     process_gui = mp.Process(target=main, args=(config, queue_gui, queue_mol))
@@ -30,4 +31,9 @@ def main_controller():
 
 
 if __name__ == "__main__":
+
     main_controller()
+
+
+
+
