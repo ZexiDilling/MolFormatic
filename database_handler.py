@@ -158,15 +158,16 @@ class DataBaseFunctions:
         :type table: str
         :param headline_for_changing_value: the column headline for the data that needs to be changed
         :type headline_for_changing_value: str
-        :param headline_for_indicator_value: The headling for the indicator value
+        :param headline_for_indicator_value: The headline for the indicator value
         :type headline_for_indicator_value: str
         :param indicator_value: A value to find the right row from
         :type indicator_value: str
-        :param new_value: The new value, that eeds to be changed to
+        :param new_value: The new value, that needs to be changed to
         :type new_value: str
         :return: An updated database
         """
-        table_update = f"UPDATE {table} SET {headline_for_changing_value} = '{new_value}' WHERE {headline_for_indicator_value} = '{indicator_value}'"
+        table_update = f'UPDATE {table} SET {headline_for_changing_value} = "{new_value}" WHERE {headline_for_indicator_value} = "{indicator_value}"'
+
         self.submit_update(table_update)
 
     def find_data_double_lookup(self, table, data_1_value, data_2_value, data_1_headline, data_2_headline):
@@ -282,7 +283,7 @@ class DataBaseFunctions:
         self.cursor.close()
         return records
 
-    def submit_update(self, table_row):
+    def submit_update(self, table_row, new_value=None, old_value=None):
         """
         Connect to the database, Updates the database and closes the connection
 
@@ -294,8 +295,8 @@ class DataBaseFunctions:
         self.create_connection()
         try:
             self.cursor.execute(table_row)
-        except sqlite3.IntegrityError:
-            pass
+        except sqlite3.IntegrityError as e:
+            print(f"sql error - {e}")
         self.conn.commit()
         self.cursor.close()
 

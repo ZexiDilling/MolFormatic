@@ -29,7 +29,14 @@ def plate_list_updater(dbf, window, values, event):
 
     plate_list = _get_list_of_names_from_database_double_lookup(dbf, table, column_headline, limiting_value,
                                                                 limiting_header)
-    window[target_window].update(values=plate_list, value=plate_list[0])
+    try:
+        plate_list[0]
+    except IndexError:
+        plate_value = ""
+    else:
+        plate_value = plate_list[0]
+
+    window[target_window].update(values=plate_list, value=plate_value)
 
 
 def plate_layout_draw_groups(window, values, well_dict):

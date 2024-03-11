@@ -350,6 +350,7 @@ def export_layout(config, window, values, well_dict):
 
 
 def save_layout(dbf, config, window, values, well_dict):
+    print(well_dict)
     if not well_dict:
         PopupError("Please create a layout to save")
     elif any("paint" in stuff.values() for stuff in well_dict.values()):
@@ -364,6 +365,7 @@ def save_layout(dbf, config, window, values, well_dict):
                 config, name=name, box_1=box_1, box_2=box_2, question=question)
         else:
             overwrite_check = box_2
+
         if overwrite_check == box_2:
             sample_type_check = PopupYesNo(f"You are about to save the layout with the style: \n "
                                            f"{values['-RECT_SAMPLE_TYPE-']} \n"
@@ -397,21 +399,17 @@ def save_layout(dbf, config, window, values, well_dict):
             for index, well_counter in enumerate(well_dict):
                 temp_well_dict[index + 1] = copy.deepcopy(well_dict[well_counter])
             
-            table = "plate_layout",
+            table = "plate_layout"
             headline_for_changing_value = "plate_layout"
-            headline_for_indicator_value = "layout_name" 
-            indicator_value = values['-ARCHIVE_PLATES-'] 
+            headline_for_indicator_value = "layout_name"
+            indicator_value = values['-ARCHIVE_PLATES-']
             new_value = f"{temp_well_dict}"
-
-            rename_record_in_the_database(table, headline_for_changing_value, headline_for_indicator_value,
+            rename_record_in_the_database(config, table, headline_for_changing_value, headline_for_indicator_value,
                                           indicator_value, new_value)
         else:
             return
 
         update_plate_layout_dropdowns(window, dbf)
-
-
-
 
 
 def delete_layout(dbf, window, values):
@@ -436,11 +434,11 @@ def rename_layout(dbf, config, window, values):
         if temp_dict_name:
             # Updates the database with new values
             table = "plate_layout"
-            headline_for_changing_value = "plate_name"
-            headline_for_indicator_value = "plate_name"
+            headline_for_changing_value = "layout_name"
+            headline_for_indicator_value = headline_for_changing_value
             indicator_value = values["-ARCHIVE_PLATES-"]
             new_value = temp_dict_name
-            
+
             rename_record_in_the_database(config, table, headline_for_changing_value, headline_for_indicator_value,
                                           indicator_value, new_value)
 
@@ -491,8 +489,16 @@ def bio_canvas(values):
 
 
 def update_plate_layout_dropdowns(window, dbf):
-    plate_list = _get_list_of_names_from_database(dbf, "plate_layout", "plate_name")
+    plate_list = _get_list_of_names_from_database(dbf, "plate_layout", "layout_name")
+
     for dropdown in plate_layout_dropdowns:
         window[dropdown].update(values=sorted(plate_list), value=plate_list[0])
 
 
+if __name__ == "__main__":
+    import configparser
+    from database_controller import DataBaseFunctions
+    config = configparser.ConfigParser()
+    config.read("config.ini")
+    dbf = DataBaseFunctions(config)
+    plate_list = _get_list_of_names_from_database(dbf, "plate_layout", "layout_name")

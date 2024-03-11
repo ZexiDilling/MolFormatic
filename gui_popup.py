@@ -2754,7 +2754,6 @@ def database_fetcher_creator(config, cw):
 
 def popup_three_box_solution(config, name, question, box_1, box_2):
 
-
     window = popup_three_box_solution_layout(config, name, question, box_1, box_2)
 
     while True:
@@ -2765,11 +2764,11 @@ def popup_three_box_solution(config, name, question, box_1, box_2):
             return "cancel"
         if event == "-TABLE_POPUP_BOX_1-":
             window.close()
-            return "box_1"
+            return box_1
 
         if event == "-TABLE_POPUP_BOX_2-":
             window.close()
-            return "box_2"
+            return box_2
 
 
 if __name__ == "__main__":

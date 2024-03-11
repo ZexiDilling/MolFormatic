@@ -77,7 +77,7 @@ plate_type = """ CREATE TABLE IF NOT EXISTS plate_type(
             """
 
 plate_layout = """ CREATE TABLE IF NOT EXISTS plate_layout(  
-            "plate_name"	TEXT NOT NULL UNIQUE,
+            "layout_name"	TEXT NOT NULL UNIQUE,
             "plate_size"	TEXT NOT NULL,
             "plate_model"	TEXT NOT NULL,
             "style"	        TEXT NOT NULL,

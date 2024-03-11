@@ -75,20 +75,22 @@ def rename_record_in_the_database(config, table, headline_for_changing_value, he
                                   new_value):
     """
     Rename a record from the database
-   :param table: The table where the data is located
+    :param config: The config handler, with all the default information in the config file.
+    :type config: configparser.ConfigParser
+    :param table: The table where the data is located
     :type table: str
     :param headline_for_changing_value: the column headline for the data that needs to be changed
     :type headline_for_changing_value: str
-    :param headline_for_indicator_value: The headling for the indicator value
+    :param headline_for_indicator_value: The headline for the indicator value
     :type headline_for_indicator_value: str
     :param indicator_value: A value to find the right row from
     :type indicator_value: str
-    :param new_value: The new value, that eeds to be changed to
+    :param new_value: The new value, that needs to be changed to
     :type new_value: str
     :return:
     """
     dbf = DataBaseFunctions(config)
-    dbf.rename_record_value( table, headline_for_changing_value, headline_for_indicator_value, indicator_value,
+    dbf.rename_record_value(table, headline_for_changing_value, headline_for_indicator_value, indicator_value,
                             new_value)
 
 
