@@ -496,9 +496,10 @@ def update_plate_layout_dropdowns(window, dbf):
 
 
 if __name__ == "__main__":
-    import configparser
-    from database_controller import DataBaseFunctions
-    config = configparser.ConfigParser()
-    config.read("config.ini")
-    dbf = DataBaseFunctions(config)
-    plate_list = _get_list_of_names_from_database(dbf, "plate_layout", "layout_name")
+    pass
+    # import configparser
+    # from database_controller import DataBaseFunctions
+    # config = configparser.ConfigParser()
+    # config.read("config.ini")
+    # dbf = DataBaseFunctions(config)
+    # plate_list = _get_list_of_names_from_database(dbf, "plate_layout", "layout_name")

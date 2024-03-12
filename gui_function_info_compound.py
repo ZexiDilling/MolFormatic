@@ -3,21 +3,43 @@ from PySimpleGUI import PopupError
 from database_functions import grab_table_data
 
 
-def update_overview_compound(dbf, config, window, values, compound_id):
-    if not compound_id:
+def search_compound_info(dbf, config, window, values):
+    vendor_id = None
+    compound_id = None
+    if values["-COMPOUND_INFO_ID-"]:
         compound_id = values["-COMPOUND_INFO_ID-"]
 
-    sample_row = grab_table_data(config, "compound_main", single_row=True, data_value=compound_id,
-                                 headline="compound_id")
+    elif values["-COMPOUND_INFO_AC-"]:
+        vendor_id = values["-COMPOUND_INFO_ORIGIN_ID-"]
+
+    if compound_id or vendor_id:
+        update_overview_compound(dbf, config, window, compound_id=compound_id, vendor_id=vendor_id)
+
+
+def find_sample_row_info(config, compound_id, vendor_id):
+    table_name = "compound_main"
+    if compound_id:
+        return grab_table_data(config, table_name, single_row=True, data_value=compound_id, headline="compound_id")
+    elif vendor_id:
+        return grab_table_data(config, table_name, single_row=True, data_value=vendor_id, headline="origin_id")
+    else:
+        return None
+
+
+def update_overview_compound(dbf, config, window, compound_id, vendor_id=None):
+
+    sample_row = find_sample_row_info(config, compound_id, vendor_id)
+
     if sample_row:
         # Get Academic/commercial information:
         ac_id = sample_row[0][6]
         all_data_ac = grab_table_data(config, "origin", single_row=True, data_value=ac_id, headline="ac_id")
 
         # Update info frame:
+        window["-COMPOUND_INFO_ID-"].update(value=sample_row[0][1])
+        window["-COMPOUND_INFO_ORIGIN_ID-"].update(value=sample_row[0][7])
         window["-COMPOUND_INFO_AC-"].update(value=all_data_ac[0][3])
         window["-COMPOUND_INFO_ORIGIN-"].update(value=all_data_ac[0][2])
-        window["-COMPOUND_INFO_ORIGIN_ID-"].update(value=sample_row[0][7])
         window["-COMPOUND_INFO_CONCENTRATION-"].update(value=sample_row[0][5])
         window["-COMPOUND_INFO_TUBE_VOLUME-"].update(value=sample_row[0][4])
 

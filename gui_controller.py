@@ -9,6 +9,7 @@ from database_handler import DataBaseFunctions
 from gui_function_info_bio import colour_chooser_update, bio_info_window_update, \
     bio_info_plate_list_update, bio_info_plate_update, bio_info_canvas_clicked
 from gui_function_info_calculations import calculate_dose
+from gui_function_info_compound import search_compound_info
 from gui_function_info_lcms import sample_selection_mode_update, lcms_calculation, lcms_drawing
 from gui_popup import popup_table, morgan_popup, database_fetcher_creator
 from start_up_values import database_guard, compound_info_tables, window_1_lcms, \
@@ -38,8 +39,7 @@ from gui_function_setup_simulation import simulation_input_update, simulation_ru
 from gui_function_table_compound import compound_table_refreshed, compound_table_export
 from gui_function_table_bio import table_tab_group_pressed_update, experiment_table_assay_list_update, \
     experiment_table_assay_run_update, \
-    experiment_table_plate_update, compound_table_double_click, \
-    update_overview_compound, bio_exp_compound_list, bio_tables_double_clicked
+    experiment_table_plate_update, compound_table_double_click, bio_exp_compound_list, bio_tables_double_clicked
 from gui_function_setup_worklist import worklist_tab_clicked, worklist_control_layout_update, worklist_generator
 from gui_layout import GUILayout
 from gui_function_general_plate_drawing import on_up, save_layout, delete_layout, rename_layout, draw_layout, on_move, \
@@ -385,7 +385,8 @@ def main(config, queue_gui, queue_mol):
 
         #   WINDOW 2 - COMPOUND INFO    ###
         if event == "-COMPOUND_INFO_SEARCH_COMPOUND_ID-":
-            update_overview_compound(dbf, config, window, values, None)
+            search_compound_info(dbf, config, window, values)
+
 
         if event in compound_info_tables:
             print(f"compound info table - {event}")

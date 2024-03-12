@@ -894,14 +894,15 @@ class GUILayout:
 
         col_info = sg.Frame("Info", [[
             sg.Column([
-                [sg.Input("", key="-COMPOUND_INFO_ID-", size=15), sg.Push(),
+                [sg.Text("Compound ID", size=self.standard_size, relief=self.lable_style),
+                 sg.Input("", key="-COMPOUND_INFO_ID-", size=15), sg.Push(),
                  sg.Button("Search", key="-COMPOUND_INFO_SEARCH_COMPOUND_ID-")],
+                [sg.Text("Origin ID", size=self.standard_size, relief=self.lable_style),
+                 sg.Input(key="-COMPOUND_INFO_ORIGIN_ID-", size=self.standard_size)],
                 [sg.Text("Academic/Commercial", size=self.standard_size, relief=self.lable_style),
                  sg.Text(key="-COMPOUND_INFO_AC-", size=self.standard_size, relief=self.show_input_style)],
                 [sg.Text("Origin", size=self.standard_size, relief=self.lable_style),
                  sg.Text(key="-COMPOUND_INFO_ORIGIN-", size=self.standard_size, relief=self.show_input_style)],
-                [sg.Text("Origin ID", size=self.standard_size, relief=self.lable_style),
-                 sg.Text(key="-COMPOUND_INFO_ORIGIN_ID-", size=self.standard_size, relief=self.show_input_style)],
                 [sg.Text("Concentration", size=self.standard_size, relief=self.lable_style),
                  sg.Text(key="-COMPOUND_INFO_CONCENTRATION-", size=self.standard_size, relief=self.show_input_style)],
                 [sg.Text("Purity", size=self.standard_size, relief=self.lable_style),

@@ -206,7 +206,7 @@ def compound_table_double_click(dbf, config, window, values, event):
         window["-TAB_GROUP_TWO-"].Widget.select(0)
         window["-COMPOUND_INFO_ID-"].update(value=temp_compound_id)
         print(temp_compound_id)
-        update_overview_compound(dbf, config, window, values, temp_compound_id)
+        update_overview_compound(dbf, config, window, temp_compound_id)
     else:
         pass
 
