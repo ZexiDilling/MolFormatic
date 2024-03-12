@@ -4,31 +4,31 @@ from database_functions import grab_table_data
 
 
 def search_compound_info(dbf, config, window, values):
-    vendor_id = None
+    origin_id = None
     compound_id = None
     if values["-COMPOUND_INFO_ID-"]:
         compound_id = values["-COMPOUND_INFO_ID-"]
 
     elif values["-COMPOUND_INFO_AC-"]:
-        vendor_id = values["-COMPOUND_INFO_ORIGIN_ID-"]
+        origin_id = values["-COMPOUND_INFO_ORIGIN_ID-"]
 
-    if compound_id or vendor_id:
-        update_overview_compound(dbf, config, window, compound_id=compound_id, vendor_id=vendor_id)
+    if compound_id or origin_id:
+        update_overview_compound(dbf, config, window, compound_id=compound_id, origin_id=origin_id)
 
 
-def find_sample_row_info(config, compound_id, vendor_id):
+def find_sample_row_info(config, compound_id, origin_id):
     table_name = "compound_main"
     if compound_id:
         return grab_table_data(config, table_name, single_row=True, data_value=compound_id, headline="compound_id")
-    elif vendor_id:
-        return grab_table_data(config, table_name, single_row=True, data_value=vendor_id, headline="origin_id")
+    elif origin_id:
+        return grab_table_data(config, table_name, single_row=True, data_value=origin_id, headline="origin_id")
     else:
         return None
 
 
-def update_overview_compound(dbf, config, window, compound_id, vendor_id=None):
+def update_overview_compound(dbf, config, window, compound_id, origin_id=None):
 
-    sample_row = find_sample_row_info(config, compound_id, vendor_id)
+    sample_row = find_sample_row_info(config, compound_id, origin_id)
 
     if sample_row:
         # Get Academic/commercial information:

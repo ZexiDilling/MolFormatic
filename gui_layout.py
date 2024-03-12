@@ -174,16 +174,20 @@ class GUILayout:
                 # target="-BIO_EXPORT_TARGET-")],
                 # [sg.Text(key="-BIO_EXPORT_TARGET-", size=self.standard_size*2)],
                 [sg.Checkbox("Same layout for all plates?", key="-BIO_PLATE_LAYOUT_CHECK-", default=True,
-                             tooltip="Will use the chosen platelayout in the dropdown for all plates if True, "
-                                     "else there will be a popup where you can choose the layout for each plate. "
-                                     "Default will be the layout chosen in the platelayouyt dropdown")],
+                             tooltip="Will use the chosen plate-layout in the dropdown for all plates if True, \n"
+                                     "else there will be a popup where you can choose the layout for each plate. \n"
+                                     "Default will be the layout chosen in the plate-layout dropdown"),
+                 sg.Checkbox("Single use layout", key="-BIO_PLATE_SINGLE_USE_LAYOUT-", default=False,
+                             tooltip="For doing calculations on a test run, without having to make and save a layout.\n"
+                                     "This will still generate reports, \n"
+                                     "but the data can't be added to the database, as the database needs a layout.")],
                 [sg.Text("Plate Layout", size=self.standard_size),
                  sg.DropDown(sorted(self.plate_list), key="-BIO_PLATE_LAYOUT-", enable_events=True,
                              size=self.standard_size, default_value=self.plate_list[0])],
                 [sg.Text("Sample Type", size=self.standard_size),
                  sg.DropDown(self.sample_style, key="-BIO_SAMPLE_TYPE-", default_value=self.sample_style[0],
                              size=self.standard_size, enable_events=True,
-                             tooltip="This indicates how many times each sample is on the plate. "
+                             tooltip="This indicates how many times each sample is on the plate.\n"
                                      "Choosing custom, will let you choose more than 3 times.")],
                 [sg.Text("Analyse Style", size=self.standard_size),
                  sg.DropDown(self.analyse_style, key="-BIO_ANALYSE_TYPE-", size=self.standard_size, enable_events=True,
@@ -198,9 +202,9 @@ class GUILayout:
                            tooltip="Will do calculations on all the files in the chosen folder. "
                                    "Data can be exported to Excel and/or imported to the Database"),
                  sg.Button("Blank", key="-BIO_BLANK_RUN-",
-                           tooltip="Will generate a blank run for the database, to show that a run was attempted, "
-                                   "keep track of thawed compounds, and days spend using the platform. Incase a "
-                                   "run fails before it generates data."),
+                           tooltip="Will generate a blank run for the database, to show that a run was attempted,\n"
+                                   "keep track of thawed compounds, and days spend using the platform.\n"
+                                   "Incase a run fails before it generates data."),
                  sg.Push(),
                  sg.Button("Send to Info", key="-BIO_SEND_TO_INFO-")]
             ])
@@ -230,7 +234,7 @@ class GUILayout:
                 [sg.T("Report Name:", size=12),
                  sg.InputText(key="-FINAL_BIO_NAME-", size=14, tooltip="The Name the final report will be saved as")],
                 [sg.Checkbox("Include Hits", key="-BIO_FINAL_REPORT_INCLUDE_HITS-",
-                             tooltip="Include a list of compounds with a score lower than the threshold sat, "
+                             tooltip="Include a list of compounds with a score lower than the threshold sat,\n"
                                      "or x-amount of the lowest once, depending on the Hit Amount sat",
                              disabled=True, enable_events=True),
                  sg.Checkbox("Include smiles", key="-BIO_FINAL_REPORT_INCLUDE_SMILES-",
@@ -248,7 +252,7 @@ class GUILayout:
                  sg.T("Hit Amount", size=12,
                       tooltip="Will use amount of hits. Can't use threshold and 'Hit Amount' at the same time")],
                 [sg.InputText(key="-BIO_FINAL_REPORT_THRESHOLD-", size=14, disabled=True,
-                              tooltip="The threshold where samples should be included. Any sample with a score "
+                              tooltip="The threshold where samples should be included. Any sample with a score\n"
                                       "lower than the threshold will be included in the report"),
                  sg.InputText(key="-BIO_FINAL_REPORT_HIT_AMOUNT-", size=14, disabled=True,
                               tooltip="The Amount of sample to list. Will be sorted after lowest score")],
