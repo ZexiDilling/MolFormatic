@@ -5,19 +5,25 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+from bio_dose_calculator import dose_response_controller
+from bio_dose_plotting import PlottingDose
 from bio_dose_response import calculate_dilution_series
+from compound_plate_formatting import plate_layout_re_formate
+from database_functions import _get_list_of_names_from_database_double_lookup
+from draw_basic import draw_plate
 from extra_functions import increment_text_string
 from file_type_handler_xml import convert_echo_to_db
 from bio_date_handler import BIOAnalyser
-from database_handler import DataBaseFunctions
 from gui_function_general_menu import sorting_the_tables
+from gui_function_setup_plate_layout import plate_list_updater, dose_dilution_replicates, dose_colouring
+from helpter_functions import int_guard
 from info import plate_384_row, plate_96_row
 from lcms_visualization import Toolbar
 from gui_popup_layout import matrix_popup_layout, plate_layout_chooser_layout, dead_run_naming_layout, \
     assay_run_naming_layout, bio_dose_response_set_up_layout, bio_data_approval_table_layout, sample_checker_layout, \
     new_headlines_layout, assay_generator_layout, table_popup_layout, morgan_popup_layout, export_chooser_popup_layout, \
-    bio_dose_response_approval_layout, popup_three_box_solution_layout
-from start_up_values import all_table_data_extra
+    bio_dose_response_approval_layout, popup_three_box_solution_layout, plate_layout_single_use_drawer_layout
+from start_up_values import all_table_data_extra, clm_to_row_converter, plate_type_count
 
 matplotlib.use('TkAgg')
 
@@ -67,57 +73,57 @@ def popup_select(the_list, select_multiple=False):
         return values['-LIST_ITEMS-'][0]
 
 
-def matrix_popup(data_dict, calc_values, state_values, method_values, calc, sub_settings_matrix, state=None,
-                 method=None):
-    window = matrix_popup_layout(config, calc, state, method)
-    window["-POPUP_MATRIX_METHOD-"].update(values=method_values)
-    window["-POPUP_MATRIX_STATE-"].update(values=state_values)
-    window["-POPUP_MATRIX_CALC-"].update(values=calc_values)
-
-    if calc:
-        table_data, display_columns = sub_settings_matrix(data_dict, calc, method, state)
-        window["-POPUP_MATRIX_TABLE-"].update(values=table_data)
-    else:
-        calc = "z_prime"
-        table_data, display_columns = sub_settings_matrix(data_dict, calc, method, state)
-        window["-POPUP_MATRIX_TABLE-"].update(values=table_data)
-    if calc == "z_prime":
-        temp_text = f"Table is showing matrix for {calc}"
-    else:
-        temp_text = f"Table is showing matrix of {calc} for {method}-data, {state}-wells"
-    window["-POPUP_TABLE_INFO-"].update(value=temp_text)
-    window.Element("-POPUP_MATRIX_TABLE-").Widget.configure(displaycolumns=display_columns)
-
-    while True:
-        event, values = window.read()
-        if event == sg.WIN_CLOSED or event == "-CLOSE-":
-            break
-        if event == "-POPUP_MATRIX_GENERATOR_BUTTON-":
-            if not values["-POPUP_MATRIX_CALC-"]:
-                sg.PopupError("Missing Calculation choice ")
-            elif values["-POPUP_MATRIX_CALC-"] != "z_prime" and not values["-POPUP_MATRIX_STATE-"]:
-                sg.PopupError("Missing State selection")
-            elif values["-POPUP_MATRIX_CALC-"] != "z_prime" and not values["-POPUP_MATRIX_METHOD-"]:
-                sg.PopupError("Missing Method selection")
-            else:
-
-                calc = values["-POPUP_MATRIX_CALC-"]
-
-                if calc == "z_prime":
-                    temp_text = f"Table is showing matrix for {calc}"
-                    state = None
-                    method = None
-                else:
-                    method = values["-POPUP_MATRIX_METHOD-"]
-                    state = values["-POPUP_MATRIX_STATE-"]
-                    temp_text = f"Table is showing matrix of {calc} for {method}-data and well state: {state}"
-
-                table_data, display_columns = sub_settings_matrix(data_dict, calc, method, state)
-                window["-POPUP_MATRIX_TABLE-"].update(values=table_data)
-
-                window["-POPUP_TABLE_INFO-"].update(value=temp_text)
-                window.Element("-POPUP_MATRIX_TABLE-").Widget.configure(displaycolumns=display_columns)
-
+# def matrix_popup(config, data_dict, calc_values, state_values, method_values, calc, sub_settings_matrix, state=None,
+#                  method=None):
+#     window = matrix_popup_layout(config, calc, state, method)
+#     window["-POPUP_MATRIX_METHOD-"].update(values=method_values)
+#     window["-POPUP_MATRIX_STATE-"].update(values=state_values)
+#     window["-POPUP_MATRIX_CALC-"].update(values=calc_values)
+#
+#     if calc:
+#         table_data, display_columns = sub_settings_matrix(data_dict, calc, method, state)
+#         window["-POPUP_MATRIX_TABLE-"].update(values=table_data)
+#     else:
+#         calc = "z_prime"
+#         table_data, display_columns = sub_settings_matrix(data_dict, calc, method, state)
+#         window["-POPUP_MATRIX_TABLE-"].update(values=table_data)
+#     if calc == "z_prime":
+#         temp_text = f"Table is showing matrix for {calc}"
+#     else:
+#         temp_text = f"Table is showing matrix of {calc} for {method}-data, {state}-wells"
+#     window["-POPUP_TABLE_INFO-"].update(value=temp_text)
+#     window.Element("-POPUP_MATRIX_TABLE-").Widget.configure(displaycolumns=display_columns)
+#
+#     while True:
+#         event, values = window.read()
+#         if event == sg.WIN_CLOSED or event == "-CLOSE-":
+#             break
+#         if event == "-POPUP_MATRIX_GENERATOR_BUTTON-":
+#             if not values["-POPUP_MATRIX_CALC-"]:
+#                 sg.PopupError("Missing Calculation choice ")
+#             elif values["-POPUP_MATRIX_CALC-"] != "z_prime" and not values["-POPUP_MATRIX_STATE-"]:
+#                 sg.PopupError("Missing State selection")
+#             elif values["-POPUP_MATRIX_CALC-"] != "z_prime" and not values["-POPUP_MATRIX_METHOD-"]:
+#                 sg.PopupError("Missing Method selection")
+#             else:
+#
+#                 calc = values["-POPUP_MATRIX_CALC-"]
+#
+#                 if calc == "z_prime":
+#                     temp_text = f"Table is showing matrix for {calc}"
+#                     state = None
+#                     method = None
+#                 else:
+#                     method = values["-POPUP_MATRIX_METHOD-"]
+#                     state = values["-POPUP_MATRIX_STATE-"]
+#                     temp_text = f"Table is showing matrix of {calc} for {method}-data and well state: {state}"
+#
+#                 table_data, display_columns = sub_settings_matrix(data_dict, calc, method, state)
+#                 window["-POPUP_MATRIX_TABLE-"].update(values=table_data)
+#
+#                 window["-POPUP_TABLE_INFO-"].update(value=temp_text)
+#                 window.Element("-POPUP_MATRIX_TABLE-").Widget.configure(displaycolumns=display_columns)
+#
 
 def sample_to_compound_name_controller(config, data_dict, fd, purity_sample_layout_import, purity_sample_layout_export,
                                        sort_table, db_data=True):
@@ -340,7 +346,7 @@ def ms_raw_name_guard(raw_data_samples, excel_data_samples, db_data, config):
                 table_data = new_table
 
 
-def new_headlines_popup(sort_table, right_headlines, wrong_headlines):
+def new_headlines_popup(config, sort_table, right_headlines, wrong_headlines):
     search_reverse = {}
     table_data = []
     new_headlines = {}
@@ -421,7 +427,7 @@ def new_headlines_popup(sort_table, right_headlines, wrong_headlines):
                 table_data = new_table
 
 
-def plate_layout_chooser(dbf, files, default_plate_layout):
+def plate_layout_chooser(dbf, config, files, default_plate_layout):
     # ToDo Make it possible to choose multiple file to change layout for at the same time
     table_data = []
     plate_to_layout = {}
@@ -475,7 +481,482 @@ def plate_layout_chooser(dbf, files, default_plate_layout):
                 window["-POP_HEADLINE_TABLE-"].update(values=table_data)
 
 
-def assay_generator(config, plate_list):
+def _draw_layout(dbf, config, window, values, well_dict, draw_tool, canvas_data):
+    graph = canvas_data["graph_plate"]
+    plate_type = values["-SINGLE_USE_PLATE-"]
+    archive_plates = values["-SINGLE_USE_ARCHIVE-"]
+    gui_tab = "plate_layout"
+    sample_type = values["-SINGLE_USE_SAMPLE_TYPE-"]
+
+    if values["-SINGLE_USE_ARCHIVE-"]:
+
+        try:
+            plate_data = dbf.find_data_single_lookup("plate_layout", values["-SINGLE_USE_ARCHIVE_PLATES-"],
+                                                     "layout_name")[0]
+        except KeyError:
+            window["-SINGLE_USE_ARCHIVE-"].update(False)
+            values["-SINGLE_USE_ARCHIVE-"] = False
+        else:
+            well_dict = eval(plate_data[5])
+            well_dict = plate_layout_re_formate(config, well_dict)
+            window["-SINGLE_USE_PLATE-"].update(plate_data[2])
+            plate_type = plate_data[2]
+            sample_type = plate_data[4]
+
+    well_dict, min_x, min_y, max_x, max_y, off_set = draw_plate(config, graph, plate_type, well_dict, gui_tab,
+                                                                archive_plates, sample_layout=sample_type)
+
+    plate_active = True
+
+    draw_tool["min_x"] = min_x
+    draw_tool["min_y"] = min_y
+    draw_tool["max_x"] = max_x
+    draw_tool["max_y"] = max_y
+    draw_tool["well_off_set"] = off_set
+    draw_tool["plate_type"] = plate_type
+    draw_tool["plate_active"] = plate_active
+    draw_tool["last_plate"] = plate_type
+
+    return well_dict, draw_tool
+
+
+def _on_move(window, values, well_dict, draw_tool, canvas_data):
+    """
+    Duplicated from "on_move" from gui_functions_general_plate_drawing
+    :param window:
+    :param values:
+    :param well_dict:
+    :param draw_tool:
+    :return:
+    """
+
+    try:
+        values["-RECT_BIO_CANVAS-"]
+    except KeyError:
+        pass
+    else:
+        if values["-RECT_BIO_CANVAS-"][0] and values["-RECT_BIO_CANVAS-"][1]:
+            try:
+                canvas_data["graph_plate"].get_figures_at_location(values['-SINGLE_USE_CANVAS-'])[0]
+            except (IndexError or KeyError) as error:
+                # print(f"Canvas Error: {error}")
+                temp_well_id = ""
+                temp_well_group = ""
+                temp_rep = ""
+                temp_conc = ""
+            else:
+                temp_well = canvas_data["graph_plate"].get_figures_at_location(values['-SINGLE_USE_CANVAS-'])[0]
+                look_up_well = temp_well - draw_tool["well_off_set"]
+                try:
+                    well_dict[look_up_well]["well_id"]
+                except (KeyError or UnboundLocalError):
+                    temp_well_id = ""
+                    temp_well_group = ""
+                else:
+                    temp_well_id = well_dict[look_up_well]["well_id"]
+                    temp_well_group = well_dict[look_up_well]["group"]
+
+                try:
+                    well_dict[look_up_well]["replicate"]
+                except KeyError:
+                    temp_rep = ""
+                    temp_conc = ""
+                else:
+                    temp_rep = well_dict[look_up_well]["replicate"]
+                    temp_conc = well_dict[look_up_well]["concentration"]
+
+            window["-CANVAS_INFO_WELL-"].update(value=f"Well: {temp_well_id}")
+            window["-CANVAS_INFO_GROUP-"].update(value=f"Group: {temp_well_group}")
+            window["-CANVAS_INFO_CONC-"].update(value=f"conc: {temp_conc}")
+            window["-CANVAS_INFO_REP-"].update(value=f"rep: {temp_rep}")
+
+
+def _canvas_group_labeling(event, values, well_dict, draw_tool, canvas_data):
+    """
+    Changes the group liable of a well by right-clicking on it
+    Duplicated from "bio_canvas_group_labeling" in gui_functions_setup_plate_layout...
+    :param event:
+    :param values:
+    :param well_dict:
+    :return:
+    """
+    group_name = event
+    temp_well = canvas_data["graph_plate"].get_figures_at_location(values['-SINGLE_USE_CANVAS-'])[0]
+    look_up_well = temp_well - draw_tool["well_off_set"]
+    try:
+        well_dict[look_up_well]["well_id"]
+    except (KeyError or UnboundLocalError):
+        return well_dict
+    else:
+
+        well_dict[look_up_well]["group"] = group_name.strip("Group ")
+
+    return well_dict
+
+
+def _canvas(values, draw_tool, canvas_data):
+    """
+    is duplicated code from: "bio_canvas" from gui_functions_general_plate_drawing
+    :param window:
+    :param values:
+    :param draw_tool:
+    :return:
+    """
+
+    draw_tool_value = draw_tool
+
+    draw_tool_value["x"], draw_tool_value["y"] = values["-SINGLE_USE_CANVAS-"]
+    if not draw_tool_value["dragging"]:
+        draw_tool_value["start_point"] = (draw_tool_value["x"], draw_tool_value["y"])
+        draw_tool_value["dragging"] = True
+    else:
+        draw_tool_value["end_point"] = (draw_tool_value["x"], draw_tool_value["y"])
+    if draw_tool_value["prior_rect"]:
+        canvas_data["graph_plate"].delete_figure(draw_tool_value["prior_rect"])
+
+    # Choosing which tool to pain the plate with.
+    if None not in (draw_tool_value["start_point"], draw_tool_value["end_point"]):
+        for temp_draw_value in canvas_data["draw_tool_dict"]:
+            if values[temp_draw_value]:
+                draw_tool_value["temp_draw_tool"] = canvas_data["draw_tool_dict"][temp_draw_value]
+        draw_tool_value["temp_selector"] = True
+        draw_tool_value["prior_rect"] = canvas_data["graph_plate"].\
+            draw_rectangle(draw_tool_value["start_point"], draw_tool_value["end_point"],
+                           fill_color="", line_color="white")
+
+
+def __on_up_grab_graph_list(values, temp_x, temp_y, draw_tool, canvas_data):
+    # makes a set, for adding wells, to avoid duplicates
+    graphs_list = set()
+
+    # goes over the coordinates and if they are within the bounds of the plate
+    # if that is the case, then the figure for that location is added the set
+    for index_x, cords_x in enumerate(temp_x):
+        for index_y, cords_y in enumerate(temp_y):
+            if draw_tool["min_x"] <= temp_x[index_x] <= draw_tool["max_x"] and \
+                    draw_tool["min_y"] <= temp_y[index_y] <= draw_tool["max_y"]:
+                graphs_list.add(
+                    canvas_data["graph_plate"].get_figures_at_location((temp_x[index_x], temp_y[index_y]))[0])
+
+    # colours the wells in different colour, depending on if they are samples or blanks
+    if values["-DOSE_VERTICAL-"]:
+        new_graphs_list = []
+        temp_graph_list = []
+        temp_converter = clm_to_row_converter[values["-SINGLE_USE_PLATE-"]]
+
+        # Change the wells numbers to what they would be, if they counted differently.
+        temp_well_saver = {}
+        for wells in graphs_list:
+            temp_well = wells % plate_type_count[canvas_data["plate_type"]]
+            converted_well = temp_converter[temp_well + 1]
+            temp_graph_list.append(converted_well)
+            temp_well_saver[converted_well] = wells
+
+        # sorts the list
+        temp_graph_list = sorted(temp_graph_list)
+
+        for wells in temp_graph_list:
+            new_graphs_list.append(temp_well_saver[wells])
+
+    else:
+        new_graphs_list = sorted(graphs_list)
+
+    return new_graphs_list
+
+
+def __on_up_x_y(start_point, end_point, x, y):
+    # if you drag and let go too fast, the values are set to None. this is to handle that bug
+    if not start_point:
+        start_point = (0, 0)
+    if not end_point:
+        end_point = (0, 0)
+
+    # get a list of coordination within the selected area
+    temp_x = []
+    temp_y = []
+
+    if start_point[0] < end_point[0]:
+        for x_cord in range(start_point[0], end_point[0]):
+            temp_x.append(x_cord)
+    if start_point[0] > end_point[0]:
+        for x_cord in range(end_point[0], start_point[0]):
+            temp_x.append(x_cord)
+
+    if start_point[1] < end_point[1]:
+        for y_cord in range(start_point[1], end_point[1]):
+            temp_y.append(y_cord)
+    if start_point[1] > end_point[1]:
+        for y_cord in range(end_point[1], start_point[1]):
+            temp_y.append(y_cord)
+
+    # This is to enable clicking on wells to mark them
+    if not temp_x:
+        temp_x = [x]
+    if not temp_y:
+        temp_y = [y]
+
+    return temp_x, temp_y
+
+
+def __on_up_well_handler(values, well_dict, new_graphs_list, temp_sample_amount, temp_dilutions,
+                         temp_sample_group, replicates, dose_colour_dict, concentration_count, colour_select,
+                         draw_tool, canvas_data):
+
+    for well_counter, wells in enumerate(new_graphs_list):
+        temp_well = wells
+        wells = wells - draw_tool["well_off_set"]
+
+        try:
+            int(values["-PLATE_LAYOUT_GROUP-"].strip("Group "))
+        except ValueError:
+            group_number = 0
+        else:
+            group_number = int(values["-PLATE_LAYOUT_GROUP-"].strip("Group "))
+
+        if canvas_data["temp_draw_tool"] == "dose":
+            try:
+                well_dict[wells]["state"]
+            except KeyError:
+                sg.PopupError("Sorry, can't deal with different plate types in a row")
+                break
+            else:
+
+                if well_dict[wells]["state"] == "sample":
+                    # if temp_replicate > replicates:
+                    #     replicates = 1
+                    #     temp_replicate = 1
+
+                    if well_counter % temp_dilutions == 0 and well_counter > 0:
+                        temp_replicate += 1
+                        if temp_replicate > replicates:
+                            temp_sample_group += 1
+                            temp_replicate = 1
+
+                        concentration_count = 1
+                        if temp_sample_group > (temp_sample_amount * replicates):
+
+                            colour = colour_select["sample"]
+                            canvas_data["graph_plate"].Widget.itemconfig(wells, fill=colour)
+
+                            well_dict[wells]["colour"] = colour
+                            well_dict[wells]["group"] = group_number
+                            well_dict[wells]["replicate"] = 0
+                            well_dict[wells]["concentration"] = 0
+                            continue
+
+                    else:
+                        concentration_count += 1
+
+                    try:
+                        dose_colour_dict["hex"][(temp_sample_group - 1)]
+                    except (IndexError or TypeError):
+                        print(f"Index error on dose colour dict for this group: {temp_sample_group}")
+                        colour = colour_select["sample"]
+                        canvas_data["graph_plate"].Widget.itemconfig(wells, fill=colour)
+
+                        well_dict[wells]["colour"] = colour
+                        well_dict[wells]["group"] = group_number
+                        well_dict[wells]["replicate"] = 0
+                        well_dict[wells]["concentration"] = 0
+                        continue
+                    else:
+                        colour = dose_colour_dict["hex"][(temp_sample_group - 1)]
+
+                    canvas_data["graph_plate"].Widget.itemconfig(wells, fill=colour)
+                    try:
+                        well_dict[wells]["colour"]
+                    except IndexError as e:
+                        print(f"error - {e} - for:")
+                        print(well_dict)
+                    else:
+                        well_dict[wells]["colour"] = colour
+                    well_dict[wells]["group"] = temp_sample_group
+                    well_dict[wells]["replicate"] = temp_replicate
+                    well_dict[wells]["concentration"] = concentration_count
+
+        else:
+            colour = colour_select[draw_tool["temp_draw_tool"]]
+            well_state = draw_tool["temp_draw_tool"]
+            if colour == "paint":
+                colour = values["-PLATE_LAYOUT_COLOUR_CHOSE_TARGET-"]
+            canvas_data["graph_plate"].Widget.itemconfig(temp_well, fill=colour)
+            well_dict[wells]["colour"] = colour
+            well_dict[wells]["state"] = well_state
+            try:
+                well_dict[wells]["group"]
+            except KeyError:
+                pass
+            else:
+                well_dict[wells]["group"] = group_number
+                well_dict[wells]["replicate"] = 0
+                well_dict[wells]["concentration"] = 0
+
+    return well_dict
+
+
+def _on_up(window, values, well_dict, dose_colour_dict, colour_select, draw_tool, canvas_data):
+    try:
+        draw_tool["temp_selector"] and draw_tool["plate_active"]
+    except KeyError:
+        pass
+    else:
+        if draw_tool["temp_selector"] and draw_tool["plate_active"]:
+
+            # Dose response values
+            if draw_tool["temp_draw_tool"] == "dose":
+                temp_dilutions = int_guard(window, values["-DOSE_DILUTIONS-"], 0)
+                temp_sample_amount = int_guard(window, values["-DOSE_SAMPLE_AMOUNT-"], 0)
+                temp_sample_group = int_guard(window, values["-SAMPLE_CHOOSER_DROPDOWN-"], 1)
+                replicates = int_guard(window, values["-DOSE_REPLICATES-"], 1)
+                concentration_count = 0
+                replicate_loop = int_guard(window, values["-REPLICATE_CHOOSER_DROPDOWN-"], 1)
+            else:
+                temp_dilutions = temp_sample_amount = temp_sample_group = \
+                    replicates = replicate_loop = concentration_count = 0
+
+            if draw_tool["temp_draw_tool"] == "dose" and temp_sample_amount == 0 and temp_dilutions == 0:
+                pass
+            else:
+
+                temp_x, temp_y = __on_up_x_y(draw_tool["start_point"], draw_tool["end_point"],
+                                             draw_tool["x"], draw_tool["y"])
+
+                new_graphs_list = __on_up_grab_graph_list(values, temp_x, temp_y, draw_tool, canvas_data)
+
+                well_dict = __on_up_well_handler(values, well_dict, new_graphs_list, temp_sample_amount,
+                                                 temp_dilutions, temp_sample_group, replicates, dose_colour_dict,
+                                                 concentration_count, colour_select, draw_tool, canvas_data)
+
+                # Reset or sets the sample tool counter
+                if temp_sample_group >= temp_sample_amount:
+                    temp_sample_group = 1
+                else:
+                    temp_sample_group += 1
+                window["-SAMPLE_CHOOSER_DROPDOWN-"].update(value=temp_sample_group)
+
+                if canvas_data["temp_draw_tool"] == "dose":
+                    window["-RECT_SAMPLE_TYPE-"].update(value="Dose Response")
+
+    # deletes the rectangle used for selection
+    if draw_tool["prior_rect"]:
+        canvas_data["graph_plate"].delete_figure(draw_tool["prior_rect"])
+
+    # reset everything
+    draw_tool["start_point"], draw_tool["end_point"] = None, None
+    draw_tool["dragging"] = False
+    draw_tool["prior_rect"] = None
+    draw_tool["temp_selector"] = False
+    draw_tool["temp_draw_tool"] = None
+
+    return well_dict
+
+
+def plate_layout_single_use_drawer(dbf, config, old_values):
+    well_dict = {}
+    draw_tool = {
+        "start_point": None,
+        "end_point": None,
+        "prior_rect": None,
+        "x": None,
+        "y": None,
+        "min_x": None,
+        "max_x": None,
+        "min_y": None,
+        "max_y": None,
+        "dragging": False,
+        "temp_draw_tool": None,
+        "temp_selector": False,
+        "well_off_set": 0,
+    }
+    dose_colour_dict = {}
+    colour_select = {}
+    canvas_data = {
+        "plate_type": None,
+        "plate_active": False,
+        "temp_draw_tool": "sample",
+        "total_sample_spots": 0,
+        "graph_plate": None,
+        "temp_draw_tool_tracker": "-RECT_SAMPLES-",
+        "draw_tool_dict": {
+            "-RECT_SAMPLES-": "sample",
+            "-RECT_BLANK-": "blank",
+            "-RECT_MAX-": "max",
+            "-RECT_MIN-": "minimum",
+            "-RECT_NEG-": "negative",
+            "-RECT_POS-": "positive",
+            "-RECT_EMPTY-": "empty",
+            "-COLOUR-": "paint",
+            "-RECT_DOSE-": "dose"
+        }
+    }
+    for keys in list(config["plate_colouring"].keys()):
+        colour_select[keys] = config["plate_colouring"][keys]
+    table = "plate_layout"
+    column_headline = "layout_name"
+    limiting_value = old_values
+
+    limiting_header = "style"
+    plate_list = _get_list_of_names_from_database_double_lookup(dbf, table, column_headline, limiting_value,
+                                                                limiting_header)
+    window = plate_layout_single_use_drawer_layout(config, plate_list)
+
+    canvas_data["graph_plate"] = window["-SINGLE_USE_CANVAS-"]
+
+    while True:
+        event, values = window.read()
+
+        if event == sg.WIN_CLOSED or event == "-SINGLE_USE_CANCEL-":
+
+            window.close()
+            return False
+
+        if event == "-SINGLE_USE_LAYOUT_OK-":
+
+            window.close()
+            return well_dict
+
+        if event == "-SINGLE_USE_SAMPLE_TYPE-":
+            plate_list_updater(dbf, window, values, event)
+
+        if event == "-SINGLE_USE_DRAW_GROUPS-":
+            pass
+
+        if event == "-DOSE_DILUTIONS-" or event == "-DOSE_REPLICATES-":
+            dose_colour_dict = dose_dilution_replicates(window, event, values, dose_colour_dict)
+
+        if event == "-DOSE_COLOUR_LOW-" or event == "-DOSE_COLOUR_HIGH-":
+            dose_colour_dict = dose_colouring(window, event, values, canvas_data=canvas_data)
+
+        if event == "-SINGLE_USE_DRAW-":
+            well_dict, draw_tool = _draw_layout(dbf, config, window, values, well_dict, draw_tool, canvas_data)
+
+        try:
+            event.endswith("+MOVE")
+
+        except AttributeError:
+            pass
+
+        else:
+            if event.endswith("+MOVE") and type(event) != tuple:
+                _on_move(window, values, well_dict, draw_tool, canvas_data)
+
+        if event.startswith("Group"):
+            well_dict = _canvas_group_labeling(event, values, well_dict, canvas_data)
+
+        if event == "-SINGLE_USE_CANVAS-":
+            _canvas(values, draw_tool, canvas_data)
+
+            # it does not always detect this event:
+        try:
+            event.endswith("+UP")
+        except AttributeError:
+            pass
+        else:
+            if event.endswith("+UP"):
+                well_dict = _on_up(window, values, well_dict, dose_colour_dict, colour_select, draw_tool, canvas_data)
+
+
+def assay_generator(config, dbf, plate_list):
     window = assay_generator_layout(config, plate_list)
 
     while True:
@@ -492,7 +973,7 @@ def assay_generator(config, plate_list):
             elif not values["-NEW_ASSAY_PLATE_LAYOUT-"]:
                 sg.PopupError("Please Select a plate-layout")
             else:
-                dbf = DataBaseFunctions(config)
+
 
                 # Gets values
                 assay_table = "assay"
@@ -557,7 +1038,7 @@ def _previous_single_run_data(dbf, assay_name, run_name):
 
 
 def _handle_worklist(config, worklist_file, bio_compound_info_from_worklist, worklist_echo_data, run_name):
-    worklist_data, _ = bio_compound_info_from_worklist(config, sg, [worklist_file])
+    worklist_data, _ = bio_compound_info_from_worklist(config, [worklist_file])
     worklist_echo_data["worklist"][run_name] = worklist_data
     worklist_txt_data = str(worklist_data)
     return worklist_txt_data
@@ -592,9 +1073,9 @@ def _update_assay_run_database_data(dbf, current_run_name, batch, worklist, echo
     dbf.update_database_items(source_table, table_data, table_index_value, headline)
 
 
-def assay_run_naming(config, all_plates_data, analysis_method, used_plates, assay_name, all_destination_plates,
-                     dead_run_check, bio_compound_info_from_worklist):
-    dbf = DataBaseFunctions(config)
+def assay_run_naming(config, dbf, all_plates_data, analysis_method, used_plates, assay_name, all_destination_plates,
+                     dead_run_check, bio_compound_info_from_worklist, import_to_database_check):
+
     previous_runs, run_name, all_batch_numbers, batch_number = _previous_runs_data(dbf, assay_name)
     used_plates_table_data = []
     if dead_run_check.casefold() == "yes":
@@ -705,31 +1186,33 @@ def assay_run_naming(config, all_plates_data, analysis_method, used_plates, assa
                 sg.popup_error("Please provide the worklist used for the run")
             # ToDo have a check to see if the echo data fit with the plate
             else:
+
                 assay_run_name = values["-ASSAY_RUN_NAME-"]
                 if assay_run_name not in different_assay_runs:
                     different_assay_runs.append(assay_run_name)
                     run_notes[assay_run_name] = values["-ASSAY_RUN_NOTES-"]
                 # Test if the run name is in the database already, if it isn't add the name to the run data
-                if assay_run_name not in previous_runs or len(previous_runs) == 1:
-                    assay_run_data = {"run_name": assay_run_name,
-                                      "assay_name": assay_name,
-                                      "batch": values["-ASSAY_RUN_ALL_BATCHES-"],
-                                      "worklist": values["-ASSAY_RUN_WORKLIST_DATA-"],
-                                      "echo_data": values["-ASSAY_RUN_ECHO_DATA-"],
-                                      "date": values["-ASSAY_RUN_DATE_TARGET-"],
-                                      "note": values["-ASSAY_RUN_NOTES-"]}
+                if import_to_database_check:
+                    if assay_run_name not in previous_runs or len(previous_runs) == 1:
+                        assay_run_data = {"run_name": assay_run_name,
+                                          "assay_name": assay_name,
+                                          "batch": values["-ASSAY_RUN_ALL_BATCHES-"],
+                                          "worklist": values["-ASSAY_RUN_WORKLIST_DATA-"],
+                                          "echo_data": values["-ASSAY_RUN_ECHO_DATA-"],
+                                          "date": values["-ASSAY_RUN_DATE_TARGET-"],
+                                          "note": values["-ASSAY_RUN_NOTES-"]}
 
-                    dbf.add_records_controller("assay_runs", assay_run_data)
-                    # add the plates to assay_plates
-                    for plates in temp_plate_data:
-                        assay_plate_data = {"plate_name": plates, "assay_run": assay_run_name}
-                        dbf.add_records_controller("assay_plates", assay_plate_data)
+                        dbf.add_records_controller("assay_runs", assay_run_data)
+                        # add the plates to assay_plates
+                        for plates in temp_plate_data:
+                            assay_plate_data = {"plate_name": plates, "assay_run": assay_run_name}
+                            dbf.add_records_controller("assay_plates", assay_plate_data)
 
-                    # Add the new run to the list of old runs,
-                    # and updates the dropdown to include it, and the value to it
-                    if len(previous_runs) != 1:
-                        previous_runs.append(assay_run_name)
-                        window["-ASSAY_RUN_PREVIOUS-"].update(values=previous_runs, value=assay_run_name)
+                        # Add the new run to the list of old runs,
+                        # and updates the dropdown to include it, and the value to it
+                        if len(previous_runs) != 1:
+                            previous_runs.append(assay_run_name)
+                            window["-ASSAY_RUN_PREVIOUS-"].update(values=previous_runs, value=assay_run_name)
 
                 if temp_event == "-ASSAY_RUN_APPLY_SELECTED-":
                     temp_plate_list = []
@@ -763,7 +1246,7 @@ def assay_run_naming(config, all_plates_data, analysis_method, used_plates, assa
                 window["-ASSAY_RUN_WORKLIST_DATA-"].update(value="")
                 window["-ASSAY_RUN_ECHO_DATA-"].update(value="")
 
-        if event == "-ASSAY_RUN_UPDATE-":
+        if event == "-ASSAY_RUN_UPDATE-" and import_to_database_check:
             current_assay_name = values["-ASSAY_RUN_NAME-"]
             if current_assay_name not in previous_runs:
                 sg.popup_error(f"{current_assay_name} is not in the Database. "
@@ -834,8 +1317,8 @@ def assay_run_naming(config, all_plates_data, analysis_method, used_plates, assa
             window["-ASSAY_RUN_CURRENT_BATCH-"].update(value=selected_batch)
 
 
-def dead_run_naming(config, assay_name, all_destination_plates, worklist, bio_compound_info_from_worklist):
-    dbf = DataBaseFunctions(config)
+def dead_run_naming(config, dbf, assay_name, all_destination_plates, worklist, bio_compound_info_from_worklist):
+
     previous_runs, run_name, all_batch_numbers, batch_number = _previous_runs_data(dbf, assay_name)
     plate_table_headline = ["Plate", "Run", "Data"]
     plates_table_data = []
@@ -1486,7 +1969,8 @@ def bio_data_approval_table(draw_plate, config, all_plates_data, assay_data, pla
 
                     temp_layout = plate_to_layout[temp_plate_name]
                 except KeyError as e:
-                    print(e)
+
+                    print(f"ERROR !!!!!!   - {e}")
                     print(plate_to_layout)
                     print(temp_plate_name)
                     temp_layout = list(plate_to_layout())[0]
@@ -2532,7 +3016,6 @@ def _draw_init_dose(window, plotting, all_data, dose_response_canvas, toolbar, p
     return dose_response_canvas, toolbar
 
 
-
 def bio_dose_response_approval(config, all_data, dose_units, method, all_calculations):
     # sg.PopupError("Missing popup to deal approve the data before resuming.")
 
@@ -2723,7 +3206,7 @@ def bio_dose_response_approval(config, all_data, dose_units, method, all_calcula
             sorting_the_tables(window, event, search_reverse)
 
 
-def popup_table(window, table):
+def popup_table(window, config, table):
     """
 
     :param table:
@@ -2752,9 +3235,9 @@ def database_fetcher_creator(config, cw):
     pass
 
 
-def popup_three_box_solution(config, name, question, box_1, box_2):
+def popup_three_box_solution(config, name, question, box_1, box_2, folder_file=False):
 
-    window = popup_three_box_solution_layout(config, name, question, box_1, box_2)
+    window = popup_three_box_solution_layout(config, name, question, box_1, box_2, folder_file)
 
     while True:
         event, values = window.read()
@@ -2763,106 +3246,28 @@ def popup_three_box_solution(config, name, question, box_1, box_2):
             window.close()
             return "cancel"
         if event == "-TABLE_POPUP_BOX_1-":
+
             window.close()
             return box_1
 
         if event == "-TABLE_POPUP_BOX_2-":
+
             window.close()
             return box_2
 
+        if event == "-TABLE_POPUP_BOX_TARGET-":
+            window.close()
+            return values[event]
+
 
 if __name__ == "__main__":
+
     import configparser
-    from bio_dose_calculator import dose_response_controller
-    from bio_dose_plotting import PlottingDose
-
-    config = configparser.ConfigParser()
-    config.read("config.ini")
-
-    dose_response_curveshape = "S"
-    all_dose_data = {"plate_1": {"control": {
-        "reading": {"raw": [107.9699121, 103.5144308, 104.0479892, 104.3916889, 97.27653273, 90.69159613, 56.65732349,
-                            37.87317223, 19.78570689, 8.299916445, 11.36102686, 4.144031277, 5.013870229, 3.04536459,
-                            4.692352962, 7.622099516, 5.336804101, 9.853183031, 9.120045299, 4.869276415, 6.108990371,
-                            3.597853303, 5.994511486, 5.717414715]},
-        "dose": {"raw": [0, 0.043478261, 0.086956522, 0.130434783, 0.173913043, 0.217391304, 0.260869565, 0.304347826,
-                         0.347826087, 0.391304348, 0.434782609, 0.47826087, 0.52173913, 0.565217391, 0.608695652,
-                         0.652173913,
-                         0.695652174, 0.739130435, 0.782608696, 0.826086957, 0.869565217, 0.913043478, 0.956521739, 1]}
-
-    },
-        "sample": {
-            "reading": {
-                "raw": [109.3214119, 108.6611434, 102.3685731, 103.9247113, 104.9325289, 102.4206455, 98.47691972,
-                        102.5875971, 93.42962519, 76.20087959, 60.9377449, 45.92929776, 27.13356751, 15.82598671,
-                        12.67835439, 13.02441613, 10.35963326, 5.007706181, 6.146401995, 3.79602644, 4.418804534,
-                        9.61913024, 3.43543862, 5.886764018]},
-            "dose": {
-                "raw": [0, 0.043478261, 0.086956522, 0.130434783, 0.173913043, 0.217391304, 0.260869565, 0.304347826,
-                        0.347826087, 0.391304348, 0.434782609, 0.47826087, 0.52173913, 0.565217391, 0.608695652,
-                        0.652173913, 0.695652174, 0.739130435, 0.782608696, 0.826086957, 0.869565217, 0.913043478,
-                        0.956521739, 1]},
-            "outlier": [0, 4, 7]
-        }}}
-    method_calc_reading_50 = "ec50 = (curve_max - curve_min)*0.5 + curve_min"
-    all_calculations = ["ec50 = (curve_max - curve_min)*0.5 + curve_min",
-                        "reading_50 = (resp_max - resp_min)*0.5",
-                        "ec50 = (resp_end - resp_start)*0.5",
-                        "reading_50 = (resp_start - resp_end)*0.5"]
-    dose_units = "mg/mL"
-    method = "EC50"
-    diff_dict = {}
-    for plates in all_dose_data:
-        diff_dict[plates] = {}
-        all_dose_data[plates] = dose_response_controller(dose_response_curveshape, all_dose_data[plates],
-                                                         method_calc_reading_50, diff_dict[plates])
-    # for plates in diff_dict:
-    #     for samples in diff_dict[plates]:
-    #         for data in diff_dict[plates][samples]:
-    #             print(data)
-    #             print(diff_dict[plates][samples][data])
-
-    # for plates in diff_dict:
-    #     for samples in diff_dict[plates]:
-    #         actual = np.array(diff_dict[plates][samples]['actual_normalized'])
-    #         theory = np.array(diff_dict[plates][samples]['theory_normalized'])
-    #
-    #         # Compute residuals
-    #         residuals = actual - theory
-    #
-    #         # Optionally, you might want to print or analyze the residuals
-    #         print("Residuals:", residuals)
-    #
-    # for plates, plate_data in diff_dict.items():
-    #     for samples, sample_data in plate_data.items():
-    #         # Extract data
-    #         actual = np.array(sample_data['actual_normalized'])
-    #         theory = np.array(sample_data['theory_normalized'])
-    #
-    #         # Compute residuals
-    #         residuals = actual - theory
-    #
-    #         # Create a 1x2 subplot grid
-    #         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-    #
-    #         # Plot residuals against dose values
-    #         ax1.scatter(sample_data['dose_normalized'], residuals, label=f'Sample {samples}')
-    #         ax1.set_title(f'Residuals for Plate {plates}')
-    #         ax1.set_xlabel('Dose (Normalized)')
-    #         ax1.set_ylabel('Residuals')
-    #         ax1.axhline(y=0, color='black', linestyle='--', label='Zero Residuals')  # Add a line at y=0 for reference
-    #         ax1.legend()
-    #
-    #         # Plot histogram of residuals
-    #         ax2.hist(residuals, bins=20, orientation='horizontal', color='skyblue', edgecolor='black')
-    #         ax2.set_title('Histogram of Residuals')
-    #         ax2.set_xlabel('Frequency')
-    #
-    #         # Adjust layout for better spacing
-    #         plt.tight_layout()
-    #
-    #         plt.show()
-
-    bio_dose_response_approval(config, all_dose_data, dose_units, method, all_calculations)
-    # pd = PlottingDose(config, all_dose_data)
-
+    from database_controller import DataBaseFunctions
+    old_config = configparser.ConfigParser()
+    old_config.read("config.ini")
+    test = popup_three_box_solution(old_config, "name", "question", "Folder", "File", folder_file=False)
+    print(test)
+    # old_dbf = DataBaseFunctions(old_config)
+    # old_value = "single"
+    # plate_layout_single_use_drawer(old_dbf, old_config, old_value)

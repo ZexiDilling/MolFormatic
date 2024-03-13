@@ -1,13 +1,15 @@
 import copy
+from os import system
 
-from PySimpleGUI import popup, PopupGetText, PopupError, PopupGetFile, PopupGetFolder
+from PySimpleGUI import popup, PopupGetText, PopupError, PopupGetFile, PopupGetFolder, PopupYesNo
 
+from const_values import const_single_use_plate_layout, const_open_file_location
 from database_functions import _get_list_of_names_from_database
 from draw_basic import draw_plate
 from bio_functions import bio_compound_info_from_worklist, bio_import_handler_single_point, bio_dead_plate_handler, \
     plate_layout_setup, set_colours, dose_response_import_handler
 from database_functions import grab_table_data
-from gui_popup import assay_generator
+from gui_popup import assay_generator, plate_layout_single_use_drawer, popup_three_box_solution
 from gui_settings_control import GUISettingsController
 from compound_plate_formatting import plate_layout_re_formate
 
@@ -84,6 +86,7 @@ def bio_report_compound_id_update(window, values):
 
 def bio_experiment_add_to_database_update(window, values):
     if values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"]:
+        window["-BIO_PLATE_SINGLE_USE_LAYOUT-"].update(values=False)
         window["-BIO_COMPOUND_DATA-"].update(value=True)
 
 
@@ -110,6 +113,12 @@ def bio_combined_report_update(window, values):
             window["-BIO_FINAL_REPORT_THRESHOLD-"].update(disabled=True)
             window["-BIO_FINAL_REPORT_HIT_AMOUNT-"].update(value="")
             window["-BIO_FINAL_REPORT_HIT_AMOUNT-"].update(disabled=True)
+
+
+def bio_setup_single_use(window, values):
+    if values["-BIO_PLATE_SINGLE_USE_LAYOUT-"]:
+        window["-BIO_EXPERIMENT_ADD_TO_DATABASE-"].update(value=False)
+        window["-BIO_PLATE_LAYOUT-"].update(value=const_single_use_plate_layout)
 
 
 def bio_settings(config, window):
@@ -161,7 +170,7 @@ def assay_name_update(config, window, values):
 
 def new_assay(config, dbf, window):
     plate_list = _get_list_of_names_from_database(dbf, "plate_layout", "plate_name")
-    assay_check = assay_generator(config, plate_list)
+    assay_check = assay_generator(config, dbf, plate_list)
 
     if assay_check:
         assay_table_data = grab_table_data(config, "assay")
@@ -196,11 +205,21 @@ def bio_calculate(dbf, config, values):
     # ToDo add guards for wrong file-formate
     else:
         # Sets values for different
-        bio_import_folder = PopupGetFolder("Please select the folder container the bio-data")
-        if not bio_import_folder:
+        box_1 = "folder"
+        box_2 = "file"
+        bio_import_data = popup_three_box_solution(config, "Folder/File",
+                                                   "Please select the folder or file that contains the bio-data",
+                                                   box_1, box_2, folder_file=True)
+        if not bio_import_data:
             return
+        print(bio_import_data)
         # default_plate_layout = archive_plates_dict[values["-BIO_PLATE_LAYOUT-"]]
+        # if values["-BIO_PLATE_SINGLE_USE_LAYOUT-"]:
+        #     default_plate_layout = plate_layout_single_use_drawer(dbf, config, values)
+        # else:
         default_plate_layout = values["-BIO_PLATE_LAYOUT-"]
+        if not default_plate_layout:
+            return
         include_hits = values["-BIO_FINAL_REPORT_INCLUDE_HITS-"]
         try:
             threshold = float(values["-BIO_FINAL_REPORT_THRESHOLD-"])
@@ -227,7 +246,7 @@ def bio_calculate(dbf, config, values):
         if not same_layout:
             # If there are difference between what layout each plate is using, or if you know some data needs
             # to be dismissed, you can choose different plate layout for each plate.
-            plate_to_layout = plate_layout_setup(dbf, bio_import_folder, default_plate_layout)
+            plate_to_layout = plate_layout_setup(dbf, config, bio_import_data, default_plate_layout)
             if plate_to_layout is None:
                 return
                 # bio_breaker = True
@@ -266,9 +285,9 @@ def bio_calculate(dbf, config, values):
             # Get concentration for the samples
             try:
                 temp_concentration = float(PopupGetText("Please provide a concentration in uM ?? \n numbers only"))
-            except ValueError:
+            except ValueError or TypeError:
                 return
-            check = bio_import_handler_single_point(dbf, config, bio_import_folder, plate_to_layout,
+            check = bio_import_handler_single_point(dbf, config, bio_import_data, plate_to_layout,
                                                     analyse_method, bio_sample_dict, bio_export_folder,
                                                     add_compound_ids, export_to_excel, all_destination_plates,
                                                     combined_report_check, import_to_database_check,
@@ -283,7 +302,7 @@ def bio_calculate(dbf, config, values):
                     worklist_file = worklist_file.split(";")
                 except TypeError:
                     return
-            check = dose_response_import_handler(config, assay_name, bio_import_folder, worklist_file,
+            check = dose_response_import_handler(config, assay_name, bio_import_data, worklist_file,
                                                  plate_to_layout, import_to_database_check, export_to_excel,
                                                  bio_export_folder,
                                                  include_id=True, include_pic=True, dose_out="uM")
@@ -292,11 +311,15 @@ def bio_calculate(dbf, config, values):
                     f"No method is set-up to deal with this\n" \
                     f"Please contact the admin"
 
-        if check:
+        if check == const_open_file_location:
+            popup_answer = PopupYesNo("Report done.\n Open File Location?")
+            if popup_answer.casefold() == "yes":
+                system(f'explorer "{config["folders"]["output"]}"')
+        else:
             popup(f"{check}")
 
 
-def bio_blank_run(config, window, values):
+def bio_blank_run(config, dbf, window, values):
     # Adds data to the database for runs that have died before data have been produced.
     bio_breaker = False
     if not values["-BIO_PLATE_LAYOUT-"]:
@@ -322,7 +345,7 @@ def bio_blank_run(config, window, values):
             responsible = values["-BIO_RESPONSIBLE-"]
             assay_name = values["-BIO_ASSAY_NAME-"]
             analyse_method = values["-BIO_ANALYSE_TYPE-"]
-            bio_dead_plate_handler(config, assay_name, worklist, analyse_method, responsible)
+            bio_dead_plate_handler(config, dbf, assay_name, worklist, analyse_method, responsible)
 
             popup("Done")
 

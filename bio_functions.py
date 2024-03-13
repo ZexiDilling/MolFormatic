@@ -8,6 +8,7 @@ from bio_date_handler import BIOAnalyser
 from bio_dose_calculator import dose_response_controller
 from bio_dose_excle_handler import dose_excel_controller
 from bio_report_setup import bio_final_report_controller
+from const_values import const_single_use_plate_layout, const_open_file_location
 from file_type_handler_csv import CSVReader
 from database_functions import get_number_of_rows, grab_table_data
 from database_handler import DataBaseFunctions
@@ -16,7 +17,7 @@ from extra_functions import unit_converter
 from file_handler import get_file_list
 from helpter_functions import sort_table
 from gui_popup import new_headlines_popup, assay_run_naming, bio_data_approval_table, bio_dose_response_set_up, \
-    dead_run_naming, plate_layout_chooser, bio_dose_response_approval
+    dead_run_naming, plate_layout_chooser, bio_dose_response_approval, plate_layout_single_use_drawer
 from info import matrix_header
 from start_up_table_layouts import responsible
 
@@ -61,7 +62,7 @@ def bio_compound_info_from_worklist(config, bio_sample_list):
         # option to change them.
         if msg == "Wrong headlines":
             print(f"{files} have the wrong format")
-            new_headline = new_headlines_popup(sort_table, right_headlines, file_headlines)
+            new_headline = new_headlines_popup(config, sort_table, right_headlines, file_headlines)
             msg, file_headlines, sample_dict, all_destination_plates = CSVReader.echo_worklist_to_dict(
                 config, config_headline, files, right_headlines, new_headline, sample_dict, all_destination_plates)
         elif msg == "Not a CSV file":
@@ -71,7 +72,7 @@ def bio_compound_info_from_worklist(config, bio_sample_list):
     return sample_dict, all_destination_plates
 
 
-def bio_data(dbf, config, bio_import_folder, plate_to_layout, analysis_method,
+def bio_data(dbf, config, bio_import_source, plate_to_layout, analysis_method,
              bio_sample_dict, save_location, add_compound_ids, write_to_excel=True):
 
     """
@@ -81,8 +82,8 @@ def bio_data(dbf, config, bio_import_folder, plate_to_layout, analysis_method,
     :type dbf: class
     :param config: The config handler, with all the default information in the config file.
     :type config: configparser.ConfigParser
-    :param bio_import_folder: The folder where the raw data is located
-    :type bio_import_folder: str
+    :param bio_import_source: The folder where the raw data is located
+    :type bio_import_source: str
     :param plate_to_layout: Either the name of the default plate_layout that all plates are using or a dict over each
         plate and the layout for that place
     :type plate_to_layout: str or dict
@@ -101,7 +102,7 @@ def bio_data(dbf, config, bio_import_folder, plate_to_layout, analysis_method,
     """
     # needs to reformat plate-layout to use well ID instead of numbers...
     bioa = BIOAnalyser(config)
-    file_list = get_file_list(bio_import_folder)
+    file_list = get_file_list(bio_import_source)
     all_plates_data = {}
     used_plates = []
 
@@ -112,25 +113,31 @@ def bio_data(dbf, config, bio_import_folder, plate_to_layout, analysis_method,
             files = txt_to_xlsx(files)
         if isfile(files) and files.endswith(".xlsx"):
             temp_barcode = files.split("/")[-1].split(".")[0]
+            print(f"plate_to_layout - {plate_to_layout}")
             if type(plate_to_layout) is dict:
                 plate_layout_dict = plate_to_layout
                 temp_plate_layout_name = plate_to_layout[temp_barcode]
             else:
                 plate_layout_dict[temp_barcode] = plate_to_layout
                 temp_plate_layout_name = plate_to_layout
+
             if temp_plate_layout_name == "skip":
                 continue
+
+            if temp_plate_layout_name == const_single_use_plate_layout:
+                temp_plate_layout = plate_layout_single_use_drawer(dbf, config, analysis_method)
             else:
                 row_data = dbf.find_data_single_lookup("plate_layout", plate_to_layout, "layout_name")
                 temp_plate_layout = eval(row_data[0][5])
-                all_data, well_row_col, well_type, barcode, date = original_data_dict(files, temp_plate_layout)
-                if not all_data:
-                    return False
 
-                used_plates.append(barcode)
-                all_plates_data[barcode] = bioa.bio_data_controller(files, temp_plate_layout, all_data, well_row_col,
-                                                                    well_type, analysis_method, write_to_excel,
-                                                                    bio_sample_dict, save_location, add_compound_ids)
+            all_data, well_row_col, well_type, barcode, date = original_data_dict(files, temp_plate_layout)
+            if not all_data:
+                return False
+
+            used_plates.append(barcode)
+            all_plates_data[barcode] = bioa.bio_data_controller(files, temp_plate_layout, all_data, well_row_col,
+                                                                well_type, analysis_method, write_to_excel,
+                                                                bio_sample_dict, save_location, add_compound_ids)
 
         else:
             print(f"{files} is not the right formate")
@@ -385,12 +392,10 @@ def bio_experiment_to_database(config, assay_name, assay_data, used_plates, all_
         print(f"{plate_index + 1} / {total_plate_amount} have been uploaded to the database - last plate was: {plates}")
 
 
-def _bio_data_check(config, assay_name, all_destination_plates, used_plates, all_plates_data,
-                                        bio_sample_dict, analyse_method, plate_to_layout):
+def _bio_data_check(config, dbf, assay_name, all_destination_plates, used_plates, all_plates_data,
+                                        bio_sample_dict, analyse_method, plate_to_layout, import_to_database_check):
 
     # Makes a popup to assign assay_run names to plates.
-    print(used_plates)
-    print(all_destination_plates)
     # if len(all_destination_plates) > len(used_plates):
     #     dead_run_check = PopupYesNo("Not all plates from worklist have data.\n"
     #                                 "Do you wish to add plates without data to the database?")
@@ -404,9 +409,10 @@ def _bio_data_check(config, assay_name, all_destination_plates, used_plates, all
     # else:
     #     dead_plates = []
     dead_run_check = "no"
-    check, transfer_dict, dismissed_plates = assay_run_naming(config, all_plates_data, analyse_method,
+    check, transfer_dict, dismissed_plates = assay_run_naming(config, dbf, all_plates_data, analyse_method,
                                                               used_plates, assay_name, all_destination_plates,
-                                                              dead_run_check, bio_compound_info_from_worklist)
+                                                              dead_run_check, bio_compound_info_from_worklist,
+                                                              import_to_database_check)
     if check:
         if len(dismissed_plates) == len(used_plates):
             all_plates_are_dismissed = True
@@ -447,32 +453,35 @@ def bio_import_handler_single_point(dbf, config, bio_import_folder, plate_to_lay
     worked, all_plates_data, date, used_plates, plate_to_layout = \
         bio_data(dbf, config, bio_import_folder, plate_to_layout,
                  analyse_method, bio_sample_dict, bio_export_folder, add_compound_ids, export_to_excel)
+    if import_to_database_check:
+        check = _bio_data_check(config, dbf, assay_name, all_destination_plates, used_plates, all_plates_data,
+                                bio_sample_dict, analyse_method, plate_to_layout, import_to_database_check)
+        if not check:
+            return "Cancelled"
+        elif type(check) != str:
+            all_plates_data, all_compound_data, plate_analyse_methods, sub_layouts, assay_data, \
+                   dismissed_plates, dead_plates, report_check = check
 
-    check = _bio_data_check(config, assay_name, all_destination_plates, used_plates, all_plates_data,
-                            bio_sample_dict, analyse_method, plate_to_layout)
+            if report_check:
+                _bio_reports()
 
-    if type(check) != str:
-        all_plates_data, all_compound_data, plate_analyse_methods, sub_layouts, assay_data, \
-               dismissed_plates, dead_plates, report_check = check
+            # Check if there should be produced a combined report over all the data
+            if combined_report_check:
+                bio_full_report(dbf, config, analyse_method, all_plates_data, bio_export_folder, final_report_name,
+                                include_hits, threshold, hit_amount, include_smiles, bio_sample_dict, plate_to_layout,
+                                include_structure)
 
-        if report_check:
-            _bio_reports()
+            # Check if the data should be added to the database
+            if import_to_database_check:
+                bio_experiment_to_database(config, assay_name, assay_data, used_plates, all_plates_data,
+                                           plate_analyse_methods, responsible, bio_sample_dict, concentration,
+                                           all_compound_data, sub_layouts, dismissed_plates, dead_plates)
 
-        # Check if there should be produced a combined report over all the data
-        if combined_report_check:
-            bio_full_report(dbf, config, analyse_method, all_plates_data, bio_export_folder, final_report_name,
-                            include_hits, threshold, hit_amount, include_smiles, bio_sample_dict, plate_to_layout,
-                            include_structure)
-
-        # Check if the data should be added to the database
-        if import_to_database_check:
-            bio_experiment_to_database(config, assay_name, assay_data, used_plates, all_plates_data,
-                                       plate_analyse_methods, responsible, bio_sample_dict, concentration,
-                                       all_compound_data, sub_layouts, dismissed_plates, dead_plates)
-
-        return "Done"
+            return const_open_file_location
+        else:
+            return check
     else:
-        return check
+        return const_open_file_location
 
 
 def _grab_dose_data(file, file_list, all_dose_readings, plate_layout, dose_layout, dose_out):
@@ -609,14 +618,14 @@ def _bio_add_dead_plates_to_db(config, dbf, assay_data, assay_run_name, plate_li
         dbf.add_records_controller(plate_table, temp_plate_data)
 
 
-def bio_dead_plate_handler(config, assay_name, worklist, analysis_method, responsible):
+def bio_dead_plate_handler(config, dbf, assay_name, worklist, analysis_method, responsible):
 
     # Grab list of plates from the CSV file
     csv_reader = CSVReader
     plate_list = csv_reader.echo_grab_plate_names(worklist)
 
     # Popup to set-up the data for the plates. Date for the run, notes and so on.
-    check, assay_run_name = dead_run_naming(config, assay_name, plate_list, worklist, bio_compound_info_from_worklist)
+    check, assay_run_name = dead_run_naming(config, dbf, assay_name, plate_list, worklist, bio_compound_info_from_worklist)
 
     if check:
         # # Grabs the value for the assay from the database
@@ -941,11 +950,11 @@ def _folder_digger_for_file_names(folder):
     return file_list
 
 
-def plate_layout_setup(dbf, folder, default_plate_layout):
+def plate_layout_setup(dbf, config, folder, default_plate_layout):
     """
     Gets all files from a folder, and list them in a table, where the user can choose the layout for each plate
-    :param dbf: The DataBaseFunction class
-    :param dbf: class
+    :param dbf: The DataBaseFunction
+    :type dbf: class
     :param folder:
     :type folder: str
     :param default_plate_layout: The default plate layout
@@ -955,7 +964,7 @@ def plate_layout_setup(dbf, folder, default_plate_layout):
     """
 
     files = _folder_digger_for_file_names(folder)
-    all_plate_layouts = plate_layout_chooser(dbf, files, default_plate_layout)
+    all_plate_layouts = plate_layout_chooser(dbf, config, files, default_plate_layout)
 
     return all_plate_layouts
 

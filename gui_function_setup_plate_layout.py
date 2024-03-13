@@ -21,6 +21,8 @@ def plate_list_updater(dbf, window, values, event):
         target_window = "-ARCHIVE_PLATES-"
     elif event == "-BIO_ANALYSE_TYPE-":
         target_window = "-BIO_PLATE_LAYOUT-"
+    elif event == "-SINGLE_USE_SAMPLE_TYPE-":
+        target_window = "-SINGLE_USE_ARCHIVE_PLATES-"
 
     table = "plate_layout"
     column_headline = "layout_name"
@@ -139,12 +141,15 @@ def dose_dilution_replicates(window, event, values, dose_colour_dict):
         return dose_colour_dict
 
 
-def dose_colouring(window, event, values):
+def dose_colouring(window, event, values, canvas_data=None):
     if "HIGH" in event:
-        window["-DOSE_COLOUR_BUTTON_HIGH-"].update(button_color=event)
+        window["-DOSE_COLOUR_BUTTON_HIGH-"].update(button_color=values[event])
     else:
-        window["-DOSE_COLOUR_BUTTON_LOW-"].update(button_color=event)
-    dose_colour_dict = _update_dose_tool(window, event, values, window_1_plate_layout["temp_sample_amount"])
+        window["-DOSE_COLOUR_BUTTON_LOW-"].update(button_color=values[event])
+    if canvas_data:
+        dose_colour_dict = _update_dose_tool(window, event, values, canvas_data["total_sample_spots"])
+    else:
+        dose_colour_dict = _update_dose_tool(window, event, values, window_1_plate_layout["total_sample_spots"])
     return dose_colour_dict
 
 

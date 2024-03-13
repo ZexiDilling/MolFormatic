@@ -33,7 +33,7 @@ from gui_function_setup_bio import bio_report_update, bio_report_hits_update, bi
     bio_report_threshold_update, bio_report_amount_update, bio_compound_data_update, \
     bio_report_compound_id_update, bio_experiment_add_to_database_update, bio_combined_report_update, bio_settings, \
     new_assay, assay_name_update, bio_finaL_report_multi_conc, bio_calculate, bio_blank_run, \
-    send_to_info_window, assay_drop_down_updates, bio_plate_layout_trigger
+    send_to_info_window, assay_drop_down_updates, bio_plate_layout_trigger, bio_setup_single_use
 from gui_function_setup_database import update_compound, update_plates
 from gui_function_setup_simulation import simulation_input_update, simulation_run
 from gui_function_table_compound import compound_table_refreshed, compound_table_export
@@ -189,11 +189,14 @@ def main(config, queue_gui, queue_mol):
         if event == "-BIO_FINAL_REPORT_CONCENTRATION_MULTIPLE-":
             bio_finaL_report_multi_conc(window, values)
 
+        if event == "-BIO_PLATE_SINGLE_USE_LAYOUT-":
+            bio_setup_single_use(window, values)
+
         if event == "-BIO_CALCULATE-":
             bio_calculate(dbf, config, values)
 
         if event == "-BIO_BLANK_RUN-":
-            bio_blank_run(config, window, values)
+            bio_blank_run(config, dbf, window, values)
 
         if event == "-BIO_SEND_TO_INFO-":
             send_to_info_window(config, window, values)
@@ -395,7 +398,7 @@ def main(config, queue_gui, queue_mol):
             window["-SUB_SEARCH_SMILES-"].update(value=values["-COMPOUND_INFO_ID-"])
 
         if event in compound_info_tables:
-            popup_table(window, event)
+            popup_table(window, config, event)
 
         #   WINDOW 2 - BIO INFO         ###
         # Updating Sub setting data

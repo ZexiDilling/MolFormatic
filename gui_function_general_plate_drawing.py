@@ -467,24 +467,30 @@ def bio_canvas_group_labeling(event, values, well_dict):
     return well_dict
 
 
-def bio_canvas(values):
-    draw_tool_values["x"], draw_tool_values["y"] = values["-RECT_BIO_CANVAS-"]
-    if not draw_tool_values["dragging"]:
-        draw_tool_values["start_point"] = (draw_tool_values["x"], draw_tool_values["y"])
-        draw_tool_values["dragging"] = True
+def bio_canvas(values, draw_tool=None):
+
+    if draw_tool:
+        draw_tool_value = draw_tool
     else:
-        draw_tool_values["end_point"] = (draw_tool_values["x"], draw_tool_values["y"])
-    if draw_tool_values["prior_rect"]:
-        window_1_plate_layout["graph_plate"].delete_figure(draw_tool_values["prior_rect"])
+        draw_tool_value = draw_tool_values
+
+    draw_tool_value["x"], draw_tool_value["y"] = values["-RECT_BIO_CANVAS-"]
+    if not draw_tool_value["dragging"]:
+        draw_tool_value["start_point"] = (draw_tool_value["x"], draw_tool_value["y"])
+        draw_tool_value["dragging"] = True
+    else:
+        draw_tool_value["end_point"] = (draw_tool_value["x"], draw_tool_value["y"])
+    if draw_tool_value["prior_rect"]:
+        window_1_plate_layout["graph_plate"].delete_figure(draw_tool_value["prior_rect"])
 
     # Choosing which tool to pain the plate with.
-    if None not in (draw_tool_values["start_point"], draw_tool_values["end_point"]):
+    if None not in (draw_tool_value["start_point"], draw_tool_value["end_point"]):
         for temp_draw_value in window_1_plate_layout["draw_tool_dict"]:
             if values[temp_draw_value]:
-                draw_tool_values["temp_draw_tool"] = window_1_plate_layout["draw_tool_dict"][temp_draw_value]
-        draw_tool_values["temp_selector"] = True
-        draw_tool_values["prior_rect"] = window_1_plate_layout["graph_plate"].\
-            draw_rectangle(draw_tool_values["start_point"], draw_tool_values["end_point"],
+                draw_tool_value["temp_draw_tool"] = window_1_plate_layout["draw_tool_dict"][temp_draw_value]
+        draw_tool_value["temp_selector"] = True
+        draw_tool_value["prior_rect"] = window_1_plate_layout["graph_plate"].\
+            draw_rectangle(draw_tool_value["start_point"], draw_tool_value["end_point"],
                            fill_color="", line_color="white")
 
 

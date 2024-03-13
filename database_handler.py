@@ -207,7 +207,7 @@ class DataBaseFunctions:
         if type(data_value) == str:
             find = f"SELECT rowid, * FROM '{table}' WHERE {headline} = '{data_value}' "
         else:
-            find = f"SELECT rowid, * FROM '{table}' WHERE {headline} = {data_value} "
+            find = f"SELECT rowid, * FROM '{table}' WHERE {headline} = '{data_value}' "
         return self.fetch(find)
 
     def delete_records(self, table, headline, data_value):

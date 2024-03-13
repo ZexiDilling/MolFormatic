@@ -12,8 +12,17 @@ def get_file_list(path):
     :return: A list of files in the folder
     :rtype: list
     """
-    file_list = _folder_scan(path)
-    # file_list = [f"{path}/{files}" for files in os.listdir(path)]
+    if type(path) == str:
+        if os.path.isfile(path):
+            file_list = [path]
+        else:
+            file_list = _folder_scan(path)
+    else:
+        if path.is_file():
+            file_list = [path]
+        else:
+            files = folder.glob("*")
+            file_list = [file for file in files if file.is_file()]
 
     return file_list
 

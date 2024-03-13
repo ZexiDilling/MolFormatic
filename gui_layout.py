@@ -177,7 +177,8 @@ class GUILayout:
                              tooltip="Will use the chosen plate-layout in the dropdown for all plates if True, \n"
                                      "else there will be a popup where you can choose the layout for each plate. \n"
                                      "Default will be the layout chosen in the plate-layout dropdown"),
-                 sg.Checkbox("Single use layout", key="-BIO_PLATE_SINGLE_USE_LAYOUT-", default=False,
+                 sg.Checkbox("Single use layout", key="-BIO_PLATE_SINGLE_USE_LAYOUT-",
+                             default=False, enable_events=True,
                              tooltip="For doing calculations on a test run, without having to make and save a layout.\n"
                                      "This will still generate reports, \n"
                                      "but the data can't be added to the database, as the database needs a layout.")],

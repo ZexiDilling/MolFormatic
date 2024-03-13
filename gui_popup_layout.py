@@ -1,3 +1,5 @@
+from math import floor
+
 import PySimpleGUI as sg
 
 from info import unit_converter_list_mol, unit_converter_list_liquids, matrix_header
@@ -27,14 +29,27 @@ def morgan_popup_layout(config, main_values):
     return sg.Window("Morgan Values", layout, finalize=True, resizable=True)
 
 
-def popup_three_box_solution_layout(config, name, question, box_1, box_2):
+def popup_three_box_solution_layout(config, name, question, box_1, box_2, folder_file):
     sg.theme(config["GUI"]["theme"])
-    col = sg.Column([
+    if folder_file:
+        col = sg.Column([
             [sg.Text(question)],
-            [sg.Button(box_1, key="-TABLE_POPUP_BOX_1-"),
-             sg.Button(box_2, key="-TABLE_POPUP_BOX_2-"),
-             sg.Button("Cancel", key="-TABLE_POPUP_CANCEL-")]
-    ])
+            [sg.FolderBrowse(box_1, key="-TABLE_POPUP_BOX_1-", target="-TABLE_POPUP_BOX_TARGET-",
+                             enable_events=False),
+             sg.FileBrowse(box_2, key="-TABLE_POPUP_BOX_2-", target="-TABLE_POPUP_BOX_TARGET-",
+                           enable_events=False),
+             sg.Button("Cancel", key="-TABLE_POPUP_CANCEL-")],
+            [sg.InputText("", key="-TABLE_POPUP_BOX_TARGET-", visible=False, enable_events=True)]
+        ])
+
+    else:
+        col = sg.Column([
+                [sg.Text(question)],
+                [sg.Button(box_1, key="-TABLE_POPUP_BOX_1-"),
+                 sg.Button(box_2, key="-TABLE_POPUP_BOX_2-"),
+                 sg.Button("Cancel", key="-TABLE_POPUP_CANCEL-")],
+                [sg.InputText("", key="-TABLE_POPUP_BOX_TARGET-", visible=False, enable_events=False)]
+        ])
 
     layout = [[col]]
     return sg.Window(name, layout, finalize=True, resizable=True)
@@ -771,6 +786,134 @@ def bio_dose_response_approval_layout(config, plate_table_data, plate_headings,
     return sg.Window("Dose Response", layout, finalize=True, resizable=True)
 
 
+def plate_layout_single_use_drawer_layout(config, plate_list):
+    sg.theme(config["GUI"]["theme"])
+    standard_size = 20
+    group_number_list = [f"Group {counter}" for counter in range(1, 20)]
+    plate_type = ["plate_96", "plate_384", "plate_1536"]
+    colour_size = 5
+    color_select = {}
+    for keys in list(config["plate_colouring"].keys()):
+        color_select[keys] = config["plate_colouring"][keys]
 
+    plate_layout_mouse_menu = [[], ["Group", group_number_list]]
 
+    col_graph = sg.Frame("Plate Layout", [[
+        sg.Column([
+            [sg.Graph(canvas_size=(500, 350), graph_bottom_left=(0, 0), graph_top_right=(500, 350),
+                      background_color='grey', key="-SINGLE_USE_CANVAS-", enable_events=True, drag_submits=True,
+                      motion_events=True, right_click_menu=plate_layout_mouse_menu)],
+            [sg.DropDown(values=plate_type, default_value=plate_type[1], key="-SINGLE_USE_PLATE-"),
+             sg.B("Draw Plate", key="-SINGLE_USE_DRAW-"),
+             # sg.B("Add sample layout", key="-DRAW_SAMPLE_LAYOUT-"),
+             sg.Text(key="-CANVAS_INFO_WELL-"),
+             sg.Text(key="-CANVAS_INFO_GROUP-"),
+             sg.Text(key="-CANVAS_INFO_COUNT-"),
+             sg.Text(key="-CANVAS_INFO_CONC-"),
+             sg.Text(key="-CANVAS_INFO_REP-"),
+             ]
+        ])
+    ]])
+    events_enabled = False
+    coloring_tab = sg.Tab("State", [[
+        sg.Column([
+            [sg.Radio(f"Select Sample", 1, key="-RECT_SAMPLES-", size=standard_size, enable_events=events_enabled,
+                      default=True),
+             sg.T(background_color=config["plate_colouring"]["sample"], size=colour_size,
+                  key="-SINGLE_USE_COLOUR_BOX_SAMPLE-", relief="groove")],
+            [sg.Radio(f"Select Blank", 1, key="-RECT_BLANK-", size=standard_size, enable_events=events_enabled),
+             sg.T(background_color=config["plate_colouring"]["blank"], size=colour_size,
+                  key="-SINGLE_USE_COLOUR_BOX_BLANK-", relief="groove")],
+            [sg.Radio(f"Select Max Signal", 1, key="-RECT_MAX-", size=standard_size, enable_events=events_enabled),
+             sg.T(background_color=config["plate_colouring"]["max"], size=colour_size,
+                  key="-SINGLE_USE_COLOUR_BOX_NAX-", relief="groove")],
+            [sg.Radio(f"Select Minimum Signal", 1, key="-RECT_MIN-", size=standard_size,
+                      enable_events=events_enabled),
+             sg.T(background_color=config["plate_colouring"]["minimum"], size=colour_size,
+                  key="-SINGLE_USE_COLOUR_BOX_MINIMUM-", relief="groove")],
+            [sg.Radio(f"Select Positive Control", 1, key="-RECT_POS-", size=standard_size,
+                      enable_events=events_enabled),
+             sg.T(background_color=config["plate_colouring"]["positive"], size=colour_size,
+                  key="-SINGLE_USE_COLOUR_BOX_POSITIVE-", relief="groove")],
+            [sg.Radio(f"Select Negative Control", 1, key="-RECT_NEG-", size=standard_size,
+                      enable_events=events_enabled),
+             sg.T(background_color=config["plate_colouring"]["negative"], size=colour_size,
+                  key="-SINGLE_USE_COLOUR_BOX_NEGATIVE-", relief="groove")],
+            [sg.Radio(f"Select Empty", 1, key="-RECT_EMPTY-", size=standard_size, enable_events=events_enabled),
+             sg.T(background_color=config["plate_colouring"]["empty"], size=colour_size,
+                  key="-SINGLE_USE_COLOUR_BOX_EMPTY-", relief="groove")],
+            [sg.Radio(f"Colour", 1, key="-COLOUR-", enable_events=events_enabled, size=standard_size),
+             sg.ColorChooserButton("Colour", key="-PLATE_LAYOUT_COLOUR_CHOSE-",
+                                   target="-SINGLE_USE_COLOUR_CHOSE_TARGET-"),
+             sg.Input(key="-SINGLE_USE_COLOUR_CHOSE_TARGET-", visible=False, enable_events=True, disabled=True,
+                      default_text="#ffffff")],
+            [sg.DropDown(group_number_list, key="-PLATE_LAYOUT_GROUP-",
+                         default_value=group_number_list[0])]
+            # [sg.Radio('Erase', 1, key='-ERASE-', enable_events=True)],
+            # [sg.Radio('Move Stuff', 1, key='-MOVE-', enable_events=True)],
+
+        ])]])
+
+    grp_tab = sg.Tab("Dose Response", [[
+        sg.Column([
+            [sg.T("Amount of available sample spots:"),
+             sg.T("", key="-SAMPLE_SPOTS-")],
+            [sg.T("Sample Amount", size=standard_size),
+             sg.Input("", key="-DOSE_SAMPLE_AMOUNT-", size=5, enable_events=True)],
+            [sg.T("Dilutions", size=standard_size),
+             sg.Input("", key="-DOSE_DILUTIONS-", size=5, enable_events=True)],
+            [sg.T("Replicates", size=standard_size),
+             sg.Input(1, key="-DOSE_REPLICATES-", size=5, enable_events=True)],
+            [sg.T("Empty Sample Spots", size=standard_size),
+             sg.Input("", key="-DOSE_EMPTY_SAMPLE_SPOTS-", size=5, enable_events=True)],
+            [sg.Checkbox("Equal split", key="-EQUAL_SPLIT-", default=True,
+                         tooltip="If this is true, the amount of replicates per sample will be the same")],
+            [sg.T("", size=standard_size)],
+            [sg.T("Sample"),
+             sg.DropDown(values=[1], key="-SAMPLE_CHOOSER_DROPDOWN-", default_value=1, enable_events=True),
+             sg.T("Conc"),
+             sg.DropDown(values=[1], key="-CONC_CHOOSER_DROPDOWN-", default_value=1, enable_events=True),
+             sg.T("Replicate"),
+             sg.DropDown(values=[1], key="-REPLICATE_CHOOSER_DROPDOWN-", default_value=1, enable_events=True)],
+
+            [sg.Radio(f"Horizontal", 2, key="-DOSE_HORIZONTAL-", size=10, enable_events=True,
+                      default=True),
+             sg.Radio(f"Vertical", 2, key="-DOSE_VERTICAL-", size=10, enable_events=True)],
+            [sg.ColorChooserButton("First Colour", button_color=config["plate_colouring"]["dose_low"],
+                                   target="-DOSE_COLOUR_LOW-", key="-DOSE_COLOUR_BUTTON_LOW-"),
+             sg.Input(config["plate_colouring"]["dose_low"], key="-DOSE_COLOUR_LOW-", size=5,
+                      enable_events=True, visible=False),
+             sg.ColorChooserButton("Last Colour", button_color=config["plate_colouring"]["dose_high"],
+                                   target="-DOSE_COLOUR_HIGH-", key="-DOSE_COLOUR_BUTTON_HIGH-"),
+             sg.Input(config["plate_colouring"]["dose_high"], key="-DOSE_COLOUR_HIGH-", size=5,
+                      enable_events=True, visible=False)],
+            [sg.Radio(f"", 1, key="-RECT_DOSE-", size=15, enable_events=True, visible=False)]
+        ])
+    ]])
+
+    draw_tab_group = [coloring_tab, grp_tab]
+
+    tab_draw_group = sg.TabGroup([draw_tab_group], selected_title_color=config["GUI"]["tab_colour"],
+                                 key="-SINGLE_USE_DRAW_GROUPS-", enable_events=True)
+
+    analyse_style = ["Single", "Dose Response"]
+    draw_options = sg.Frame("Options", [[
+        sg.Column([
+            [tab_draw_group],
+            [sg.Checkbox("Use Archive", default=False, key="-SINGLE_USE_ARCHIVE-", size=floor(standard_size / 2))],
+            [sg.T("Style", size=5),
+             sg.DropDown(analyse_style, key="-SINGLE_USE_SAMPLE_TYPE-", default_value=analyse_style[0],
+                         visible=True, enable_events=True)],
+            [sg.T("Archive", size=5),
+             sg.DropDown(sorted(plate_list), key="-SINGLE_USE_ARCHIVE_PLATES-", size=standard_size,
+                         enable_events=True)],
+
+        ])
+    ]])
+
+    layout = [[col_graph, draw_options],
+              [sg.Button("Transferee", key="-SINGLE_USE_LAYOUT_OK-"),
+              sg.Button("Cancel", key="-SINGLE_USE_CANCEL-")]]
+
+    return sg.Window("Plate Layout", layout, finalize=True, resizable=True)
 
