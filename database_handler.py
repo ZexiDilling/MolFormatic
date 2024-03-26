@@ -73,6 +73,7 @@ class DataBaseFunctions:
         :type data: list
         :return: Data added to a table
         """
+
         try:
             self.cursor.execute(layout, data)
         except sqlite3.IntegrityError as error:
@@ -81,6 +82,7 @@ class DataBaseFunctions:
             # EITHER DUE TO DUPLICATES OR MISSING REFERENCE(FOREIGN KEY)
         self.conn.commit()
         self.cursor.close()
+
 
     def add_records_controller(self, table_name, data, counter=None):
         """
@@ -454,6 +456,7 @@ class DataBaseFunctions:
         temp_data = f"SELECT * FROM {table}"
         self.create_connection()
         cursor = self.cursor.execute(temp_data)
+        self.cursor.close()
         return [description[0] for description in cursor.description]
 
     def return_table_data(self, table, search_limiter):

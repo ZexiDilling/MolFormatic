@@ -54,6 +54,7 @@ def plate_layout_draw_groups(window, values, well_dict):
                 total_sample_spots += 1
 
         window["-SAMPLE_SPOTS-"].update(value=total_sample_spots)
+        window_1_plate_layout["total_sample_spots"] = total_sample_spots
     elif values["-PLATE_LAYOUT_DRAW_GROUPS-"] == "State":
         window[window_1_plate_layout["temp_draw_tool_tracker"]].update(value=True)
 
@@ -120,9 +121,9 @@ def dose_dilution_replicates(window, event, values, dose_colour_dict):
 
     temp_replicates = int_guard(window, values["-DOSE_REPLICATES-"], 1)
     temp_dilutions = int_guard(window, values["-DOSE_DILUTIONS-"], 0)
-
+    temp_sample_amount = int_guard(window, values["-DOSE_SAMPLE_AMOUNT-"], 0)
     if values["-DOSE_REPLICATES-"] is None or values["-DOSE_DILUTIONS-"] is None or window_1_plate_layout["total_sample_spots"] is None \
-            or temp_dilutions == 0 or temp_replicates == 0 or window_1_plate_layout["total_sample_spots"] is None or temp_dilutions is None \
+            or temp_dilutions == 0 or temp_replicates == 0 or temp_sample_amount is None or temp_dilutions is None \
             or temp_replicates is None:
         return dose_colour_dict
 
@@ -131,9 +132,9 @@ def dose_dilution_replicates(window, event, values, dose_colour_dict):
     except (ZeroDivisionError or TypeError):
         return dose_colour_dict
     else:
-        temp_sample_amount = int(floor(window_1_plate_layout["total_sample_spots"] / (temp_dilutions * temp_replicates)))
-        window["-DOSE_SAMPLE_AMOUNT-"].update(value=temp_sample_amount)
-        empty_sample_spots = window_1_plate_layout["total_sample_spots"] - (temp_dilutions * temp_sample_amount * temp_replicates)
+
+        empty_sample_spots = window_1_plate_layout["total_sample_spots"] - (temp_dilutions * temp_sample_amount *
+                                                                            temp_replicates)
         window["-DOSE_EMPTY_SAMPLE_SPOTS-"].update(value=empty_sample_spots)
 
         dose_colour_dict = _update_dose_tool(window, event, values, temp_sample_amount)

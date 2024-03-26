@@ -84,9 +84,9 @@ def _on_up_x_y(start_point, end_point, x, y):
     return temp_x, temp_y
 
 
-def _on_up_well_handler(values, well_dict, new_graphs_list, temp_sample_amount, temp_dilutions, temp_sample_group,
+def _on_up_well_handler(window, values, well_dict, new_graphs_list, temp_sample_amount, temp_dilutions, temp_sample_group,
                         replicate_loop, replicates, dose_colour_dict, concentration_count, colour_select):
-
+    temp_replicate = replicate_loop
     for well_counter, wells in enumerate(new_graphs_list):
         temp_well = wells
         wells = wells - draw_tool_values["well_off_set"]
@@ -97,8 +97,11 @@ def _on_up_well_handler(values, well_dict, new_graphs_list, temp_sample_amount, 
             group_number = 0
         else:
             group_number = int(values["-PLATE_LAYOUT_GROUP-"].strip("Group "))
+        if draw_tool_values["temp_draw_tool"] == "dose":
+            if not temp_sample_group or not temp_dilutions or not temp_sample_amount or not replicates or not replicate_loop:
+                window["-DOSE_DRAW_ERROR-"].update(value="Error: Not all values are filled")
+                break
 
-        if window_1_plate_layout["temp_draw_tool"] == "dose":
             try:
                 well_dict[wells]["state"]
             except KeyError:
@@ -131,11 +134,10 @@ def _on_up_well_handler(values, well_dict, new_graphs_list, temp_sample_amount, 
 
                     else:
                         concentration_count += 1
-
                     try:
                         dose_colour_dict["hex"][(temp_sample_group - 1)]
                     except (IndexError or TypeError):
-                        print(f"Index error on dose colour dict for this group: {temp_sample_group}")
+                        # print(f"Index error on dose colour dict for this group: {temp_sample_group}")
                         colour = colour_select["sample"]
                         window_1_plate_layout["graph_plate"].Widget.itemconfig(wells, fill=colour)
 
@@ -152,7 +154,6 @@ def _on_up_well_handler(values, well_dict, new_graphs_list, temp_sample_amount, 
                         well_dict[wells]["colour"]
                     except IndexError as e:
                         print(f"error - {e} - for:")
-                        print(well_dict)
                     else:
                         well_dict[wells]["colour"] = colour
                     well_dict[wells]["group"] = temp_sample_group
@@ -180,7 +181,7 @@ def _on_up_well_handler(values, well_dict, new_graphs_list, temp_sample_amount, 
 
 
 def on_up(window, values, well_dict, dose_colour_dict, colour_select):
-
+    window["-DOSE_DRAW_ERROR-"].update(value="")
     try:
         draw_tool_values["temp_selector"] and draw_tool_values["plate_active"]
     except KeyError:
@@ -209,19 +210,20 @@ def on_up(window, values, well_dict, dose_colour_dict, colour_select):
 
                 new_graphs_list = _on_up_grab_graph_list(values, temp_x, temp_y)
 
-                well_dict = _on_up_well_handler(values, well_dict, new_graphs_list, temp_sample_amount, temp_dilutions,
+                well_dict = _on_up_well_handler(window, values, well_dict, new_graphs_list, temp_sample_amount, temp_dilutions,
                                                 temp_sample_group, replicate_loop, replicates, dose_colour_dict,
                                                 concentration_count, colour_select)
 
                 # Reset or sets the sample tool counter
-                if temp_sample_group >= temp_sample_amount:
-                    temp_sample_group = 1
-                else:
-                    temp_sample_group += 1
-                window["-SAMPLE_CHOOSER_DROPDOWN-"].update(value=temp_sample_group)
+                if temp_sample_amount:
+                    if temp_sample_group >= temp_sample_amount:
+                        temp_sample_group = 1
+                    else:
+                        temp_sample_group += 1
+                    window["-SAMPLE_CHOOSER_DROPDOWN-"].update(value=temp_sample_group)
 
-                if window_1_plate_layout["temp_draw_tool"] == "dose":
-                    window["-RECT_SAMPLE_TYPE-"].update(value="Dose Response")
+                    if window_1_plate_layout["temp_draw_tool"] == "dose":
+                        window["-RECT_SAMPLE_TYPE-"].update(value="Dose Response")
 
     # deletes the rectangle used for selection
     if draw_tool_values["prior_rect"]:
@@ -306,7 +308,7 @@ def draw_layout(dbf, config, window, values, well_dict):
     archive_plates = values["-ARCHIVE-"]
     gui_tab = "plate_layout"
     sample_type = values["-RECT_SAMPLE_TYPE-"]
-
+    window_1_plate_layout["plate_type"] = plate_type
     if values["-ARCHIVE-"]:
 
         try:
@@ -350,7 +352,6 @@ def export_layout(config, window, values, well_dict):
 
 
 def save_layout(dbf, config, window, values, well_dict):
-    print(well_dict)
     if not well_dict:
         PopupError("Please create a layout to save")
     elif any("paint" in stuff.values() for stuff in well_dict.values()):
@@ -383,11 +384,12 @@ def save_layout(dbf, config, window, values, well_dict):
                     # setting up the data for importing the new plate_layout to the database
                     temp_table = "plate_layout"
                     # ToDo add plate model ??
+                    style = values['-RECT_SAMPLE_TYPE-'].casefold()
                     temp_plate_layout_data = {
                         "layout_name": temp_dict_name,
                         "plate_size": values["-PLATE-"],
                         "plate_mode": "placeholder",
-                        "style": values["-RECT_SAMPLE_TYPE-"].casefold(),
+                        "style": f"{style}",
                         "plate_layout": f"{temp_well_dict}"
                     }
                     update_database(config, temp_table, temp_plate_layout_data)

@@ -24,8 +24,8 @@ class GUILayout:
         self.button_height = 1
         self.tab_colour = config["GUI"]["tab_colour"]
         self.sample_style = ["Single Point", "Duplicate", "Triplicate", "Custom", "Dose Response"]
-        self.analyse_style = ["Single", "Dose Response"]
-        self.analyse_style_include_all = ["All", "Single", "Dose Response"]
+        self.analyse_style = ["Single", "Dose_Response"]
+        self.analyse_style_include_all = ["All", "Single", "Dose_Response"]
         self.plate_list = plate_list
         self.lable_style = "solid"
         self.show_input_style = "sunken"
@@ -364,7 +364,6 @@ class GUILayout:
         for keys in list(self.config["plate_colouring"].keys()):
             color_select[keys] = self.config["plate_colouring"][keys]
 
-
         plate_layout_mouse_menu = [[], ["Group", self.group_number_list]]
 
         col_graph = sg.Frame("Plate Layout", [[
@@ -437,7 +436,7 @@ class GUILayout:
                  sg.Input("", key="-DOSE_EMPTY_SAMPLE_SPOTS-", size=5, enable_events=True)],
                 [sg.Checkbox("Equal split", key="-EQUAL_SPLIT-", default=True,
                              tooltip="If this is true, the amount of replicates per sample will be the same")],
-                [sg.T("", size=self.standard_size)],
+                [sg.T("", key="-DOSE_DRAW_ERROR-", size=self.standard_size)],
                 [sg.T("Sample"),
                  sg.DropDown(values=[1], key="-SAMPLE_CHOOSER_DROPDOWN-", default_value=1, enable_events=True),
                  sg.T("Conc"),

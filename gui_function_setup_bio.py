@@ -86,7 +86,7 @@ def bio_report_compound_id_update(window, values):
 
 def bio_experiment_add_to_database_update(window, values):
     if values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"]:
-        window["-BIO_PLATE_SINGLE_USE_LAYOUT-"].update(values=False)
+        window["-BIO_PLATE_SINGLE_USE_LAYOUT-"].update(value=False)
         window["-BIO_COMPOUND_DATA-"].update(value=True)
 
 
@@ -212,7 +212,7 @@ def bio_calculate(dbf, config, values):
                                                    box_1, box_2, folder_file=True)
         if not bio_import_data:
             return
-        print(bio_import_data)
+
         # default_plate_layout = archive_plates_dict[values["-BIO_PLATE_LAYOUT-"]]
         # if values["-BIO_PLATE_SINGLE_USE_LAYOUT-"]:
         #     default_plate_layout = plate_layout_single_use_drawer(dbf, config, values)

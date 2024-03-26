@@ -181,8 +181,6 @@ class FetchData:
         :rtype: dict
         """
 
-        print(search_limiter)
-        print(table)
         if table == "join_main_mp":
             rows = self.dbf.join_table_controller(search_limiter)
         else:
