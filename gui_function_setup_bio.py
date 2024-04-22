@@ -280,7 +280,7 @@ def bio_calculate(dbf, config, values):
         import_to_database_check = values["-BIO_EXPERIMENT_ADD_TO_DATABASE-"]
         responsible = values["-BIO_RESPONSIBLE-"]
         assay_name = values["-BIO_ASSAY_NAME-"]
-
+        analysis_equipment = "multiscan"
         if analyse_method == "single":
             # Get concentration for the samples
             try:
@@ -288,14 +288,15 @@ def bio_calculate(dbf, config, values):
             except ValueError or TypeError:
                 return
             check = bio_import_handler_single_point(dbf, config, bio_import_data, plate_to_layout,
-                                                    analyse_method, bio_sample_dict, bio_export_folder,
+                                                    analyse_method, analysis_equipment,
+                                                    bio_sample_dict, bio_export_folder,
                                                     add_compound_ids, export_to_excel, all_destination_plates,
                                                     combined_report_check, import_to_database_check,
                                                     final_report_name, include_hits,
                                                     threshold, hit_amount, include_smiles, include_structure,
                                                     assay_name, responsible, temp_concentration)
 
-        elif analyse_method == "dose response":
+        elif analyse_method.casefold() == "dose_response":
             if not worklist_file:
                 worklist_file = PopupGetFile("Please select worklist files", multiple_files=True)
                 try:

@@ -174,7 +174,7 @@ def worklist_generator(dbf, config, window, values, worklist_mp_plates_list):
             worklist_analyse_method = values["-WORKLIST_SAMPLE_STYLE-"]
             sample_direction = values["-WORKLIST_DROPDOWN_SAMPLE_DIRECTION-"]
 
-            leading_zeroes = values["-WORKLIST_LEADING_ZEROES-"]
+            leading_zeroes = int(values["-WORKLIST_LEADING_ZEROES_AMOUNT-"]) + 1
             try:
                 leading_zeroes_amount = int(values["-WORKLIST_LEADING_ZEROES_AMOUNT-"])
             except ValueError:
@@ -207,8 +207,9 @@ def _get_motherplates_with_wells_from_worklist_dict(used_plate_well_dict):
     """
 
     motherplate_dict = {}
+    print(used_plate_well_dict)
     for destinations_plates in used_plate_well_dict:
-
+        print(destinations_plates)
         for wells in used_plate_well_dict[destinations_plates]:
             temp_mp = used_plate_well_dict[destinations_plates][wells]["source_plate"]
             try:
@@ -240,7 +241,7 @@ def _get_motherplate_layout(config, mps):
         plate_data_dict[mp] = []
         temp_rows = dbf.find_data_single_lookup(table, mp, clm_header)
         headlines = dbf.grab_table_headers(table)
-        headline_number = headlines.index("mp_well")
+        headline_number = headlines.index("mp_well") + 1
 
         for data in temp_rows:
 

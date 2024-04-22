@@ -21,7 +21,7 @@ def get_file_list(path):
         if path.is_file():
             file_list = [path]
         else:
-            files = folder.glob("*")
+            files = path.glob("*")
             file_list = [file for file in files if file.is_file()]
 
     return file_list
@@ -179,10 +179,11 @@ def file_list_distributor(folder):
 
 
 if __name__ == "__main__":
-    folder = "C:/Users/phch/PycharmProjects/structure_search/output_files/pending"
-    #folder_scan(folder)
-    # file_list = get_file_list(folder)
-    # z, x, c, a, s, file_list = file_list_distributor(folder)
-    # move_files(file_list)
-    folder = "C:/Users/phch/Desktop/more_data_files/spark_raw_elisa"
-    get_file_list(folder)
+    # folder = "C:/Users/phch/PycharmProjects/structure_search/output_files/pending"
+    # #folder_scan(folder)
+    # # file_list = get_file_list(folder)
+    # # z, x, c, a, s, file_list = file_list_distributor(folder)
+    # # move_files(file_list)
+    # folder = "C:/Users/phch/Desktop/more_data_files/spark_raw_elisa"
+    # get_file_list(folder)
+    pass

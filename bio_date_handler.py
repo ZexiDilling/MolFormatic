@@ -538,12 +538,12 @@ class BIOAnalyser:
         print(f"File is here: {save_file}")
         wb.save(save_file)
 
-    def bio_data_controller(self, ex_file, plate_layout, all_data, well_row_col, well_type, analysis_method, write_to_excel,
-                            bio_sample_dict, save_location, add_compound_ids):
+    def bio_data_controller(self, ex_file, plate_layout, all_data, well_row_col, well_type, analysis_method,
+                            write_to_excel, bio_sample_dict, save_location, add_compound_ids):
         """
         The control modul for the bio analysing
 
-        :param ex_file: The excel file
+        :param ex_file: The Excel file
         :type ex_file: str
         :param plate_layout: The layout for the plate with values for each well, what state they are in
         :type plate_layout: dict
@@ -557,7 +557,7 @@ class BIOAnalyser:
         :type analysis_method: str
         :param bio_sample_dict: None or a dict of sample ide, per plate analysed
         :type bio_sample_dict: dict
-        :param save_location: where to save all the excel files
+        :param save_location: where to save all the Excel files
         :type save_location: str
         :param add_compound_ids: Will add the compound ID to each well on the hit-list
         :type add_compound_ids: bool
@@ -567,8 +567,11 @@ class BIOAnalyser:
 
         self.ex_file = ex_file
         self.plate = plate_layout
+
         all_data, pw_dict = self.data_converter(all_data, well_type)
+
         if write_to_excel:
+
             self._excel_controller(all_data, well_row_col, pw_dict, bio_sample_dict, save_location, add_compound_ids)
 
         # Making sure that there info is here for later

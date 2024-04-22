@@ -1,8 +1,10 @@
 import configparser
+from pathlib import Path
 
 import numpy as np
 from scipy.optimize import leastsq
 
+from bio_dose_excle_handler import dose_excel_controller
 from bio_dose_functions import denormalise_0_1, _calc_EC50_brent_eq, _cal_ec50_normalized, _calc_residuals_mean, \
     _calc_rsquared, normalise_0_1, residuals, hill_eq
 
@@ -124,10 +126,11 @@ if __name__ == "__main__":
                                                          method_calc_reading_50, outliers=outliers)
 
     from bio_dose_plotting import PlottingDose
+    import matplotlib.pyplot as plt
     pd = PlottingDose(config, all_data)
-    pd.controller()
-
+    fig, axarr = pd.controller(all_dose_data)
+    plt.subplots()
     # save_location = Path(r"C:\Users\phch\Desktop\test\dose_response")
     # plate_group_to_compound_id = None
     # include_id = False
-    # dose_excel_controller(all_dose_data, plate_group_to_compound_id, include_id, save_location)
+    dose_excel_controller(all_dose_data, plate_group_to_compound_id, include_id, save_location)

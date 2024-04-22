@@ -482,9 +482,8 @@ class CSVWriter:
     def _worklist_writer(file, plate_layout, headlines, plate_amount, assay_name, initial_plate, leading_zeroes,
                          leading_zeroes_amount, mps, mp_plate_counter, free_well_dict, volume, control_samples,
                          bonus_compound, control_bonus_source, config):
-
         bonus_name = "bonus"
-
+        mp_well_counter = 0
         with open(file, "w", newline="\n") as csv_file:
 
             csv_writer = csv.writer(csv_file, delimiter=";")
@@ -508,7 +507,6 @@ class CSVWriter:
                         # Check if there are any wells left, that have not been used, else it skips to the next plate
                         source_plate = mps[mp_plate_counter]
                         while len(free_well_dict[source_plate]) == 0:
-                            print(source_plate)
                             mp_plate_counter += 1
                             mp_well_counter = 0
                             if mp_plate_counter == len(mps):
@@ -516,7 +514,6 @@ class CSVWriter:
                                 return file, msg
 
                             source_plate = mps[mp_plate_counter]
-
                         source_well = free_well_dict[source_plate][mp_well_counter]
 
                         # Writes the data to a CSV file
@@ -557,6 +554,8 @@ class CSVWriter:
                                 if not found_vol:
                                     trans_volume = volume
                             else:
+                                print(f" NAME - {name}")
+                                print(control_bonus_source)
                                 if control_bonus_source[name]["trans_vol"]:
                                     temp_group = plate_layout[counter]["group"]
                                     try:

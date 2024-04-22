@@ -123,7 +123,6 @@ class ConfigWriter:
         elif name_setting == "ms_ions_settings":
             self._ms_ion_settings(setting_dict)
         elif name_setting == "simple_settings":
-            print(setting_dict)
             self._simple_settings_writer(setting_dict)
 
         self._writer()

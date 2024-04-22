@@ -3,7 +3,7 @@ from pathlib import Path
 
 from PySimpleGUI import PopupError, PopupYesNo
 
-from bio_data_functions import txt_to_xlsx, original_data_dict
+from bio_data_functions import txt_to_xlsx, original_data_dict, multiscan_data_dict
 from bio_date_handler import BIOAnalyser
 from bio_dose_calculator import dose_response_controller
 from bio_dose_excle_handler import dose_excel_controller
@@ -73,7 +73,7 @@ def bio_compound_info_from_worklist(config, bio_sample_list):
 
 
 def bio_data(dbf, config, bio_import_source, plate_to_layout, analysis_method,
-             bio_sample_dict, save_location, add_compound_ids, write_to_excel=True):
+             bio_sample_dict, save_location, add_compound_ids, analysis_equipment, write_to_excel=True):
 
     """
     Handles the Bio data.
@@ -91,10 +91,12 @@ def bio_data(dbf, config, bio_import_source, plate_to_layout, analysis_method,
     :type bio_sample_dict: dict
     :param analysis_method: The analysis method
     :type analysis_method: str
-    :param save_location: where to save all the excel files
+    :param save_location: where to save all the Excel files
     :type save_location: str
     :param add_compound_ids: Will add the compound ID to each well on the hit-list
     :type add_compound_ids: bool
+    :param analysis_equipment: The equipment used to analyse the data.
+    :type analysis_equipment: str
     :param write_to_excel: A bool statement to see if the results should be exported to excel
     :type write_to_excel: bool
     :return: All the data for the plates raw data, and their calculations
@@ -129,8 +131,11 @@ def bio_data(dbf, config, bio_import_source, plate_to_layout, analysis_method,
             else:
                 row_data = dbf.find_data_single_lookup("plate_layout", plate_to_layout, "layout_name")
                 temp_plate_layout = eval(row_data[0][5])
+            if analysis_equipment == "multiscan":
+                all_data, well_row_col, well_type, barcode, date = multiscan_data_dict(files, temp_plate_layout)
+            elif analysis_equipment == "tecan_platereader":
 
-            all_data, well_row_col, well_type, barcode, date = original_data_dict(files, temp_plate_layout)
+                all_data, well_row_col, well_type, barcode, date = original_data_dict(files, temp_plate_layout)
             if not all_data:
                 return False
 
@@ -444,7 +449,8 @@ def _bio_data_check(config, dbf, assay_name, all_destination_plates, used_plates
         return check
 
 
-def bio_import_handler_single_point(dbf, config, bio_import_folder, plate_to_layout, analyse_method, bio_sample_dict,
+def bio_import_handler_single_point(dbf, config, bio_import_folder, plate_to_layout, analyse_method, analysis_equipment,
+                                    bio_sample_dict,
                                     bio_export_folder, add_compound_ids, export_to_excel, all_destination_plates,
                                     combined_report_check, import_to_database_check, final_report_name, include_hits,
                                     threshold, hit_amount, include_smiles, include_structure, assay_name, responsible,
@@ -452,7 +458,7 @@ def bio_import_handler_single_point(dbf, config, bio_import_folder, plate_to_lay
 
     worked, all_plates_data, date, used_plates, plate_to_layout = \
         bio_data(dbf, config, bio_import_folder, plate_to_layout,
-                 analyse_method, bio_sample_dict, bio_export_folder, add_compound_ids, export_to_excel)
+                 analyse_method, bio_sample_dict, bio_export_folder, add_compound_ids, analysis_equipment, export_to_excel)
     if import_to_database_check:
         check = _bio_data_check(config, dbf, assay_name, all_destination_plates, used_plates, all_plates_data,
                                 bio_sample_dict, analyse_method, plate_to_layout, import_to_database_check)

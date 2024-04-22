@@ -146,6 +146,32 @@ def _get_sheet_name(ws):
     return re.sub('[^A-Za-z0-9]+', '', worksheet_name)
 
 
+def next_letter(current_letter, spacer):
+    letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+    # Find the index of the current letter
+    current_index = letters.index(current_letter.capitalize())
+
+    # Calculate the index of the next letter
+    next_index = current_index + spacer
+
+    if next_index < len(letters):
+        return letters[next_index]
+    else:
+        # Calculate the number of times to append "A" to the output
+        num_a = next_index // len(letters)
+
+        # Calculate the remainder to find the position of the letter after "Z"
+        remainder = next_index % len(letters)
+
+        # Recursively call next_letter to get the letter after "Z"
+        next_letter_after_z = next_letter("A", remainder)
+
+        # Concatenate "A" and the letter after "Z"
+        return "A" * num_a + next_letter_after_z
+
+
+
 def ex_cell(row, col):
     """
     takes row value and column value and translate it to a cell value  ex from (1,1) = (A1)

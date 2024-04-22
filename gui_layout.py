@@ -496,7 +496,8 @@ class GUILayout:
                  sg.InputText(key="-WORKLIST_ASSAY_NAME-", size=input_size_long,
                               tooltip="The name of the assay. "
                                       "Will be used for destination plate names, and folder name")],
-                [sg.InputText(key="-WORKLIST_LEADING_ZEROES_AMOUNT-", default_text="0", size=input_size_short)],
+                [sg.Text("Leading Zeroes", size=text_size_short),
+                    sg.InputText(key="-WORKLIST_LEADING_ZEROES_AMOUNT-", default_text="0", size=input_size_short)],
                 [sg.Text("Plate Amount:", size=text_size_short),
                  sg.InputText(key="-WORKLIST_PLATE_AMOUNT-", size=input_size_short,
                               tooltip="How many Destination plates should there be. "

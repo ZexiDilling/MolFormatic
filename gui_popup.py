@@ -10,6 +10,7 @@ from bio_dose_plotting import PlottingDose
 from bio_dose_response import calculate_dilution_series
 from compound_plate_formatting import plate_layout_re_formate
 from database_functions import _get_list_of_names_from_database_double_lookup
+from database_handler import DataBaseFunctions
 from draw_basic import draw_plate
 from extra_functions import increment_text_string
 from file_type_handler_xml import convert_echo_to_db
@@ -19,7 +20,7 @@ from gui_function_setup_plate_layout import plate_list_updater, dose_dilution_re
 from helpter_functions import int_guard
 from info import plate_384_row, plate_96_row
 from lcms_visualization import Toolbar
-from gui_popup_layout import matrix_popup_layout, plate_layout_chooser_layout, dead_run_naming_layout, \
+from gui_popup_layout import plate_layout_chooser_layout, dead_run_naming_layout, \
     assay_run_naming_layout, bio_dose_response_set_up_layout, bio_data_approval_table_layout, sample_checker_layout, \
     new_headlines_layout, assay_generator_layout, table_popup_layout, morgan_popup_layout, export_chooser_popup_layout, \
     bio_dose_response_approval_layout, popup_three_box_solution_layout, plate_layout_single_use_drawer_layout
@@ -3261,13 +3262,13 @@ def popup_three_box_solution(config, name, question, box_1, box_2, folder_file=F
 
 
 if __name__ == "__main__":
-
-    import configparser
-    from database_controller import DataBaseFunctions
-    old_config = configparser.ConfigParser()
-    old_config.read("config.ini")
-    test = popup_three_box_solution(old_config, "name", "question", "Folder", "File", folder_file=False)
-    print(test)
+    pass
+    # import configparser
+    # from database_controller import DataBaseFunctions
+    # old_config = configparser.ConfigParser()
+    # old_config.read("config.ini")
+    # test = popup_three_box_solution(old_config, "name", "question", "Folder", "File", folder_file=False)
+    # print(test)
     # old_dbf = DataBaseFunctions(old_config)
     # old_value = "single"
     # plate_layout_single_use_drawer(old_dbf, old_config, old_value)
