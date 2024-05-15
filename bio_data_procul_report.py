@@ -485,6 +485,7 @@ def _grab_hits(compound_data):
                 hit_data[barcode][well] = compound_data[barcode][style]["hits"][well]
     return hit_data
 
+
 def _saving(wb, save_location, report_file_name):
     report_path = f"{save_location}/{report_file_name}.xlsx"
     counter = 1

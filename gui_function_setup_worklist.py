@@ -195,7 +195,7 @@ def worklist_generator(dbf, config, window, values, worklist_mp_plates_list):
                     Popup(f"{msg} - File still created with fewer plates, saved here {file}")
                 else:
                     Popup(f"Worklist have been created and saved here: {file}")
-
+    print("DONE")
 
 def _get_motherplates_with_wells_from_worklist_dict(used_plate_well_dict):
     """
@@ -207,17 +207,18 @@ def _get_motherplates_with_wells_from_worklist_dict(used_plate_well_dict):
     """
 
     motherplate_dict = {}
-    print(used_plate_well_dict)
-    for destinations_plates in used_plate_well_dict:
-        print(destinations_plates)
-        for wells in used_plate_well_dict[destinations_plates]:
-            temp_mp = used_plate_well_dict[destinations_plates][wells]["source_plate"]
+    used_plate_dict = used_plate_well_dict[0]
+
+    for destinations_plates in used_plate_dict:
+        # print(destinations_plates)
+        for wells in used_plate_dict[destinations_plates]:
+            temp_mp = used_plate_dict[destinations_plates][wells]["source_plate"]
             try:
                 motherplate_dict[temp_mp]
             except KeyError:
                 motherplate_dict[temp_mp] = []
 
-            source_well = used_plate_well_dict[destinations_plates][wells]["source_well"]
+            source_well = used_plate_dict[destinations_plates][wells]["source_well"]
             if source_well not in motherplate_dict[temp_mp]:
                 motherplate_dict[temp_mp].append(source_well)
 
@@ -333,7 +334,7 @@ def generate_worklist(config, plate_amount, mps, plate_layout, used_plate_well_d
         return None, "error: wrong file format for Control Layout"
     # destination_dict = _from_plate_layout_to_destination_dict(plate_layout, assay_name, plate_amount, initial_plate)
     csv_w = CSVWriter()
-    print(f"plate_layout - {plate_layout}")
+
     file, msg = csv_w.worklist_writer_controller(config, plate_layout, mps, free_well_dict, assay_name, plate_amount,
                                                  initial_plate, leading_zeroes, leading_zeroes_amount, volume,
                                                  sample_direction, worklist_analyse_method, control_bonus_source,

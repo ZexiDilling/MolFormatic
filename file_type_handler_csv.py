@@ -482,6 +482,7 @@ class CSVWriter:
     def _worklist_writer(file, plate_layout, headlines, plate_amount, assay_name, initial_plate, leading_zeroes,
                          leading_zeroes_amount, mps, mp_plate_counter, free_well_dict, volume, control_samples,
                          bonus_compound, control_bonus_source, config):
+        mp_list = []
         bonus_name = "bonus"
         mp_well_counter = 0
         with open(file, "w", newline="\n") as csv_file:
@@ -506,6 +507,8 @@ class CSVWriter:
                     if well_state == "sample":
                         # Check if there are any wells left, that have not been used, else it skips to the next plate
                         source_plate = mps[mp_plate_counter]
+                        if source_plate not in mp_list:
+                            mp_list.append(source_plate)
                         while len(free_well_dict[source_plate]) == 0:
                             mp_plate_counter += 1
                             mp_well_counter = 0
@@ -554,8 +557,6 @@ class CSVWriter:
                                 if not found_vol:
                                     trans_volume = volume
                             else:
-                                print(f" NAME - {name}")
-                                print(control_bonus_source)
                                 if control_bonus_source[name]["trans_vol"]:
                                     temp_group = plate_layout[counter]["group"]
                                     try:
@@ -616,6 +617,9 @@ class CSVWriter:
                                 csv_writer.writerow([destination_plate, destination_well, new_trans_volume,
                                                      source_well, source_plate])
 
+        csv_writer.writerow(["MP to be used:"])
+        for plate in mp_list:
+            csv_writer.writerow([plate])
         return None
 
     def worklist_writer_controller(self, config, plate_layout, mps, free_well_dict, assay_name, plate_amount,
@@ -665,13 +669,13 @@ class CSVWriter:
         try:
             os.mkdir(output_folder)
         except OSError:
-            print("directory exist")
+            print(f"directory exist {output_folder}")
 
         path = output_folder/assay_name
         try:
             os.mkdir(path)
         except OSError:
-            print("directory exist")
+            print(f"directory exist {path}")
 
         headlines = [headlines for headlines in config["worklist_headlines_v1"]]
         temp_file_name = f"Worklist_{assay_name}_{initial_plate}_to_{plate_amount + initial_plate - 1}"

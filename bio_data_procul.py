@@ -24,6 +24,7 @@ def _get_values_for_calc(compound_data):
 
     return max_values, min_values
 
+
 def _z_prime_calculator(compound_data):
     """
     Calculate Z-prime
